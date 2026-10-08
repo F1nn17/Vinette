@@ -23,7 +23,7 @@ make dev        # бэкенд (http://localhost:5080) и фронтенд (http
 make check      # lint + test + build — ровно то, что гоняет CI
 ```
 
-Тестовый почтовый сервер с готовыми ящиками (`alice@vinette.test` / `alice-pass`, `bob@vinette.test` / `bob-pass`):
+Тестовый почтовый сервер с готовыми ящиками (логин `alice` / пароль `alice-pass`, логин `bob` / пароль `bob-pass`; адреса `alice@vinette.test` и `bob@vinette.test`):
 
 ```bash
 docker compose -f deploy/docker/compose.dev.yaml up -d

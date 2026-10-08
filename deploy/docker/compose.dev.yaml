@@ -1,8 +1,8 @@
 # Development environment: a test mail server with pre-created mailboxes.
 #   docker compose -f deploy/docker/compose.dev.yaml up -d
-# Mailboxes (login = full address, password = login part + "-pass"):
-#   alice@vinette.test / alice-pass
-#   bob@vinette.test   / bob-pass
+# Mailboxes. GreenMail login is the part before "@" (NOT the full address):
+#   login alice / password alice-pass  (alice@vinette.test)
+#   login bob   / password bob-pass    (bob@vinette.test)
 # Run Vinette itself with `make dev` and point it at localhost (see backend appsettings.Development.json).
 services:
   greenmail:
