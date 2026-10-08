@@ -2,7 +2,7 @@
 # Build context: repository root.  docker build -f deploy/docker/Dockerfile .
 
 # ---- Frontend: node + pnpm (via corepack) ----
-FROM --platform=$BUILDPLATFORM node:24-alpine AS frontend
+FROM --platform=$BUILDPLATFORM node:26-alpine AS frontend
 WORKDIR /src/frontend
 ENV CI=true
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
