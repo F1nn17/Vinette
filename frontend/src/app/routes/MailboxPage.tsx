@@ -7,7 +7,7 @@ export function MailboxPage() {
   return (
     <main className="p-8">
       <h1 className="text-2xl font-semibold">{t('mailbox.title')}</h1>
-      <p className="text-fg-muted">{folder}</p>
+      <p className="text-muted">{folder}</p>
     </main>
   );
 }

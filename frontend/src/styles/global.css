@@ -1,15 +1,108 @@
 @import 'tailwindcss';
+@import '@fontsource/golos-text/cyrillic-400.css';
+@import '@fontsource/golos-text/cyrillic-500.css';
+@import '@fontsource/golos-text/cyrillic-600.css';
+@import '@fontsource/golos-text/cyrillic-700.css';
+@import '@fontsource/golos-text/latin-400.css';
+@import '@fontsource/golos-text/latin-500.css';
+@import '@fontsource/golos-text/latin-600.css';
+@import '@fontsource/golos-text/latin-700.css';
 @import './tokens.css';
 
+/* Tailwind utilities reference the CSS variables, so runtime overrides (branding) apply everywhere. */
 @theme inline {
-  --color-accent: var(--vn-accent);
-  --color-bg: var(--vn-bg);
-  --color-surface-muted: var(--vn-surface-muted);
-  --color-fg: var(--vn-fg);
-  --color-fg-muted: var(--vn-fg-muted);
+  --font-sans: 'Golos Text', system-ui, sans-serif;
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+
+  --color-ink: var(--ink);
+  --color-body: var(--text-body);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-muted: var(--muted);
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+
+  /* border-line / border-subtle / border-control / border-field */
+  --color-line: var(--border);
+  --color-subtle: var(--border-subtle);
+  --color-control: var(--border-control);
+  --color-field: var(--border-input);
+
+  --color-label-work-bg: var(--label-work-bg);
+  --color-label-work: var(--label-work-text);
+  --color-label-work-dot: var(--label-work-dot);
+  --color-label-bills-bg: var(--label-bills-bg);
+  --color-label-bills: var(--label-bills-text);
+  --color-label-bills-dot: var(--label-bills-dot);
+  --color-label-personal-bg: var(--label-personal-bg);
+  --color-label-personal: var(--label-personal-text);
+  --color-label-personal-dot: var(--label-personal-dot);
+
+  --color-success-bg: var(--success-bg);
+  --color-success: var(--success-text);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning: var(--warning-text);
+  --color-flag: var(--flag);
+
+  --color-panel: var(--panel-bg);
+  --color-panel-text: var(--panel-text);
+  --color-panel-text-2: var(--panel-text-2);
+  --color-panel-text-3: var(--panel-text-3);
+
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+  --radius-2xl: var(--r-2xl);
+  --radius-pill: var(--r-pill);
+
+  --shadow-fab: var(--sh-fab);
+  --shadow-card: var(--sh-card);
+
+  /* Type scale (px from the spec) */
+  --text-caps: 11.5px;
+  --text-meta: 12.5px;
+  --text-secondary: 13.5px;
+  --text-base: 14.5px;
+  --text-message: 15px;
+  --text-logo: 19px;
+  --text-heading: 21px;
+  --text-subject: 24px;
+  --text-form: 26px;
+  --text-display: 40px;
+}
+
+html {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
 }
 
 body {
-  background: var(--vn-bg);
-  color: var(--vn-fg);
+  margin: 0;
+  background: var(--bg);
+  color: var(--text-body);
+  font-size: 14.5px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

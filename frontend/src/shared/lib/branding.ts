@@ -7,11 +7,14 @@ export interface Branding {
   faviconUrl: string;
 }
 
+export const DEFAULT_NAME = 'Vinette';
+export const DEFAULT_LOGO_URL = '/icons/vinette.svg';
+
 const DEFAULT_BRANDING: Branding = {
-  name: 'Vinette',
+  name: DEFAULT_NAME,
   accent: '#8E2043',
   poweredBy: true,
-  logoUrl: '/logo.svg',
+  logoUrl: DEFAULT_LOGO_URL,
   faviconUrl: '/favicon.svg',
 };
 
@@ -29,6 +32,22 @@ export function getBranding(): Branding {
   return DEFAULT_BRANDING;
 }
 
+/** Darkens a #RRGGBB color; used to derive the hover shade of a custom accent. */
+export function darken(hex: string, amount = 0.25): string {
+  const n = parseInt(hex.slice(1), 16);
+  const channel = (shift: number) =>
+    Math.round(((n >> shift) & 0xff) * (1 - amount))
+      .toString(16)
+      .padStart(2, '0');
+  return `#${channel(16)}${channel(8)}${channel(0)}`;
+}
+
+/** Overrides the accent tokens at runtime (white-label). The default accent keeps the exact spec shades. */
 export function applyBranding(): void {
-  document.documentElement.style.setProperty('--vn-accent', getBranding().accent);
+  const { accent } = getBranding();
+  const style = document.documentElement.style;
+  if (accent.toLowerCase() === DEFAULT_BRANDING.accent.toLowerCase()) return;
+  style.setProperty('--accent', accent);
+  style.setProperty('--accent-hover', darken(accent));
+  style.setProperty('--accent-soft', `${accent}17`);
 }

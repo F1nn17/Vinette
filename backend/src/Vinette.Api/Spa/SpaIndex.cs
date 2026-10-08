@@ -43,7 +43,7 @@ public static partial class SpaIndex
 
     internal static string Render(string html, BrandingOptions b)
     {
-        var logoUrl = string.IsNullOrWhiteSpace(b.LogoPath) ? "/logo.svg" : "/branding/logo";
+        var logoUrl = string.IsNullOrWhiteSpace(b.LogoPath) ? "/icons/vinette.svg" : "/branding/logo";
         var faviconUrl = string.IsNullOrWhiteSpace(b.FaviconPath) ? "/favicon.svg" : "/branding/favicon";
 
         var settings = JsonSerializer.Serialize(

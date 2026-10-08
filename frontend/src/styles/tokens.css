@@ -1,8 +1,67 @@
-/* Design tokens placeholder. The full set arrives with the design spec (docs/design). */
+/*
+ * Design tokens (see docs/design/DESIGN.md). Components must use only these variables.
+ * Dark theme is not in v1; a future theme overrides the same variables under a selector.
+ * --accent, --accent-hover and --accent-soft are overridden at runtime from server branding.
+ */
 :root {
-  --vn-accent: #8e2043; /* overridden at runtime from server branding */
-  --vn-bg: #ffffff;
-  --vn-surface-muted: #f4f4f5;
-  --vn-fg: #18181b;
-  --vn-fg-muted: #71717a;
+  /* Accent */
+  --accent: #8e2043;
+  --accent-hover: #6b1531;
+  --accent-soft: #8e204317;
+  --on-accent: #ffffff;
+
+  /* Text */
+  --ink: #15171c;
+  --text-body: #23262d;
+  --text-2: #3a3f48;
+  --text-3: #4b515c;
+  --muted: #5f6570;
+
+  /* Surfaces */
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --surface-2: #fbfbfc;
+
+  /* Borders */
+  --border: #e2e4e9;
+  --border-subtle: #eef0f3;
+  --border-control: #d5d8de;
+  --border-input: #c9cdd4;
+
+  /* Labels: background / text / dot */
+  --label-work-bg: #e6ecfb;
+  --label-work-text: #1e3a8a;
+  --label-work-dot: #3b5bdb;
+  --label-bills-bg: #fcefd9;
+  --label-bills-text: #7a4a06;
+  --label-bills-dot: #d9822b;
+  --label-personal-bg: #e3f3ec;
+  --label-personal-text: #17603f;
+  --label-personal-dot: #2f9e6b;
+
+  /* Status */
+  --success-bg: #e7f5ee;
+  --success-text: #17603f;
+  --warning-bg: #fdf0e6;
+  --warning-text: #7a3410;
+  --flag: #b45309;
+
+  /* Dark login panel */
+  --panel-bg: #15171c;
+  --panel-text: #f3f4f6;
+  --panel-text-2: #c5c9d1;
+  --panel-text-3: #9aa0aa;
+
+  /* Radii */
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 12px;
+  --r-xl: 14px;
+  --r-2xl: 16px;
+  --r-pill: 999px;
+
+  /* Shadows */
+  --sh-fab: 0 6px 16px rgb(21 23 28 / 0.22);
+  --sh-card: 0 1px 2px rgb(21 23 28 / 0.06);
 }
