@@ -1,0 +1,8 @@
+/* Design tokens placeholder. The full set arrives with the design spec (docs/design). */
+:root {
+  --vn-accent: #8e2043; /* overridden at runtime from server branding */
+  --vn-bg: #ffffff;
+  --vn-surface-muted: #f4f4f5;
+  --vn-fg: #18181b;
+  --vn-fg-muted: #71717a;
+}

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Сообщить об уязвимости
+    url: https://github.com/F1nn17/vinette/blob/main/SECURITY.md
+    about: Не создавайте публичные issues об уязвимостях — следуйте инструкции в SECURITY.md.

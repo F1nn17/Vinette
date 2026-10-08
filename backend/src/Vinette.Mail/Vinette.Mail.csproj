@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="MailKit" />
+    <PackageReference Include="HtmlSanitizer" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vinette.Core\Vinette.Core.csproj" />
+  </ItemGroup>
+</Project>

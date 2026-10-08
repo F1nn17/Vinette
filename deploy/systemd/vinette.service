@@ -1,0 +1,36 @@
+[Unit]
+Description=Vinette web mail client
+Documentation=https://github.com/F1nn17/vinette
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=vinette
+Group=vinette
+WorkingDirectory=/opt/vinette
+ExecStart=/usr/bin/dotnet /opt/vinette/Vinette.Api.dll
+Restart=on-failure
+RestartSec=5
+
+Environment=ASPNETCORE_URLS=http://127.0.0.1:8080
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=VINETTE_CONFIG=/etc/vinette/appsettings.json
+Environment=VINETTE_DataProtection__KeysPath=/var/lib/vinette/keys
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/var/lib/vinette
+ConfigurationDirectory=vinette
+StateDirectory=vinette
+StateDirectoryMode=0700
+
+[Install]
+WantedBy=multi-user.target

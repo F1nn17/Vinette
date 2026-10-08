@@ -1,0 +1,6 @@
+{
+  "login": { "title": "Sign in to {{name}}" },
+  "mailbox": { "title": "Mail" },
+  "compose": { "title": "New message" },
+  "common": { "close": "Close" }
+}

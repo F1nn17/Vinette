@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+@theme inline {
+  --color-accent: var(--vn-accent);
+  --color-bg: var(--vn-bg);
+  --color-surface-muted: var(--vn-surface-muted);
+  --color-fg: var(--vn-fg);
+  --color-fg-muted: var(--vn-fg-muted);
+}
+
+body {
+  background: var(--vn-bg);
+  color: var(--vn-fg);
+}

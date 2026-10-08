@@ -1,0 +1,29 @@
+# Vinette against an external mail server.
+#   docker compose -f deploy/docker/compose.yaml up -d
+services:
+  vinette:
+    image: ghcr.io/f1nn17/vinette:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      VINETTE_Imap__Host: mail.example.com
+      VINETTE_Imap__Port: "993"
+      VINETTE_Imap__Security: Tls
+      VINETTE_Smtp__Host: mail.example.com
+      VINETTE_Smtp__Port: "587"
+      VINETTE_Smtp__Security: StartTls
+      # White-label (optional):
+      # VINETTE_Branding__Name: Acme Mail
+      # VINETTE_Branding__Accent: "#1F6FEB"
+    volumes:
+      # Data Protection keys: keep them, or users are signed out on every restart.
+      - vinette-data:/data
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  vinette-data:
