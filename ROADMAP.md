@@ -44,7 +44,7 @@
   Готово, когда: утилиты токенов работают, акцент переопределяется в рантайме. Зависит от: VIN-001.
 - [x] **VIN-008 · UI-примитивы и каталог `/dev/ui`** (2026-10-08, 3d8af52) — Button, IconButton, Chip, LabelTag, Avatar, Badge, поля, Checkbox, ProgressBar, Logo с тестами.
   Готово, когда: каталог показывает все состояния, тесты зелёные. Зависит от: VIN-007.
-- [ ] **VIN-009 · Соглашения API** — единая обработка ошибок в формате ProblemDetails (RFC 9457), сквозной correlation id в логах и ответах, общий каталог кодов ошибок.
+- [~] **VIN-009 · Соглашения API** — единая обработка ошибок в формате ProblemDetails (RFC 9457), сквозной correlation id в логах и ответах, общий каталог кодов ошибок.
   Готово, когда: необработанное исключение и ошибка валидации возвращают ProblemDetails с correlation id; покрыто тестами. Зависит от: VIN-004.
 - [ ] **VIN-010 · Dev-среда на Dovecot** — вариант `compose.dev` с Dovecot (например, docker-mailserver), у которого включены SPECIAL-USE, IDLE, MOVE, CONDSTORE/QRESYNC, QUOTA, ID, METADATA — GreenMail этого не умеет.
   Готово, когда: `make dev-mail` поднимает Dovecot с ящиками alice и bob и перечисленными расширениями (проверено по CAPABILITY). Зависит от: VIN-005.
