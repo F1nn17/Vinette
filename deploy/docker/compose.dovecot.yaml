@@ -1,0 +1,44 @@
+# Development mail server with a real Dovecot + Postfix (docker-mailserver), for features GreenMail lacks:
+# SPECIAL-USE, IDLE, MOVE, CONDSTORE/QRESYNC, QUOTA, ID, METADATA.
+#   make dev-mail         # start and wait until ready
+#   make dev-mail-check   # verify the IMAP capabilities Vinette needs
+#   make dev-mail-down    # stop and remove (mail data is discarded)
+# Mailboxes (login is the FULL address, unlike GreenMail):
+#   alice@vinette.test / alice-pass
+#   bob@vinette.test   / bob-pass
+# Host ports match GreenMail's (compose.dev.yaml) so appsettings.Development.json works with either:
+#   IMAP 3143, IMAPS 3993, SMTP 3025, submission 3587, SMTPS 3465. Do not run both at once.
+services:
+  mailserver:
+    image: ghcr.io/docker-mailserver/docker-mailserver:16.0.1
+    hostname: mail.vinette.test
+    restart: unless-stopped
+    environment:
+      OVERRIDE_HOSTNAME: mail.vinette.test
+      ONE_DIR: "1"
+      SSL_TYPE: self-signed
+      ENABLE_QUOTAS: "1"
+      ENABLE_RSPAMD: "0"
+      ENABLE_CLAMAV: "0"
+      ENABLE_FAIL2BAN: "0"
+      ENABLE_POSTGREY: "0"
+      ENABLE_AMAVIS: "0"
+      ENABLE_SPAMASSASSIN: "0"
+      SPOOF_PROTECTION: "0"
+      POSTFIX_MAILBOX_SIZE_LIMIT: "104857600"
+      LOG_LEVEL: info
+    ports:
+      - "3025:25"    # SMTP
+      - "3143:143"   # IMAP
+      - "3465:465"   # SMTPS
+      - "3587:587"   # submission (STARTTLS)
+      - "3993:993"   # IMAPS
+    volumes:
+      - ./dev-mail/postfix-accounts.cf:/tmp/docker-mailserver/postfix-accounts.cf:ro
+      - ./dev-mail/dovecot.cf:/tmp/docker-mailserver/dovecot.cf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "ss -lnt | grep -q ':143 ' && ss -lnt | grep -q ':587 '"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
