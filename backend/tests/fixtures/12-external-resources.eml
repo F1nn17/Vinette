@@ -1,0 +1,15 @@
+From: Anna Smirnova <anna@example.org>
+To: Alice <alice@vinette.test>
+Date: Fri, 02 Oct 2026 14:32:00 +0300
+Message-ID: <m12@example.org>
+MIME-Version: 1.0
+Subject: Weekly newsletter
+Content-Type: text/html; charset=utf-8
+
+<html><body style="background:url('http://tracker.example/bg.png')">
+<p>Newsletter</p><img src="http://tracker.example/pixel.gif" width="1" height="1">
+<img src="https://cdn.example.org/banner.png"><img src="//cdn.example.org/proto-relative.png">
+<table background="http://tracker.example/table.png"><tr><td>x</td></tr></table>
+<link rel="stylesheet" href="http://tracker.example/style.css">
+<img srcset="http://tracker.example/a.png 1x, http://tracker.example/b.png 2x" src="cid:inline@example.org">
+</body></html>

@@ -1,0 +1,35 @@
+From: Anna Smirnova <anna@example.org>
+To: Alice <alice@vinette.test>
+Date: Fri, 02 Oct 2026 14:32:00 +0300
+Message-ID: <m11@example.org>
+MIME-Version: 1.0
+Subject: Dangerous attachments
+Content-Type: multipart/mixed; boundary="mix11"
+
+--mix11
+Content-Type: text/plain; charset=utf-8
+
+Open the files.
+
+--mix11
+Content-Type: image/svg+xml; name="logo.svg"
+Content-Transfer-Encoding: base64
+Content-Disposition: inline; filename="logo.svg"
+
+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIG9ubG9hZD0iYWxlcnQoMSki
+PjxzY3JpcHQ+YWxlcnQoMik8L3NjcmlwdD48cmVjdCB3aWR0aD0iMTAiIGhlaWdodD0iMTAiLz48
+L3N2Zz4=
+--mix11
+Content-Type: text/html; name="page.html"
+Content-Transfer-Encoding: base64
+Content-Disposition: inline; filename="page.html"
+
+PGh0bWw+PGJvZHk+PHNjcmlwdD5hbGVydCgzKTwvc2NyaXB0PmF0dGFjaG1lbnQgcGFnZTwvYm9k
+eT48L2h0bWw+
+--mix11
+Content-Type: application/x-msdownload; name="setup.exe"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="../../setup.exe"
+
+TVotc3R1Yg==
+--mix11--

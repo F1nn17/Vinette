@@ -1,0 +1,28 @@
+From: Anna Smirnova <anna@example.org>
+To: Alice <alice@vinette.test>
+Date: Fri, 02 Oct 2026 14:32:00 +0300
+Message-ID: <m09@example.org>
+MIME-Version: 1.0
+Subject: Fwd attached message
+Content-Type: multipart/mixed; boundary="mix09"
+
+--mix09
+Content-Type: text/plain; charset=utf-8
+
+See the attached message.
+
+--mix09
+Content-Type: message/rfc822
+Content-Disposition: attachment; filename=inner.eml
+
+From: Anna Smirnova <boris@example.org>
+To: Alice <alice@vinette.test>
+Date: Fri, 02 Oct 2026 14:32:00 +0300
+Message-ID: <inner09@example.org>
+MIME-Version: 1.0
+Subject: Inner message
+Content-Type: text/plain; charset=utf-8
+
+This is the forwarded inner message.
+
+--mix09--

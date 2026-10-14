@@ -1,0 +1,54 @@
+From: Anna Smirnova <anna@example.org>
+To: Alice <alice@vinette.test>
+Date: Fri, 02 Oct 2026 14:32:00 +0300
+Message-ID: <m06@example.org>
+MIME-Version: 1.0
+Subject: Nested multipart
+Content-Type: multipart/mixed; boundary="mix06"
+
+--mix06
+Content-Type: multipart/related; boundary="rel06"
+
+--rel06
+Content-Type: multipart/alternative; boundary="alt06"
+
+--alt06
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: base64
+
+0KHQvNC+0YLRgNC4INC60LDRgNGC0LjQvdC60YMgKNGC0LXQutGB0YLQvtCy0LDRjyDQstC10YDR
+gdC40Y8pLgo=
+--alt06
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGJvZHk+PHA+0KHQvNC+0YLRgNC4INC60LDRgNGC0LjQvdC60YM6PC9wPjxpbWcgc3Jj
+PSJjaWQ6bG9nb0BleGFtcGxlLm9yZyIgYWx0PSJsb2dvIj48cD7QmCDQstC70L7QttC10L3QuNGP
+INC90LjQttC1LjwvcD48L2JvZHk+PC9odG1sPgo=
+--alt06--
+
+--rel06
+Content-Type: image/png; name=logo.png
+Content-Transfer-Encoding: base64
+Content-ID: <logo@example.org>
+Content-Disposition: inline; filename=logo.png
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6
+kgAAAABJRU5ErkJggg==
+--rel06--
+
+--mix06
+Content-Type: application/pdf; name="report.pdf"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="report.pdf"
+
+JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZz4+ZW5kb2JqCnRyYWlsZXI8PC9Sb290IDEg
+MCBSPj4KJSVFT0YK
+--mix06
+Content-Type: text/plain; charset=utf-8; name=notes.txt
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename=notes.txt
+
+attachment text
+
+--mix06--

@@ -1,0 +1,10 @@
+From: "Your Bank" <security@bank.example>
+To: Alice <alice@vinette.test>
+Date: Fri, 02 Oct 2026 15:00:00 +0300
+Message-ID: <m17@evil.example>
+MIME-Version: 1.0
+Authentication-Results: mail.vinette.test; dkim=none; spf=fail smtp.mailfrom=bank.example; dmarc=fail (p=reject) header.from=bank.example
+Subject: Your account is locked
+Content-Type: text/plain; charset=utf-8
+
+Sign in now to unlock your account.

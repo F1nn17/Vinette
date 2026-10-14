@@ -1,0 +1,22 @@
+From: Anna Smirnova <anna@example.org>
+To: Alice <alice@vinette.test>
+Date: Fri, 02 Oct 2026 14:32:00 +0300
+Message-ID: <m07@example.org>
+MIME-Version: 1.0
+Subject: Inline image only
+Content-Type: multipart/related; boundary="rel07"
+
+--rel07
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+<html><body><img src="cid:pixel@example.org"><p>Only an inline image.</p></body></html>
+
+--rel07
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-ID: <pixel@example.org>
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6
+kgAAAABJRU5ErkJggg==
+--rel07--

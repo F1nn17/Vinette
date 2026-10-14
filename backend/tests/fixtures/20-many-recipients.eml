@@ -1,0 +1,39 @@
+From: Anna Smirnova <anna@example.org>
+To: User 1 <user1@example.org>,
+ User 2 <user2@example.org>,
+ User 3 <user3@example.org>,
+ User 4 <user4@example.org>,
+ User 5 <user5@example.org>,
+ User 6 <user6@example.org>,
+ User 7 <user7@example.org>,
+ User 8 <user8@example.org>,
+ User 9 <user9@example.org>,
+ User 10 <user10@example.org>,
+ User 11 <user11@example.org>,
+ User 12 <user12@example.org>,
+ User 13 <user13@example.org>,
+ User 14 <user14@example.org>,
+ User 15 <user15@example.org>,
+ User 16 <user16@example.org>,
+ User 17 <user17@example.org>,
+ User 18 <user18@example.org>,
+ User 19 <user19@example.org>,
+ User 20 <user20@example.org>,
+ User 21 <user21@example.org>,
+ User 22 <user22@example.org>,
+ User 23 <user23@example.org>,
+ User 24 <user24@example.org>,
+ User 25 <user25@example.org>,
+ User 26 <user26@example.org>,
+ User 27 <user27@example.org>,
+ User 28 <user28@example.org>,
+ User 29 <user29@example.org>,
+ User 30 <user30@example.org>
+Cc: Bob <bob@vinette.test>
+Date: Fri, 02 Oct 2026 14:32:00 +0300
+Message-ID: <m20@example.org>
+MIME-Version: 1.0
+Subject: Many recipients
+Content-Type: text/plain; charset=utf-8
+
+Message with 30 To recipients and one Cc.
