@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.DataProtection;
 using Vinette.Api.Configuration;
 using Vinette.Api.Endpoints;
+using Vinette.Api.Errors;
 using Vinette.Api.Hubs;
 using Vinette.Api.Spa;
 
@@ -37,6 +38,7 @@ builder.Logging.AddJsonConsole(o =>
 });
 
 builder.Services.AddVinetteOptions(builder.Configuration);
+builder.Services.AddVinetteProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
 
@@ -48,6 +50,8 @@ if (!string.IsNullOrWhiteSpace(keysPath))
 }
 
 var app = builder.Build();
+
+app.UseVinetteProblemDetails();
 
 if (app.Environment.IsDevelopment())
 {
