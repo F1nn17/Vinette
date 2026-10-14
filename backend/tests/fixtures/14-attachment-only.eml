@@ -1,0 +1,16 @@
+From: Anna Smirnova <anna@example.org>
+To: Alice <alice@vinette.test>
+Date: Fri, 02 Oct 2026 14:32:00 +0300
+Message-ID: <m14@example.org>
+MIME-Version: 1.0
+Subject: Attachment only
+Content-Type: multipart/mixed; boundary="mix14"
+
+--mix14
+Content-Type: application/pdf; name="only.pdf"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="only.pdf"
+
+JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZz4+ZW5kb2JqCnRyYWlsZXI8PC9Sb290IDEg
+MCBSPj4KJSVFT0YK
+--mix14--

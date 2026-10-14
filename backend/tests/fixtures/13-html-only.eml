@@ -1,0 +1,9 @@
+From: Anna Smirnova <anna@example.org>
+To: Alice <alice@vinette.test>
+Date: Fri, 02 Oct 2026 14:32:00 +0300
+Message-ID: <m13@example.org>
+MIME-Version: 1.0
+Subject: HTML only
+Content-Type: text/html; charset=utf-8
+
+<html><body><h1>Heading</h1><p>HTML-only body, no text part.</p></body></html>

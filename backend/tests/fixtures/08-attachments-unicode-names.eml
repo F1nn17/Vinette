@@ -1,0 +1,27 @@
+From: Anna Smirnova <anna@example.org>
+To: Alice <alice@vinette.test>
+Date: Fri, 02 Oct 2026 14:32:00 +0300
+Message-ID: <m08@example.org>
+MIME-Version: 1.0
+Subject: Unicode attachment names
+Content-Type: multipart/mixed; boundary="mix08"
+
+--mix08
+Content-Type: text/plain; charset=utf-8
+
+Смотрите вложения.
+
+--mix08
+Content-Type: application/pdf
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename*=UTF-8''%D0%9E%D1%82%D1%87%D1%91%D1%82%20%E2%84%961.pdf
+
+JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZz4+ZW5kb2JqCnRyYWlsZXI8PC9Sb290IDEg
+MCBSPj4KJSVFT0YK
+--mix08
+Content-Type: application/octet-stream
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="=?UTF-8?B?0JTQvtCz0L7QstC+0YAuZG9jeA==?="
+
+UEsDBGRvY3gtc3R1Yg==
+--mix08--

@@ -1,0 +1,11 @@
+From: broken sender <broken@example.org>
+To: alice@vinette.test
+Subject: =?UTF-8?Q?unterminated encoded word
+Subject: duplicate subject header
+Content-Type: text/plain; charset=x-no-such-charset
+Content-Transfer-Encoding: 8bit
+X-Folded: line one
+	   continued
+
+Body with bare LF line endings and an unknown charset.
+Second line.

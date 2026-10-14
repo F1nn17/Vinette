@@ -1,0 +1,10 @@
+From: Anna Smirnova <anna@example.org>
+To: Alice <alice@vinette.test>
+Date: Fri, 02 Oct 2026 14:32:00 +0300
+Message-ID: <m19@example.org>
+MIME-Version: 1.0
+Subject: =?UTF-8?B?0JTQu9C40L3QvdCw0Y8g0YLQtdC80LA=?=
+ =?UTF-8?B?INC/0LjRgdGM0LzQsCDRgSDQutC40YDQuNC70LvQuNGG0LXQuSDQuCDRjdC80L7QtNC30Lgg8J+agCDQutC+0YLQvtGA0LDRjyDQv9C10YDQtdC90L7RgdC40YLRgdGPINC90LAg0L3QtdGB0LrQvtC70YzQutC+INGB0YLRgNC+0Lo=?=
+Content-Type: text/plain; charset=utf-8
+
+Long subject split mid-character across encoded words.

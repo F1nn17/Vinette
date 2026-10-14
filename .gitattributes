@@ -9,3 +9,6 @@
 pnpm-lock.yaml -diff linguist-generated
 backend/openapi/*.json linguist-generated
 frontend/src/shared/api/schema.d.ts linguist-generated
+
+# Fixture emails keep their exact bytes (CRLF, 8-bit charsets)
+backend/tests/fixtures/** -text

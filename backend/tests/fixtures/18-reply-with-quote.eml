@@ -1,0 +1,16 @@
+From: Anna Smirnova <anna@example.org>
+To: Alice <alice@vinette.test>
+Date: Fri, 02 Oct 2026 14:32:00 +0300
+Message-ID: <m18@example.org>
+MIME-Version: 1.0
+In-Reply-To: <m02@example.org>
+References: <m01@example.org> <m02@example.org>
+Subject: Re: Привет, мир
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+Спасибо, получил.
+
+10/02/2026 Anna Smirnova wrote:
+> Привет! Это проверка кодировок.
+> Вторая строка цитаты.
