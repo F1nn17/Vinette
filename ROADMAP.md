@@ -10,7 +10,7 @@
 
 | Веха | Задачи | Готово |
 | --- | --- | --- |
-| M0 Фундамент | VIN-001 … VIN-015 | 10 из 15 |
+| M0 Фундамент | VIN-001 … VIN-015 | 11 из 15 |
 | M1 Вход и сессии | VIN-016 … VIN-028 | 0 из 13 |
 | M2 Пул IMAP-соединений | VIN-029 … VIN-037 | 0 из 9 |
 | M3 Папки и список писем | VIN-038 … VIN-053 | 0 из 16 |
@@ -46,7 +46,7 @@
   Готово, когда: каталог показывает все состояния, тесты зелёные. Зависит от: VIN-007.
 - [x] **VIN-009 · Соглашения API** (2026-10-14, 041de80) — единая обработка ошибок в формате ProblemDetails (RFC 9457), сквозной correlation id в логах и ответах, общий каталог кодов ошибок.
   Готово, когда: необработанное исключение и ошибка валидации возвращают ProblemDetails с correlation id; покрыто тестами. Зависит от: VIN-004.
-- [~] **VIN-010 · Dev-среда на Dovecot** (пауза: нужен образ docker-mailserver, ждёт стабильной сети) — вариант `compose.dev` с Dovecot (например, docker-mailserver), у которого включены SPECIAL-USE, IDLE, MOVE, CONDSTORE/QRESYNC, QUOTA, ID, METADATA — GreenMail этого не умеет.
+- [x] **VIN-010 · Dev-среда на Dovecot** (2026-10-19, bbd7e43) — вариант `compose.dev` с Dovecot (например, docker-mailserver), у которого включены SPECIAL-USE, IDLE, MOVE, CONDSTORE/QRESYNC, QUOTA, ID, METADATA — GreenMail этого не умеет.
   Готово, когда: `make dev-mail` поднимает Dovecot с ящиками alice и bob и перечисленными расширениями (проверено по CAPABILITY). Зависит от: VIN-005.
 - [x] **VIN-011 · Набор тестовых писем (.eml)** (2026-10-14, fed8a62) — `backend/tests/fixtures`: koi8-r, windows-1251, base64, quoted-printable, вложенный multipart, inline-картинки, вложения разных типов, письмо с вредоносным HTML, письмо без текстовой части, сломанные заголовки.
   Готово, когда: файлы лежат в репозитории, у каждого есть описание в `fixtures/README.md` с ожидаемым результатом разбора. Зависит от: VIN-001.

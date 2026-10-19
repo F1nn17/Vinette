@@ -29,6 +29,14 @@ make check      # lint + test + build — ровно то, что гоняет C
 docker compose -f deploy/docker/compose.dev.yaml up -d
 ```
 
+Нужны IMAP-расширения (SPECIAL-USE, IDLE, QRESYNC, QUOTA, METADATA)? Используйте почту на настоящем Dovecot (логин — полный адрес, пароли те же), одновременно с GreenMail не запускать:
+
+```bash
+make dev-mail         # запустить
+make dev-mail-check   # проверить расширения IMAP
+make dev-mail-down    # остановить и удалить данные
+```
+
 Все цели Makefile: `make help`. На Windows GNU Make удобнее запускать из Git Bash или WSL.
 
 ## Запуск

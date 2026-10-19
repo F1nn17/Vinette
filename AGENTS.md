@@ -60,10 +60,13 @@ GNU Make, .NET SDK (версия в [backend/global.json](backend/global.json)),
 | `make format` | автоформатирование |
 | `make check` | lint + test + build — ровно то, что гоняет CI |
 | `make api-types` | OpenAPI бэкенда → TypeScript-типы (`frontend/src/shared/api/schema.d.ts`) |
+| `make dev-mail` | dev-почта на Dovecot (docker-mailserver): `alice@vinette.test` / `alice-pass` |
+| `make dev-mail-check` | проверить IMAP-расширения dev-почты (SPECIAL-USE, IDLE, MOVE, CONDSTORE, QRESYNC, QUOTA, ID, METADATA) |
+| `make dev-mail-down` | остановить dev-почту и удалить её данные |
 | `make docker` | образ `vinette:dev` |
 | `make clean` | удалить артефакты сборки |
 
-Планируются: `make e2e` (VIN-014), `make seed` (VIN-012), цель для dev-почты на Dovecot (VIN-010). Не ссылайся на них, пока задачи не закрыты.
+Планируются: `make e2e` (VIN-014), `make seed` (VIN-012). Не ссылайся на них, пока задачи не закрыты.
 
 ### Dev-среда
 
@@ -79,7 +82,15 @@ make dev
 
 GreenMail принимает логин **без** `@домен`; Dovecot в продакшене — полный адрес. Порты: IMAP 3143 (IMAPS 3993), SMTP 3025 (SMTPS 3465), API GreenMail 8081. Dev-конфигурация бэкенда — `appsettings.Development.json` (без шифрования, только локально). Фронтенд проксирует `/api`, `/hubs`, `/branding` на бэкенд.
 
-GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRESYNC и др.); для них нужна dev-среда на Dovecot (VIN-010).
+GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRESYNC и др.). Для них есть dev-почта на настоящем Dovecot 2.4 + Postfix (`make dev-mail`, файл [compose.dovecot.yaml](deploy/docker/compose.dovecot.yaml)):
+
+| Ящик | Логин (полный адрес) | Пароль |
+| --- | --- | --- |
+| `alice@vinette.test` | `alice@vinette.test` | `alice-pass` |
+| `bob@vinette.test` | `bob@vinette.test` | `bob-pass` |
+
+Порты те же, что у GreenMail (IMAP 3143, IMAPS 3993, SMTP 3025, submission 3587, SMTPS 3465), поэтому два сервера одновременно не запускай. Для IMAPS и submission используется самоподписанный сертификат (`mail.vinette.test`, `localhost`) — клиент в dev должен его принимать. Незашифрованный IMAP на 3143 разрешён только для dev. Первый запуск скачивает образ около 1 ГБ и стартует около минуты.
+
 
 ### e2e
 

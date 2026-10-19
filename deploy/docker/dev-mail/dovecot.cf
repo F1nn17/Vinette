@@ -1,5 +1,14 @@
-# Extra Dovecot settings for the Vinette dev mail server (appended by docker-mailserver).
+# Extra Dovecot settings for the Vinette dev mail server (appended by docker-mailserver; Dovecot 2.4 syntax).
 # METADATA (RFC 5464) needs an attribute dictionary; without it the capability is not advertised.
-mail_attribute_dict = file:%h/dovecot-attributes
+mail_attribute {
+  dict file {
+    path = %{home}/dovecot-attributes
+  }
+}
 # Dev only: allow plain-text login on the unencrypted port so the app can connect with Security=None.
-disable_plaintext_auth = no
+# DMS forces ssl=required, which makes cleartext meaningless; relax it for dev.
+ssl = yes
+auth_allow_cleartext = yes
+
+# Advertise METADATA (RFC 5464); uses the attribute dictionary above.
+imap_metadata = yes
