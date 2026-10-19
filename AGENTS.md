@@ -18,7 +18,7 @@ Vinette — self-hosted веб-клиент почты для Postfix + Dovecot 
 Одна задача за раз.
 
 1. Возьми первую незакрытую задачу текущей вехи (или ту, что назвал владелец) и отметь её `[~]` в ROADMAP.md. Проверь, что зависимости закрыты.
-2. Создай ветку от `main`: `feat/VIN-012-short-name` (также `fix/…`, `docs/…`, `refactor/…`).
+2. **Перед созданием ветки обнови `main`:** `git fetch origin`, затем создавай ветку от свежего `origin/main` — `git switch -c feat/VIN-012-short-name origin/main` (также `fix/…`, `docs/…`, `refactor/…`). Не ветвись от другой рабочей ветки и от устаревшего локального `main`. Если ветка нужна поверх ещё не влитой — спроси владельца.
 3. До кода напиши план из 3–7 пунктов. Если в плане есть пункт из раздела 3 — остановись и спроси владельца.
 4. Реализуй небольшими коммитами, сразу с тестами.
 5. Прогони `make check`. Не сдавай работу с красным `make check`.
@@ -209,7 +209,7 @@ make api-types                  # после изменения API
 make format                     # автоформатирование
 cd backend && dotnet test --solution Vinette.sln         # только тесты бэкенда
 cd frontend && corepack pnpm test                        # только тесты фронтенда
-git switch -c feat/VIN-012-short-name                    # ветка под задачу
+git fetch origin && git switch -c feat/VIN-012-short-name origin/main   # ветка под задачу — от свежего main
 git commit -m "feat(backend): add folder list endpoint"  # Conventional Commits
 make docker                     # образ vinette:dev
 ```
