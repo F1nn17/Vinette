@@ -1,22 +1,42 @@
-# Development mail server with a real Dovecot + Postfix (docker-mailserver), for features GreenMail lacks:
+# Development mail server with a real Dovecot 2.4 + Postfix (docker-mailserver), for features GreenMail lacks:
 # SPECIAL-USE, IDLE, MOVE, CONDSTORE/QRESYNC, QUOTA, ID, METADATA.
 #   make dev-mail         # start and wait until ready
 #   make dev-mail-check   # verify the IMAP capabilities Vinette needs
-#   make dev-mail-down    # stop and remove (mail data is discarded)
+#   make dev-mail-down    # stop and remove (mail data and the dev certificate are discarded)
+# TLS (IMAPS 3993, SMTPS 3465, STARTTLS on 3143/3587) uses a self-signed certificate for
+# mail.vinette.test/localhost; clients must accept it. Plain IMAP on 3143 is allowed for dev only.
 # Mailboxes (login is the FULL address, unlike GreenMail):
 #   alice@vinette.test / alice-pass
 #   bob@vinette.test   / bob-pass
 # Host ports match GreenMail's (compose.dev.yaml) so appsettings.Development.json works with either:
 #   IMAP 3143, IMAPS 3993, SMTP 3025, submission 3587, SMTPS 3465. Do not run both at once.
 services:
+  # One-shot: creates a self-signed dev certificate (valid for mail.vinette.test and localhost) once.
+  certs:
+    image: alpine/openssl:3.5.4
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        [ -f /ssl/cert.pem ] ||
+        openssl req -x509 -newkey rsa:2048 -nodes -days 3650
+        -keyout /ssl/key.pem -out /ssl/cert.pem -subj "/CN=mail.vinette.test"
+        -addext "subjectAltName=DNS:mail.vinette.test,DNS:localhost,IP:127.0.0.1"
+    volumes:
+      - dev-mail-ssl:/ssl
+
   mailserver:
     image: ghcr.io/docker-mailserver/docker-mailserver:16.0.1
     hostname: mail.vinette.test
     restart: unless-stopped
+    depends_on:
+      certs:
+        condition: service_completed_successfully
     environment:
       OVERRIDE_HOSTNAME: mail.vinette.test
       ONE_DIR: "1"
-      SSL_TYPE: self-signed
+      SSL_TYPE: manual
+      SSL_CERT_PATH: /etc/dev-mail-ssl/cert.pem
+      SSL_KEY_PATH: /etc/dev-mail-ssl/key.pem
       ENABLE_QUOTAS: "1"
       ENABLE_RSPAMD: "0"
       ENABLE_CLAMAV: "0"
@@ -34,6 +54,7 @@ services:
       - "3587:587"   # submission (STARTTLS)
       - "3993:993"   # IMAPS
     volumes:
+      - dev-mail-ssl:/etc/dev-mail-ssl:ro
       - ./dev-mail/postfix-accounts.cf:/tmp/docker-mailserver/postfix-accounts.cf:ro
       - ./dev-mail/dovecot.cf:/tmp/docker-mailserver/dovecot.cf:ro
     healthcheck:
@@ -42,3 +63,6 @@ services:
       timeout: 5s
       retries: 30
       start_period: 20s
+
+volumes:
+  dev-mail-ssl:

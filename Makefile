@@ -17,7 +17,7 @@ DOTNET := cd $(BACKEND) && dotnet
 PNPM := cd $(FRONTEND) && corepack pnpm
 
 .DEFAULT_GOAL := help
-.PHONY: help setup dev dev-backend dev-frontend build test lint format check api-types docker clean
+.PHONY: help setup dev dev-backend dev-frontend dev-mail dev-mail-check dev-mail-down build test lint format check api-types docker clean
 
 help: ## Show available targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -34,6 +34,15 @@ dev-backend:
 
 dev-frontend:
 	$(PNPM) dev
+
+dev-mail: ## Start the Dovecot dev mail server (alice@vinette.test / alice-pass)
+	docker compose -f deploy/docker/compose.dovecot.yaml up -d --wait
+
+dev-mail-check: ## Verify the IMAP capabilities Vinette needs on the dev mail server
+	bash deploy/docker/dev-mail/check-capabilities.sh
+
+dev-mail-down: ## Stop the dev mail server and discard its data
+	docker compose -f deploy/docker/compose.dovecot.yaml down -v
 
 build: ## Build backend (Release) and frontend
 	$(DOTNET) build $(SLN) -c Release --no-restore
