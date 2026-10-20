@@ -21,7 +21,7 @@ DOTNET := cd $(BACKEND) && dotnet
 PNPM := cd $(FRONTEND) && corepack pnpm
 
 .DEFAULT_GOAL := help
-.PHONY: help setup dev dev-backend dev-frontend dev-mail dev-mail-check dev-mail-down seed seed-reset build test lint format check api-types docker clean
+.PHONY: help setup dev dev-backend dev-frontend dev-mail dev-mail-check dev-mail-down seed seed-reset build test test-integration lint format check api-types docker clean
 
 help: ## Show available targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -58,9 +58,12 @@ build: ## Build backend (Release) and frontend
 	$(DOTNET) build $(SLN) -c Release --no-restore
 	$(PNPM) build
 
-test: ## Run backend and frontend unit tests
-	$(DOTNET) test --solution $(SLN) --no-restore
+test: ## Run backend and frontend unit tests (no Docker needed)
+	$(DOTNET) test --solution $(SLN) --no-restore -- --filter-not-trait "Category=Integration"
 	$(PNPM) test
+
+test-integration: ## Run backend integration tests against a real Dovecot in Docker (Testcontainers)
+	$(DOTNET) test --solution $(SLN) --no-restore -- --filter-trait "Category=Integration" --ignore-exit-code 8
 
 lint: ## Check code style and static analysis
 	$(DOTNET) format $(SLN) --verify-no-changes --no-restore

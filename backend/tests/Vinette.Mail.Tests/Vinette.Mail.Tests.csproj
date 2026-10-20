@@ -7,12 +7,9 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3.mtp-v2" />
-    <PackageReference Include="Testcontainers" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Vinette.Mail\Vinette.Mail.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\fixtures\**\*" LinkBase="fixtures" CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="..\Vinette.TestSupport\Vinette.TestSupport.csproj" />
   </ItemGroup>
 </Project>

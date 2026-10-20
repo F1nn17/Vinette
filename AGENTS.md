@@ -55,7 +55,8 @@ GNU Make, .NET SDK (версия в [backend/global.json](backend/global.json)),
 | `make setup` | `dotnet restore` + `pnpm install --frozen-lockfile` |
 | `make dev` | бэкенд (`http://localhost:5080`) и фронтенд (`http://localhost:5173`) параллельно |
 | `make build` | сборка бэкенда (Release) и фронтенда |
-| `make test` | модульные тесты бэкенда и фронтенда |
+| `make test` | модульные тесты бэкенда и фронтенда (Docker не нужен) |
+| `make test-integration` | интеграционные тесты бэкенда против настоящего Dovecot в контейнере (Testcontainers; нужен Docker, ~1 мин) |
 | `make lint` | `dotnet format --verify-no-changes`, ESLint, Prettier |
 | `make format` | автоформатирование |
 | `make check` | lint + test + build — ровно то, что гоняет CI |
@@ -185,7 +186,7 @@ GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRE
 
 - Бэкенд: xUnit. Фикстуры писем `.eml` — `backend/tests/fixtures` (koi8-r, windows-1251, base64, quoted-printable, вложенный multipart, inline-картинки, вредоносный HTML); у каждой фикстуры описано ожидание.
 - Санитайзер покрыт отдельным набором XSS-векторов; новый вектор добавляется данными, а не кодом теста.
-- Интеграционные тесты — против реального почтового сервера в Testcontainers, помечены категорией Integration; `make test` не требует Docker.
+- Интеграционные тесты — против реального почтового сервера в Testcontainers: класс помечается `[Integration]` (trait `Category=Integration`) и `[Collection(DovecotFixture.CollectionName)]`, в сборке теста объявляется `[CollectionDefinition(DovecotFixture.CollectionName)] ... : ICollectionFixture<DovecotFixture>`. Общая инфраструктура — проект `backend/tests/Vinette.TestSupport` (контейнер Dovecot, ящики alice и bob, фикстуры писем загружены в INBOX). `make test` Docker не требует и интеграционные тесты пропускает; запускаются `make test-integration`.
 - Фронтенд: Vitest + Testing Library для логики и компонентов; каждый примитив `shared/ui` имеет тест.
 - e2e: Playwright — сценарии «вход», «чтение», «отправка».
 - Баг-фикс начинается с теста, который падает. Тесты не зависят от порядка и от внешней сети.
