@@ -1,0 +1,10 @@
+{
+  "exceptions": [
+    {
+      "ecosystem": "npm",
+      "name": "@fontsource/golos-text",
+      "license": "OFL-1.1",
+      "reason": "Golos Text font bundled with the SPA (docs/design/DESIGN.md section 3). SIL OFL 1.1 allows embedding and redistribution with software; the font may not be sold on its own. Added by the assistant on 2026-10-08, pending explicit owner confirmation."
+    }
+  ]
+}

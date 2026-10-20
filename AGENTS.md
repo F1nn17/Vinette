@@ -55,9 +55,11 @@ GNU Make, .NET SDK (версия в [backend/global.json](backend/global.json)),
 | `make setup` | `dotnet restore` + `pnpm install --frozen-lockfile` |
 | `make dev` | бэкенд (`http://localhost:5080`) и фронтенд (`http://localhost:5173`) параллельно |
 | `make build` | сборка бэкенда (Release) и фронтенда |
-| `make test` | модульные тесты бэкенда и фронтенда (Docker не нужен) |
+| `make test` | модульные тесты бэкенда, фронтенда и скриптов `scripts/` (Docker не нужен) |
 | `make test-integration` | интеграционные тесты бэкенда против настоящего Dovecot в контейнере (Testcontainers; нужен Docker, ~1 мин) |
-| `make lint` | `dotnet format --verify-no-changes`, ESLint, Prettier |
+| `make lint` | `dotnet format --verify-no-changes`, ESLint, Prettier, `check-version`, `check-licenses` |
+| `make check-version` | версия бэкенда (`Directory.Build.props`) совпадает с `frontend/package.json` |
+| `make check-licenses` | лицензии всех зависимостей NuGet и npm совместимы с Apache-2.0 (политика — `scripts/license-policy.mjs`; нужен `make setup`) |
 | `make format` | автоформатирование |
 | `make check` | lint + test + build — ровно то, что гоняет CI |
 | `make api-types` | OpenAPI бэкенда → TypeScript-типы (`frontend/src/shared/api/schema.d.ts`) |
@@ -203,7 +205,7 @@ GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRE
 - документация обновлена, если менялось поведение, конфигурация или API;
 - нет секретов и персональных данных в коде, логах и фикстурах.
 
-**Лицензии зависимостей.** Проект — Apache-2.0. Перед добавлением зависимости проверь лицензию: MIT, BSD, Apache-2.0, ISC — можно; GPL/AGPL — только с согласия владельца (MPL и прочие — спроси). Укажи лицензию в запросе.
+**Лицензии зависимостей.** Проект — Apache-2.0. Перед добавлением зависимости проверь лицензию: MIT, BSD, Apache-2.0, ISC — можно; GPL/AGPL — только с согласия владельца (MPL и прочие — спроси). Укажи лицензию в запросе. `make check-licenses` (входит в `make lint`, а значит и в CI) блокирует неподходящие лицензии: допустимы MIT, MIT-0, Apache-2.0, BSD-2/3, 0BSD, ISC, CC0, Unlicense, Zlib, BlueOak, Python-2.0; MPL-2.0 и CC-BY-4.0 — только для инструментов, которые не попадают в поставку. Остальное — только записью с обоснованием в `scripts/license-exceptions.json` **после согласия владельца**.
 
 ## 14. Документация
 
