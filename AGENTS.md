@@ -146,6 +146,7 @@ GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRE
 - MailKit используется **только** в `Vinette.Mail`; остальной код работает через интерфейсы `Vinette.Core`. `Vinette.Core` не зависит от MailKit.
 - Один `ImapClient` никогда не используется параллельно: доступ сериализован.
 - Идентификатор письма в API — `(folder, uidValidity, uid)`, никогда не порядковый номер.
+- Все endpoint'ы и хабы по умолчанию требуют сессии (fallback-политика). Открыть можно только осознанно: `.AllowAnonymous()` плюс запись в `AuthorizationTests.ExpectedAnonymousEndpoints` и обоснование в PR. Пользователь — `ClaimsPrincipal` (имя = адрес ящика); сессия — `HttpContext.GetSession()`.
 - Публичный API — только `/api/v1`; OpenAPI — контракт. После изменения API запусти `make api-types` и закоммить результат (`backend/openapi/`, `schema.d.ts`).
 - `TreatWarningsAsErrors` включён; не подавляй предупреждения без причины в комментарии.
 

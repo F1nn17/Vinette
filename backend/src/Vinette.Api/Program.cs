@@ -43,6 +43,7 @@ builder.Logging.AddJsonConsole(o =>
 builder.Services.AddVinetteOptions(builder.Configuration);
 builder.Services.AddVinetteMail();
 builder.Services.AddVinetteSessions();
+builder.Services.AddVinetteAuthentication();
 builder.Services.AddVinetteProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
@@ -64,9 +65,13 @@ if (!keysPersisted)
 
 app.UseVinetteProblemDetails();
 
+app.UseStaticFiles();
+app.UseAuthentication();
+app.UseAuthorization();
+
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
 }
 
 var api = app.MapGroup("/api/v1");
@@ -75,7 +80,6 @@ api.MapAuth();
 app.MapHub<MailHub>("/hubs/mail");
 app.MapBranding();
 
-app.UseStaticFiles();
 app.MapSpa();
 
 app.Run();
