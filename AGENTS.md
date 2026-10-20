@@ -66,10 +66,9 @@ GNU Make, .NET SDK (версия в [backend/global.json](backend/global.json)),
 | `make dev-mail-down` | остановить dev-почту и удалить её данные |
 | `make seed` | загрузить тестовые письма из `backend/tests/fixtures` в ящики alice и bob (идемпотентно; нужен Python 3) |
 | `make seed-reset` | удалить загруженные ранее письма и загрузить заново |
+| `make e2e` | Playwright e2e: поднимает dev-почту (`E2E_MAIL=0` — не поднимать), бэкенд и Vite, прогоняет `frontend/e2e` |
 | `make docker` | образ `vinette:dev` |
 | `make clean` | удалить артефакты сборки |
-
-Планируется: `make e2e` (VIN-014). Не ссылайся на неё, пока задача не закрыта.
 
 ### Dev-среда
 
@@ -97,7 +96,7 @@ GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRE
 
 ### e2e
 
-После VIN-014: `make e2e` (Playwright, сценарии «вход», «чтение», «отправка»). Браузеры: `pnpm exec playwright install chromium` в `frontend/`.
+`make e2e` (Playwright, `frontend/e2e`): сценарии «вход», «чтение», «отправка» появятся вместе с функциями; сейчас — smoke. Конфигурация [playwright.config.ts](frontend/playwright.config.ts) сама запускает бэкенд (Development, порт 5080) и Vite (порт 5173); уже запущенные серверы переиспользуются. Тестировать готовый экземпляр (например, контейнер): `VINETTE_E2E_URL=http://localhost:8080 pnpm e2e` в `frontend/` — серверы тогда не стартуют. Хелперы — `e2e/helpers.ts` (`accounts`, `waitForAppReady`, `signIn`). Браузер ставится один раз: `pnpm exec playwright install chromium` в `frontend/`. Отчёты и трейсы — в `frontend/test-results` и `frontend/playwright-report` (в git не попадают).
 
 ### Docker и голое железо
 
@@ -112,6 +111,7 @@ GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRE
 
 - Команды `dotnet` запускай из `backend/` (там `global.json`); тесты — `dotnet test --solution Vinette.sln`, без `-nologo` (на .NET 10 используется Microsoft.Testing.Platform).
 - TypeScript закреплён на 6.0.x (typescript-eslint не поддерживает 7).
+- Если на машине трафик `node.exe` к localhost перехватывает прокси-утилита (например, ProxyBridge), Playwright падает с `socket hang up`/502, а `curl` работает: добавь localhost и 127.0.0.1 в исключения утилиты.
 - `make seed` берёт `python3`, иначе `python`; если на Windows `python3` — заглушка Microsoft Store, запусти `make seed PYTHON=python`.
 
 ## 5. Git
