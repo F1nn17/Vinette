@@ -6,4 +6,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Vinette.Core\Vinette.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vinette.Mail.Tests" />
+  </ItemGroup>
 </Project>

@@ -12,7 +12,12 @@ public enum AuthenticationOutcome
     ServerUnavailable,
 }
 
-public sealed record AuthenticationResult(AuthenticationOutcome Outcome)
+/// <param name="Outcome">What happened; the only part that may influence what the user is told.</param>
+/// <param name="Diagnostic">
+/// Technical reason for the server log (exception type and message). Never contains credentials and must
+/// never be shown to the user.
+/// </param>
+public sealed record AuthenticationResult(AuthenticationOutcome Outcome, string? Diagnostic = null)
 {
     public bool IsSuccess => Outcome == AuthenticationOutcome.Succeeded;
 
@@ -21,4 +26,7 @@ public sealed record AuthenticationResult(AuthenticationOutcome Outcome)
     public static AuthenticationResult InvalidCredentials { get; } = new(AuthenticationOutcome.InvalidCredentials);
 
     public static AuthenticationResult ServerUnavailable { get; } = new(AuthenticationOutcome.ServerUnavailable);
+
+    public static AuthenticationResult Unavailable(string diagnostic) =>
+        new(AuthenticationOutcome.ServerUnavailable, diagnostic);
 }
