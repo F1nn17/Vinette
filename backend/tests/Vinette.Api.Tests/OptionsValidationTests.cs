@@ -29,6 +29,28 @@ public class OptionsValidationTests
     }
 
     [Fact]
+    public void RememberMeLifetime_Shorter_Than_MaxLifetime_Fails_Startup()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        {
+            b.UseSetting("Session:MaxLifetime", "10.00:00:00");
+            b.UseSetting("Session:RememberMeLifetime", "5.00:00:00");
+        });
+
+        Assert.Throws<OptionsValidationException>(() => factory.CreateClient());
+    }
+
+    [Fact]
+    public void Session_Services_Are_Registered_In_DI()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+
+        Assert.IsType<Vinette.Api.Sessions.InMemorySessionStore>(factory.Services.GetRequiredService<Vinette.Core.Sessions.ISessionStore>());
+        Assert.IsType<Vinette.Api.Sessions.DataProtectionCredentialProtector>(factory.Services.GetRequiredService<Vinette.Core.Sessions.ICredentialProtector>());
+        Assert.NotNull(factory.Services.GetRequiredService<Vinette.Api.Sessions.SessionService>());
+    }
+
+    [Fact]
     public void Non_Positive_Imap_Timeout_Fails_Startup()
     {
         using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
