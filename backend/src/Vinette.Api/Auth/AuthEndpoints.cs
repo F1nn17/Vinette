@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.Extensions.Options;
 using Vinette.Api.Configuration;
 using Vinette.Api.Errors;
@@ -12,9 +13,16 @@ public static partial class AuthEndpoints
 
     public static IEndpointRouteBuilder MapAuth(this IEndpointRouteBuilder api)
     {
+        api.MapGet("/me", (ClaimsPrincipal user) => new MeResponse(user.Identity!.Name!))
+            .WithName("GetMe")
+            .WithTags("Auth")
+            .Produces<MeResponse>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+
         var auth = api.MapGroup("/auth").WithTags("Auth");
 
         auth.MapPost("/login", LoginAsync)
+            .AllowAnonymous()
             .WithName("Login")
             .Produces<LoginResponse>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -22,6 +30,7 @@ public static partial class AuthEndpoints
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         auth.MapPost("/logout", LogoutAsync)
+            .AllowAnonymous()
             .WithName("Logout")
             .Produces(StatusCodes.Status204NoContent);
 

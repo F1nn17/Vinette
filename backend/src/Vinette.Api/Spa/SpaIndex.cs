@@ -37,7 +37,7 @@ public static partial class SpaIndex
             var html = await ReadAsync(file, ctx.RequestAborted);
             ctx.Response.Headers.CacheControl = "no-cache";
             return Results.Content(Render(html, branding.Value), "text/html; charset=utf-8");
-        }).ExcludeFromDescription();
+        }).AllowAnonymous().ExcludeFromDescription();
         return app;
     }
 

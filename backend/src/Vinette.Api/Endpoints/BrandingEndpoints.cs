@@ -12,8 +12,10 @@ public static class BrandingEndpoints
     public static IEndpointRouteBuilder MapBranding(this IEndpointRouteBuilder app)
     {
         app.MapGet("/branding/logo", (IOptions<BrandingOptions> o) => ServeFile(o.Value.LogoPath))
+            .AllowAnonymous()
             .ExcludeFromDescription();
         app.MapGet("/branding/favicon", (IOptions<BrandingOptions> o) => ServeFile(o.Value.FaviconPath))
+            .AllowAnonymous()
             .ExcludeFromDescription();
         return app;
     }

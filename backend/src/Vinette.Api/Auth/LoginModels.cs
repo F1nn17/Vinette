@@ -18,3 +18,6 @@ public sealed record LoginRequestBody
 
 /// <summary>The signed-in mailbox.</summary>
 public sealed record LoginResponse(string Address);
+
+/// <summary>The current user, as returned by <c>GET /api/v1/me</c>.</summary>
+public sealed record MeResponse(string Address);

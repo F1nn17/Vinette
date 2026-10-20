@@ -11,6 +11,7 @@ public static class HealthEndpoints
     public static IEndpointRouteBuilder MapHealth(this IEndpointRouteBuilder api)
     {
         api.MapGet("/health", () => new HealthResponse("ok", ProductVersion))
+            .AllowAnonymous()
             .WithName("GetHealth")
             .WithTags("System");
         return api;
