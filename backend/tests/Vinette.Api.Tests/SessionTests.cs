@@ -28,7 +28,7 @@ public sealed class SessionTests
 
         public InMemorySessionStore Store { get; } = new();
 
-        public SessionOptions Options { get; } = new()
+        public SessionLifetimeOptions Options { get; } = new()
         {
             IdleTimeout = TimeSpan.FromHours(2),
             MaxLifetime = TimeSpan.FromDays(7),

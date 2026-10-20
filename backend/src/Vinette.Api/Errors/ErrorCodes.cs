@@ -9,6 +9,8 @@ public static class ErrorCodes
     public const string BadRequest = "bad_request";
     public const string ValidationFailed = "validation_failed";
     public const string Unauthorized = "unauthorized";
+    public const string InvalidCredentials = "invalid_credentials";
+    public const string MailUnavailable = "mail_unavailable";
     public const string Forbidden = "forbidden";
     public const string NotFound = "not_found";
     public const string Conflict = "conflict";

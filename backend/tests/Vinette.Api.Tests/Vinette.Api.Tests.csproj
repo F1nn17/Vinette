@@ -11,5 +11,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Vinette.Api\Vinette.Api.csproj" />
+    <ProjectReference Include="..\Vinette.TestSupport\Vinette.TestSupport.csproj" />
   </ItemGroup>
 </Project>

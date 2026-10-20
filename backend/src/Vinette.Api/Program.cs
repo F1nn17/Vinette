@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.DataProtection;
+using Vinette.Api.Auth;
 using Vinette.Api.Configuration;
 using Vinette.Api.Endpoints;
 using Vinette.Api.Errors;
@@ -68,7 +69,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.MapGroup("/api/v1").MapHealth();
+var api = app.MapGroup("/api/v1");
+api.MapHealth();
+api.MapAuth();
 app.MapHub<MailHub>("/hubs/mail");
 app.MapBranding();
 
