@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Shared test infrastructure: Dovecot in a container (Testcontainers), test mailboxes and fixture emails. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Testcontainers" />
+    <PackageReference Include="xunit.v3.extensibility.core" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Copied to the output of every test project that references this one. -->
+    <None Include="..\fixtures\**\*" LinkBase="fixtures" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\deploy\docker\dev-mail\postfix-accounts.cf" LinkBase="dev-mail" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\deploy\docker\dev-mail\dovecot.cf" LinkBase="dev-mail" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
