@@ -4,6 +4,7 @@ using Vinette.Api.Endpoints;
 using Vinette.Api.Errors;
 using Vinette.Api.Hubs;
 using Vinette.Api.Mail;
+using Vinette.Api.Sessions;
 using Vinette.Api.Spa;
 
 // Container HEALTHCHECK: chiseled images ship no curl, so the app probes itself.
@@ -40,18 +41,25 @@ builder.Logging.AddJsonConsole(o =>
 
 builder.Services.AddVinetteOptions(builder.Configuration);
 builder.Services.AddVinetteMail();
+builder.Services.AddVinetteSessions();
 builder.Services.AddVinetteProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
 
 var dataProtection = builder.Services.AddDataProtection().SetApplicationName("Vinette");
 var keysPath = builder.Configuration[$"{KeyStorageOptions.SectionName}:{nameof(KeyStorageOptions.KeysPath)}"];
-if (!string.IsNullOrWhiteSpace(keysPath))
+var keysPersisted = !string.IsNullOrWhiteSpace(keysPath);
+if (keysPersisted)
 {
-    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath!));
 }
 
 var app = builder.Build();
+
+if (!keysPersisted)
+{
+    SessionServices.LogKeysNotPersisted(app.Logger);
+}
 
 app.UseVinetteProblemDetails();
 

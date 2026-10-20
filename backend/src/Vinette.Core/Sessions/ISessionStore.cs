@@ -16,6 +16,9 @@ public interface ISessionStore
     /// <summary>Returns false when the session did not exist.</summary>
     Task<bool> RemoveAsync(string sessionId, CancellationToken cancellationToken);
 
+    /// <summary>Removes every session the predicate selects (expired ones). Returns how many were removed.</summary>
+    Task<int> RemoveWhereAsync(Func<Session, bool> predicate, CancellationToken cancellationToken);
+
     /// <summary>Signs a mailbox out everywhere (password changed, access revoked). Returns the number of removed sessions.</summary>
     Task<int> RemoveAllForAddressAsync(string address, CancellationToken cancellationToken);
 }
