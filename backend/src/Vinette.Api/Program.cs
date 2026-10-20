@@ -5,6 +5,7 @@ using Vinette.Api.Endpoints;
 using Vinette.Api.Errors;
 using Vinette.Api.Hubs;
 using Vinette.Api.Mail;
+using Vinette.Api.Security;
 using Vinette.Api.Sessions;
 using Vinette.Api.Spa;
 
@@ -44,6 +45,7 @@ builder.Services.AddVinetteOptions(builder.Configuration);
 builder.Services.AddVinetteMail();
 builder.Services.AddVinetteSessions();
 builder.Services.AddVinetteAuthentication();
+builder.Services.AddVinetteCsrf();
 builder.Services.AddVinetteProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
@@ -67,6 +69,7 @@ app.UseVinetteProblemDetails();
 
 app.UseStaticFiles();
 app.UseAuthentication();
+app.UseVinetteCsrf();
 app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
@@ -77,6 +80,7 @@ if (app.Environment.IsDevelopment())
 var api = app.MapGroup("/api/v1");
 api.MapHealth();
 api.MapAuth();
+api.MapCsrf();
 app.MapHub<MailHub>("/hubs/mail");
 app.MapBranding();
 

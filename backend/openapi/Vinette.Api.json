@@ -55,6 +55,26 @@
         }
       }
     },
+    "/api/v1/csrf": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "operationId": "GetCsrfToken",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CsrfResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "tags": [
@@ -131,6 +151,17 @@
   },
   "components": {
     "schemas": {
+      "CsrfResponse": {
+        "required": [
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        }
+      },
       "HealthResponse": {
         "required": [
           "status",
