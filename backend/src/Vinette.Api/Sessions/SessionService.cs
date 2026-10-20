@@ -12,7 +12,7 @@ namespace Vinette.Api.Sessions;
 public sealed class SessionService(
     ISessionStore store,
     ICredentialProtector protector,
-    IOptions<Configuration.SessionOptions> options,
+    IOptions<Configuration.SessionLifetimeOptions> options,
     TimeProvider time)
 {
     public async Task<Session> CreateAsync(

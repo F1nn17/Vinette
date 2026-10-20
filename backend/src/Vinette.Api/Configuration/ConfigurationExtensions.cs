@@ -25,7 +25,7 @@ public static class ConfigurationExtensions
         AddValidated<ImapOptions>(services, configuration, ImapOptions.SectionName);
         AddValidated<SmtpOptions>(services, configuration, SmtpOptions.SectionName);
         AddValidated<BrandingOptions>(services, configuration, BrandingOptions.SectionName);
-        AddValidated<SessionOptions>(services, configuration, SessionOptions.SectionName);
+        AddValidated<SessionLifetimeOptions>(services, configuration, SessionLifetimeOptions.SectionName);
         AddValidated<KeyStorageOptions>(services, configuration, KeyStorageOptions.SectionName);
         return services;
     }

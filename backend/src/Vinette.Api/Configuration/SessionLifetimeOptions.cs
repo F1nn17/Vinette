@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Vinette.Api.Configuration;
 
-public sealed class SessionOptions : IValidatableObject
+public sealed class SessionLifetimeOptions : IValidatableObject
 {
     public const string SectionName = "Session";
 
