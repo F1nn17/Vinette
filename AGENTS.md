@@ -63,10 +63,12 @@ GNU Make, .NET SDK (версия в [backend/global.json](backend/global.json)),
 | `make dev-mail` | dev-почта на Dovecot (docker-mailserver): `alice@vinette.test` / `alice-pass` |
 | `make dev-mail-check` | проверить IMAP-расширения dev-почты (SPECIAL-USE, IDLE, MOVE, CONDSTORE, QRESYNC, QUOTA, ID, METADATA) |
 | `make dev-mail-down` | остановить dev-почту и удалить её данные |
+| `make seed` | загрузить тестовые письма из `backend/tests/fixtures` в ящики alice и bob (идемпотентно; нужен Python 3) |
+| `make seed-reset` | удалить загруженные ранее письма и загрузить заново |
 | `make docker` | образ `vinette:dev` |
 | `make clean` | удалить артефакты сборки |
 
-Планируются: `make e2e` (VIN-014), `make seed` (VIN-012). Не ссылайся на них, пока задачи не закрыты.
+Планируется: `make e2e` (VIN-014). Не ссылайся на неё, пока задача не закрыта.
 
 ### Dev-среда
 
@@ -109,6 +111,7 @@ GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRE
 
 - Команды `dotnet` запускай из `backend/` (там `global.json`); тесты — `dotnet test --solution Vinette.sln`, без `-nologo` (на .NET 10 используется Microsoft.Testing.Platform).
 - TypeScript закреплён на 6.0.x (typescript-eslint не поддерживает 7).
+- `make seed` берёт `python3`, иначе `python`; если на Windows `python3` — заглушка Microsoft Store, запусти `make seed PYTHON=python`.
 
 ## 5. Git
 

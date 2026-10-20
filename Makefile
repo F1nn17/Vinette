@@ -11,13 +11,17 @@ API      := src/Vinette.Api/Vinette.Api.csproj
 IMAGE    ?= vinette:dev
 VERSION  ?= $(shell sed -n 's:.*<VersionPrefix>\(.*\)</VersionPrefix>.*:\1:p' $(BACKEND)/Directory.Build.props)
 
+# Python 3 is needed only for `make seed`.
+PYTHON ?= $(shell command -v python3 2>/dev/null || command -v python 2>/dev/null)
+SEED_ARGS ?=
+
 # pnpm is pinned by "packageManager" in frontend/package.json and resolved through corepack.
 export COREPACK_ENABLE_DOWNLOAD_PROMPT := 0
 DOTNET := cd $(BACKEND) && dotnet
 PNPM := cd $(FRONTEND) && corepack pnpm
 
 .DEFAULT_GOAL := help
-.PHONY: help setup dev dev-backend dev-frontend dev-mail dev-mail-check dev-mail-down build test lint format check api-types docker clean
+.PHONY: help setup dev dev-backend dev-frontend dev-mail dev-mail-check dev-mail-down seed seed-reset build test lint format check api-types docker clean
 
 help: ## Show available targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -43,6 +47,12 @@ dev-mail-check: ## Verify the IMAP capabilities Vinette needs on the dev mail se
 
 dev-mail-down: ## Stop the dev mail server and discard its data
 	docker compose -f deploy/docker/compose.dovecot.yaml down -v
+
+seed: ## Load the test emails (backend/tests/fixtures) into alice's and bob's dev mailboxes; idempotent
+	$(PYTHON) deploy/docker/dev-mail/seed.py $(SEED_ARGS)
+
+seed-reset: ## Delete previously seeded emails and load them again
+	$(PYTHON) deploy/docker/dev-mail/seed.py --reset $(SEED_ARGS)
 
 build: ## Build backend (Release) and frontend
 	$(DOTNET) build $(SLN) -c Release --no-restore

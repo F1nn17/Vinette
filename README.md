@@ -35,6 +35,7 @@ docker compose -f deploy/docker/compose.dev.yaml up -d
 make dev-mail         # запустить
 make dev-mail-check   # проверить расширения IMAP
 make dev-mail-down    # остановить и удалить данные
+make seed             # загрузить тестовые письма в ящики alice и bob (нужен Python 3)
 ```
 
 Все цели Makefile: `make help`. На Windows GNU Make удобнее запускать из Git Bash или WSL.
