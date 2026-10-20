@@ -38,6 +38,12 @@ make dev-mail-down    # остановить и удалить данные
 make seed             # загрузить тестовые письма в ящики alice и bob (нужен Python 3)
 ```
 
+Сквозные тесты в браузере (один раз: `cd frontend && pnpm exec playwright install chromium`):
+
+```bash
+make e2e              # поднимает почту, бэкенд и фронтенд и прогоняет Playwright
+```
+
 Все цели Makefile: `make help`. На Windows GNU Make удобнее запускать из Git Bash или WSL.
 
 ## Запуск
