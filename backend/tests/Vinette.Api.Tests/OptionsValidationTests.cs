@@ -29,6 +29,25 @@ public class OptionsValidationTests
     }
 
     [Fact]
+    public void Non_Positive_Imap_Timeout_Fails_Startup()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+            b.UseSetting("Imap:Timeout", "00:00:00"));
+
+        Assert.Throws<OptionsValidationException>(() => factory.CreateClient());
+    }
+
+    [Fact]
+    public void Authenticator_Is_Registered_In_DI()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+
+        var authenticator = factory.Services.GetRequiredService<Vinette.Core.Authentication.IAuthenticator>();
+
+        Assert.IsType<Vinette.Mail.ImapAuthenticator>(authenticator);
+    }
+
+    [Fact]
     public void Environment_Variables_With_Prefix_Override_Settings()
     {
         Environment.SetEnvironmentVariable("VINETTE_Branding__Name", "Acme Mail");

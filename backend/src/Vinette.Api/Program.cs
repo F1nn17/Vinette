@@ -3,6 +3,7 @@ using Vinette.Api.Configuration;
 using Vinette.Api.Endpoints;
 using Vinette.Api.Errors;
 using Vinette.Api.Hubs;
+using Vinette.Api.Mail;
 using Vinette.Api.Spa;
 
 // Container HEALTHCHECK: chiseled images ship no curl, so the app probes itself.
@@ -38,6 +39,7 @@ builder.Logging.AddJsonConsole(o =>
 });
 
 builder.Services.AddVinetteOptions(builder.Configuration);
+builder.Services.AddVinetteMail();
 builder.Services.AddVinetteProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
