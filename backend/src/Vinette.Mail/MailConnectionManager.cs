@@ -31,22 +31,69 @@ public sealed class MailConnectionManager(
         ArgumentNullException.ThrowIfNull(command);
         ObjectDisposedException.ThrowIf(disposed, this);
 
-        var connection = connections.GetOrAdd(credentials.SessionId, static _ => new Connection());
-        await connection.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
+        while (true)
         {
-            if (connection.Closed)
+            var connection = connections.GetOrAdd(credentials.SessionId, _ => new Connection { LastUsed = time.GetTimestamp() });
+            await connection.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
             {
-                // The web session ended while this command was waiting: do not open a connection nobody will close.
-                throw new MailAccessRevokedException("The session has ended.");
+                if (connection.Evicted)
+                {
+                    continue; // closed for idleness while this command waited: take the current slot of the session
+                }
+
+                if (connection.Closed)
+                {
+                    // The web session ended while this command was waiting: do not open a connection nobody will close.
+                    throw new MailAccessRevokedException("The session has ended.");
+                }
+
+                return await RunWithReconnectAsync(connection, credentials, command, safeToRepeat, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                connection.LastUsed = time.GetTimestamp();
+                _ = connection.Gate.Release();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Closes the connections that have not been used for <paramref name="idleFor"/> (a command that is running or
+    /// waiting keeps its connection). The next command of such a session simply opens a new one. Returns how many were closed.
+    /// </summary>
+    public async Task<int> CloseIdleAsync(TimeSpan idleFor, CancellationToken cancellationToken)
+    {
+        var closed = 0;
+        foreach (var (id, connection) in connections)
+        {
+            if (time.GetElapsedTime(connection.LastUsed) < idleFor || !await connection.Gate.WaitAsync(0, cancellationToken).ConfigureAwait(false))
+            {
+                continue; // in use, or used recently
             }
 
-            return await RunWithReconnectAsync(connection, credentials, command, safeToRepeat, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                if (time.GetElapsedTime(connection.LastUsed) < idleFor || connection.Closed || connection.Evicted)
+                {
+                    continue;
+                }
+
+                connection.Evicted = true;
+                _ = connections.TryRemove(new KeyValuePair<string, Connection>(id, connection));
+                if (connection.Session is not null)
+                {
+                    await DropAsync(connection).ConfigureAwait(false);
+                    closed++;
+                }
+            }
+            finally
+            {
+                _ = connection.Gate.Release();
+            }
         }
-        finally
-        {
-            _ = connection.Gate.Release();
-        }
+
+        return closed;
     }
 
     // Connection-level failures (cannot connect, connection lost) are retried with growing pauses; a rejected password never is.
@@ -178,6 +225,12 @@ public sealed class MailConnectionManager(
 
         public IMailSession? Session { get; set; }
 
+        /// <summary>The web session ended: the slot must not be used again.</summary>
         public bool Closed { get; set; }
+
+        /// <summary>Taken out of the table because it was idle: a waiting command must look the session up again.</summary>
+        public bool Evicted { get; set; }
+
+        public long LastUsed { get; set; }
     }
 }

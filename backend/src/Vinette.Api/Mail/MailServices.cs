@@ -25,6 +25,7 @@ public static class MailServices
         });
         services.AddSingleton<MailConnectionManager>();
         services.AddSingleton<IMailGateway>(provider => provider.GetRequiredService<MailConnectionManager>());
+        services.AddHostedService<MailConnectionCleanupService>();
         return services;
     }
 }

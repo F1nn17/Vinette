@@ -5,6 +5,17 @@ namespace Vinette.Mail.Tests;
 /// <summary>The connection manager against a fake mail server: no network, no Docker.</summary>
 public sealed class MailConnectionManagerTests
 {
+    private sealed class ManualTimeProvider : TimeProvider
+    {
+        private long ticks;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp() => Interlocked.Read(ref ticks);
+
+        public void Advance(TimeSpan by) => Interlocked.Add(ref ticks, by.Ticks);
+    }
+
     private static MailConnectionManager NewManager(IMailSessionFactory factory, int maxRetries = 3) =>
         new(factory, new MailReconnectPolicy(maxRetries, TimeSpan.Zero, 1, 0));
 
@@ -407,6 +418,79 @@ public sealed class MailConnectionManagerTests
         factory.OpenDelay = TimeSpan.Zero;
 
         Assert.Equal(1, await manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token));
+    }
+
+    [Fact]
+    public async Task A_Connection_Idle_For_Long_Enough_Is_Closed_And_Reopened_On_Demand()
+    {
+        var factory = new FakeFactory();
+        var clock = new ManualTimeProvider();
+        await using var manager = new MailConnectionManager(factory, MailReconnectPolicy.Default, clock);
+        await manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token);
+        clock.Advance(TimeSpan.FromMinutes(6));
+
+        var closed = await manager.CloseIdleAsync(TimeSpan.FromMinutes(5), Token);
+
+        Assert.Equal(1, closed);
+        Assert.True(factory.Sessions.Single().Disposed);
+        Assert.Equal(0, manager.ConnectionCount);
+        Assert.Equal(1, await manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token));
+        Assert.Equal(2, factory.Opened);
+    }
+
+    [Fact]
+    public async Task A_Recently_Used_Connection_Stays_Open()
+    {
+        var factory = new FakeFactory();
+        var clock = new ManualTimeProvider();
+        await using var manager = new MailConnectionManager(factory, MailReconnectPolicy.Default, clock);
+        await manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token);
+        clock.Advance(TimeSpan.FromMinutes(4));
+        await manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token); // used again: the idle time starts over
+        clock.Advance(TimeSpan.FromMinutes(4));
+
+        var closed = await manager.CloseIdleAsync(TimeSpan.FromMinutes(5), Token);
+
+        Assert.Equal(0, closed);
+        Assert.False(factory.Sessions.Single().Disposed);
+        Assert.Equal(1, manager.ConnectionCount);
+    }
+
+    [Fact]
+    public async Task A_Connection_With_A_Running_Command_Is_Not_Closed_As_Idle()
+    {
+        var factory = new FakeFactory();
+        var clock = new ManualTimeProvider();
+        await using var manager = new MailConnectionManager(factory, MailReconnectPolicy.Default, clock);
+        var blocked = new BlockedCommand();
+        var running = manager.ExecuteAsync(Credentials(), blocked.RunAsync, Token);
+        await blocked.Started;
+        clock.Advance(TimeSpan.FromHours(1));
+
+        var closed = await manager.CloseIdleAsync(TimeSpan.FromMinutes(5), Token);
+
+        Assert.Equal(0, closed);
+        Assert.False(factory.Sessions.Single().Disposed);
+        blocked.Release();
+        await running;
+    }
+
+    [Fact]
+    public async Task Only_The_Idle_Sessions_Are_Closed()
+    {
+        var factory = new FakeFactory();
+        var clock = new ManualTimeProvider();
+        await using var manager = new MailConnectionManager(factory, MailReconnectPolicy.Default, clock);
+        await manager.ExecuteAsync(Credentials("old"), SlowCommandAsync, Token);
+        clock.Advance(TimeSpan.FromMinutes(10));
+        await manager.ExecuteAsync(Credentials("new", "bob@vinette.test"), SlowCommandAsync, Token);
+
+        var closed = await manager.CloseIdleAsync(TimeSpan.FromMinutes(5), Token);
+
+        Assert.Equal(1, closed);
+        Assert.True(factory.Sessions[0].Disposed);
+        Assert.False(factory.Sessions[1].Disposed);
+        Assert.Equal(1, manager.ConnectionCount);
     }
 
     [Fact]
