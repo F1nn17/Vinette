@@ -1,5 +1,27 @@
 {
-  "login": { "title": "Sign in to {{name}}" },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Use the address and password of your mailbox.",
+    "headline": "Mail\nthat belongs to you",
+    "tagline": "Your messages stay with you, not in someone else's cloud. No ads, no prying eyes.",
+    "address": "Email address",
+    "addressPlaceholder": "user@example.com",
+    "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "remember": "Stay signed in for 30 days",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "passwordNote": "Your password is not saved in the browser.",
+    "errors": {
+      "addressRequired": "Enter your email address.",
+      "passwordRequired": "Enter your password.",
+      "invalid_credentials": "Wrong address or password. Check them and try again.",
+      "mail_unavailable": "Mail is temporarily unavailable. Try again in a few minutes.",
+      "too_many_requests": "Too many sign-in attempts. Try again in {{minutes}} min.",
+      "unknown": "Could not sign in. Try again."
+    }
+  },
   "mailbox": { "title": "Mail" },
   "compose": { "title": "New message" },
   "common": { "close": "Close", "loading": "Loading…" }
