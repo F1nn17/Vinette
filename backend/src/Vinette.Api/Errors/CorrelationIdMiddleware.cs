@@ -29,7 +29,13 @@ public sealed partial class CorrelationIdMiddleware(RequestDelegate next, ILogge
         });
         Activity.Current?.SetTag("correlation.id", id);
 
-        using (logger.BeginScope(new Dictionary<string, object> { ["CorrelationId"] = id }))
+        var scope = new Dictionary<string, object> { ["CorrelationId"] = id };
+        if (context.Connection.RemoteIpAddress is { } clientIp)
+        {
+            scope["ClientIp"] = clientIp.ToString(); // the real client when trusted proxies are configured
+        }
+
+        using (logger.BeginScope(scope))
         {
             await next(context);
         }

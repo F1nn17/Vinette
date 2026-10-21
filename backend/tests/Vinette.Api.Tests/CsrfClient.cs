@@ -14,9 +14,23 @@ internal static class CsrfClient
     /// <summary>The address of the test server, which is also the origin of its pages.</summary>
     public const string Origin = "http://localhost";
 
-    public static async Task<(string Token, string Cookie)> GetTokenAsync(HttpClient client, string? sessionId, CancellationToken cancellationToken)
+    private static void Apply(HttpRequestMessage request, IReadOnlyDictionary<string, string>? headers)
+    {
+        foreach (var (name, value) in headers ?? new Dictionary<string, string>())
+        {
+            request.Headers.Remove(name);
+            request.Headers.TryAddWithoutValidation(name, value);
+        }
+    }
+
+    public static async Task<(string Token, string Cookie)> GetTokenAsync(
+        HttpClient client,
+        string? sessionId,
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, string>? extraHeaders = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/csrf");
+        Apply(request, extraHeaders);
         if (sessionId is not null)
         {
             request.Headers.Add("Cookie", $"{SessionCookie.Name}={sessionId}");
@@ -35,16 +49,24 @@ internal static class CsrfClient
         string url,
         CancellationToken cancellationToken,
         HttpContent? content = null,
-        string? sessionId = null)
+        string? sessionId = null,
+        IReadOnlyDictionary<string, string>? extraHeaders = null)
     {
-        var (token, csrfCookie) = await GetTokenAsync(client, sessionId, cancellationToken);
+        var (token, csrfCookie) = await GetTokenAsync(client, sessionId, cancellationToken, extraHeaders);
         using var request = new HttpRequestMessage(method, url) { Content = content };
         request.Headers.Add("Origin", Origin);
+        Apply(request, extraHeaders); // may replace Origin
         request.Headers.Add(CsrfProtection.HeaderName, token);
         request.Headers.Add("Cookie", sessionId is null ? csrfCookie : $"{csrfCookie}; {SessionCookie.Name}={sessionId}");
         return await client.SendAsync(request, cancellationToken);
     }
 
-    public static Task<HttpResponseMessage> PostJsonAsync(HttpClient client, string url, object body, CancellationToken cancellationToken, string? sessionId = null) =>
-        SendAsync(client, HttpMethod.Post, url, cancellationToken, JsonContent.Create(body), sessionId);
+    public static Task<HttpResponseMessage> PostJsonAsync(
+        HttpClient client,
+        string url,
+        object body,
+        CancellationToken cancellationToken,
+        string? sessionId = null,
+        IReadOnlyDictionary<string, string>? extraHeaders = null) =>
+        SendAsync(client, HttpMethod.Post, url, cancellationToken, JsonContent.Create(body), sessionId, extraHeaders);
 }
