@@ -20,6 +20,20 @@ export class ApiError extends Error {
   }
 }
 
+type UnauthorizedHandler = () => void;
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+/**
+ * Registers what happens when the server says the session is gone (401 on any call except sign-in itself, where
+ * 401 means a wrong password). Returns a function that unregisters the handler.
+ */
+export function onUnauthorized(handler: UnauthorizedHandler): () => void {
+  unauthorizedHandler = handler;
+  return () => {
+    if (unauthorizedHandler === handler) unauthorizedHandler = null;
+  };
+}
+
 let csrfToken: Promise<string> | null = null;
 
 /** Forgets the anti-forgery token: it is bound to the signed-in user, so it changes on sign-in and sign-out. */
@@ -96,6 +110,7 @@ export async function apiRequest<T>(
     }
   }
 
+  if (response.status === 401 && path !== '/api/v1/auth/login') unauthorizedHandler?.();
   if (!response.ok) throw await toApiError(response);
   if (changesState && path.startsWith('/api/v1/auth/')) resetCsrfToken(); // sign-in/out changes the user
   if (response.status === 204) return undefined as T;
