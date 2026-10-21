@@ -153,6 +153,7 @@ GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRE
 ## 9. Frontend
 
 - Структура по фичам: `src/features/<feature>`; общее — `src/shared`; маршруты и провайдеры — `src/app`.
+- Запросы к API — только через `apiRequest`/`apiGet`/`apiPost` из `shared/api/client.ts`: клиент сам подставляет CSRF-токен и разбирает ошибки в `ApiError` (`code`, `correlationId`). Прямой `fetch` к `/api` запрещён.
 - Серверное состояние — только TanStack Query; не дублируй его в локальном состоянии.
 - Типы API — только сгенерированные (`make api-types`). Ручные DTO запрещены.
 - Цвета, отступы, радиусы, шрифты — только из токенов ([tokens.css](frontend/src/styles/tokens.css), утилиты Tailwind из [DESIGN.md](docs/design/DESIGN.md)). Никаких HEX и произвольных цветов в компонентах.

@@ -27,6 +27,7 @@ public sealed class AuthorizationTests : IDisposable
     private static readonly string[] ExpectedAnonymousEndpoints =
     [
         "* {*path:nonfile}", // the SPA fallback; it never serves /api, /hubs or /branding
+        "GET /api/v1/csrf",
         "GET /api/v1/health",
         "GET /branding/favicon",
         "GET /branding/logo",
@@ -144,9 +145,7 @@ public sealed class AuthorizationTests : IDisposable
     {
         var id = await SignInAsync();
         var client = CreateClient();
-        using var logout = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
-        logout.Headers.Add("Cookie", $"{SessionCookie.Name}={id}");
-        await client.SendAsync(logout, Token);
+        await CsrfClient.SendAsync(client, HttpMethod.Post, "/api/v1/auth/logout", Token, sessionId: id);
 
         var response = await GetAsync(client, "/api/v1/me", id);
 
@@ -170,6 +169,7 @@ public sealed class AuthorizationTests : IDisposable
     public async Task The_Mail_Hub_Requires_A_Session()
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/hubs/mail/negotiate?negotiateVersion=1");
+        request.Headers.Add("Origin", CsrfClient.Origin);
 
         var response = await CreateClient().SendAsync(request, Token);
 

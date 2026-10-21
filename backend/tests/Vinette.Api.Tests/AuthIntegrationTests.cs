@@ -32,7 +32,8 @@ public sealed class AuthIntegrationTests(DovecotFixture dovecot) : IDisposable
     {
         var client = CreateClient();
 
-        var login = await client.PostAsJsonAsync(
+        var login = await CsrfClient.PostJsonAsync(
+            client,
             "/api/v1/auth/login",
             new { address = DovecotFixture.Alice.Address, password = DovecotFixture.Alice.Password, rememberMe = false },
             Token);
@@ -45,9 +46,7 @@ public sealed class AuthIntegrationTests(DovecotFixture dovecot) : IDisposable
         Assert.NotNull(session);
         Assert.Equal(DovecotFixture.Alice.Password, sessions.RevealPassword(session));
 
-        using var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
-        logoutRequest.Headers.Add("Cookie", $"{SessionCookie.Name}={id}");
-        var logout = await client.SendAsync(logoutRequest, Token);
+        var logout = await CsrfClient.SendAsync(client, HttpMethod.Post, "/api/v1/auth/logout", Token, sessionId: id);
 
         Assert.Equal(HttpStatusCode.NoContent, logout.StatusCode);
         Assert.Null(await sessions.GetValidAsync(id, Token));
@@ -56,7 +55,8 @@ public sealed class AuthIntegrationTests(DovecotFixture dovecot) : IDisposable
     [Fact]
     public async Task Wrong_Password_Is_Rejected_By_The_Real_Mail_Server()
     {
-        var response = await CreateClient().PostAsJsonAsync(
+        var response = await CsrfClient.PostJsonAsync(
+            CreateClient(),
             "/api/v1/auth/login",
             new { address = DovecotFixture.Alice.Address, password = "wrong-password", rememberMe = false },
             Token);
@@ -76,7 +76,8 @@ public sealed class AuthIntegrationTests(DovecotFixture dovecot) : IDisposable
             b.UseSetting("Imap:Timeout", "00:00:03");
         });
 
-        var response = await unreachable.CreateClient().PostAsJsonAsync(
+        var response = await CsrfClient.PostJsonAsync(
+            unreachable.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false }),
             "/api/v1/auth/login",
             new { address = DovecotFixture.Alice.Address, password = DovecotFixture.Alice.Password, rememberMe = false },
             Token);

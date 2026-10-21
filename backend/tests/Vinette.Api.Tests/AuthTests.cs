@@ -53,19 +53,11 @@ public sealed class AuthTests : IDisposable
     private HttpClient CreateClient() =>
         factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
 
-    private static async Task<HttpResponseMessage> LoginAsync(HttpClient client, string address, string password, bool rememberMe = false, string? cookie = null)
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
-        {
-            Content = JsonContent.Create(new { address, password, rememberMe }),
-        };
-        if (cookie is not null)
-        {
-            request.Headers.Add("Cookie", cookie);
-        }
+    private static Task<HttpResponseMessage> LoginAsync(HttpClient client, string address, string password, bool rememberMe = false, string? sessionId = null) =>
+        CsrfClient.PostJsonAsync(client, "/api/v1/auth/login", new { address, password, rememberMe }, Token, sessionId);
 
-        return await client.SendAsync(request, Token);
-    }
+    private static Task<HttpResponseMessage> LogoutAsync(HttpClient client, string? sessionId) =>
+        CsrfClient.SendAsync(client, HttpMethod.Post, "/api/v1/auth/logout", Token, sessionId: sessionId);
 
     private static string? SetCookie(HttpResponseMessage response) =>
         response.Headers.TryGetValues("Set-Cookie", out var values) ? values.FirstOrDefault(v => v.StartsWith(SessionCookie.Name + "=", StringComparison.Ordinal)) : null;
@@ -192,7 +184,7 @@ public sealed class AuthTests : IDisposable
         var first = SetCookie(await LoginAsync(client, Address, Password))!;
         var firstId = SessionIdFrom(first);
 
-        var second = SetCookie(await LoginAsync(client, Address, Password, cookie: $"{SessionCookie.Name}={firstId}"))!;
+        var second = SetCookie(await LoginAsync(client, Address, Password, sessionId: firstId))!;
         var secondId = SessionIdFrom(second);
 
         var sessions = factory.Services.GetRequiredService<SessionService>();
@@ -208,10 +200,8 @@ public sealed class AuthTests : IDisposable
     {
         var client = CreateClient();
         var id = SessionIdFrom(SetCookie(await LoginAsync(client, Address, Password))!);
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
-        request.Headers.Add("Cookie", $"{SessionCookie.Name}={id}");
 
-        var response = await client.SendAsync(request, Token);
+        var response = await LogoutAsync(client, id);
         var cleared = SetCookie(response);
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -227,14 +217,7 @@ public sealed class AuthTests : IDisposable
     [InlineData("0123456789012345678901234567890123456789012")]
     public async Task Logout_Without_A_Valid_Session_Is_Still_204(string? cookieValue)
     {
-        var client = CreateClient();
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
-        if (cookieValue is not null)
-        {
-            request.Headers.Add("Cookie", $"{SessionCookie.Name}={cookieValue}");
-        }
-
-        var response = await client.SendAsync(request, Token);
+        var response = await LogoutAsync(CreateClient(), cookieValue);
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }

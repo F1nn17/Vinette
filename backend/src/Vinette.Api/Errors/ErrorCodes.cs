@@ -12,6 +12,8 @@ public static class ErrorCodes
     public const string InvalidCredentials = "invalid_credentials";
     public const string MailUnavailable = "mail_unavailable";
     public const string Forbidden = "forbidden";
+    public const string CsrfFailed = "csrf_failed";
+    public const string OriginNotAllowed = "origin_not_allowed";
     public const string NotFound = "not_found";
     public const string Conflict = "conflict";
     public const string PayloadTooLarge = "payload_too_large";
