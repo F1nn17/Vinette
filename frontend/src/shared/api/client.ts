@@ -14,6 +14,8 @@ export class ApiError extends Error {
     readonly code: string | undefined,
     readonly correlationId: string | undefined,
     message: string,
+    /** Seconds until a retry makes sense (Retry-After of a 429), when the server said so. */
+    readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -64,11 +66,13 @@ async function toApiError(response: Response): Promise<ApiError> {
   } catch {
     // not a problem+json body
   }
+  const retryAfter = Number(response.headers.get('Retry-After'));
   return new ApiError(
     response.status,
     code,
     response.headers.get('X-Correlation-Id') ?? undefined,
     title,
+    Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
   );
 }
 
