@@ -86,7 +86,7 @@ public sealed class ImapAuthenticator(ImapConnectionSettings settings) : IAuthen
         return identity;
     }
 
-    private static async Task IdentifyAsync(ImapClient imap, ClientInfo client, CancellationToken cancellationToken)
+    internal static async Task IdentifyAsync(ImapClient imap, ClientInfo client, CancellationToken cancellationToken)
     {
         if (!imap.Capabilities.HasFlag(ImapCapabilities.Id))
         {
@@ -111,7 +111,7 @@ public sealed class ImapAuthenticator(ImapConnectionSettings settings) : IAuthen
 
     private static bool HasControlCharacters(string value) => value.Any(char.IsControl);
 
-    private static SecureSocketOptions ToSocketOptions(ConnectionSecurity security) => security switch
+    internal static SecureSocketOptions ToSocketOptions(ConnectionSecurity security) => security switch
     {
         ConnectionSecurity.Tls => SecureSocketOptions.SslOnConnect,
         ConnectionSecurity.StartTls => SecureSocketOptions.StartTls,
@@ -119,7 +119,7 @@ public sealed class ImapAuthenticator(ImapConnectionSettings settings) : IAuthen
         _ => throw new ArgumentOutOfRangeException(nameof(security), security, null),
     };
 
-    private static bool AcceptAnyCertificate(
+    internal static bool AcceptAnyCertificate(
         object sender,
         System.Security.Cryptography.X509Certificates.X509Certificate? certificate,
         System.Security.Cryptography.X509Certificates.X509Chain? chain,
