@@ -5,6 +5,7 @@ using Vinette.Api.Errors;
 using Vinette.Api.Security;
 using Vinette.Api.Sessions;
 using Vinette.Core.Authentication;
+using Vinette.Core.Mail;
 
 namespace Vinette.Api.Auth;
 
@@ -100,12 +101,13 @@ public static partial class AuthEndpoints
         return Results.Ok(new LoginResponse(session.Address));
     }
 
-    private static async Task<IResult> LogoutAsync(HttpContext http, SessionService sessions, CancellationToken cancellationToken)
+    private static async Task<IResult> LogoutAsync(HttpContext http, SessionService sessions, IMailGateway mail, CancellationToken cancellationToken)
     {
         var sessionId = SessionCookie.Read(http.Request);
         if (sessionId is not null)
         {
             await sessions.EndAsync(sessionId, cancellationToken);
+            await mail.ReleaseAsync(sessionId, cancellationToken);
         }
 
         SessionCookie.Clear(http.Response);
