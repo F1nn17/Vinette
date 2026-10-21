@@ -22,6 +22,12 @@ public sealed class ImapOptions : IValidatableObject
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// A mail connection that nobody has used for this long is closed to free the mail server; the next request of the
+    /// user opens a new one. Shorter than <c>Session:IdleTimeout</c> makes sense: signed-in users with no activity should not hold connections.
+    /// </summary>
+    public TimeSpan ConnectionIdleTimeout { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>
     /// Accept any TLS certificate of the mail server. Dev only (self-signed certificate); keep off in production,
     /// otherwise passwords can be intercepted.
     /// </summary>
@@ -32,6 +38,11 @@ public sealed class ImapOptions : IValidatableObject
         if (Timeout <= TimeSpan.Zero)
         {
             yield return new ValidationResult("Timeout must be positive.", [nameof(Timeout)]);
+        }
+
+        if (ConnectionIdleTimeout <= TimeSpan.Zero)
+        {
+            yield return new ValidationResult("ConnectionIdleTimeout must be positive.", [nameof(ConnectionIdleTimeout)]);
         }
     }
 }

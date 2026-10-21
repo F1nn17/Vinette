@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Mail connections of signed-in users are closed after `Imap:ConnectionIdleTimeout` without activity (default 5 minutes) and when the application stops; the next request opens a new one. Long-idle users no longer hold connections on the mail server.
 - Optional Redis session store for running several instances behind one address: set `Session:Store` to `Redis` and `Redis:ConnectionString` (StackExchange.Redis format, e.g. `redis:6379,password=...,ssl=true`); `Redis:KeyPrefix` (default `vinette:`) lets Vinette share a Redis with other applications. Sessions then survive a restart and are valid on every instance; they expire in Redis by themselves. The default stays `InMemory`. The sign-in limits are still counted per instance. The Redis password is part of the connection string: keep it in an environment variable or a protected config file.
 - The sign-in screen: address and password (with show/hide), "stay signed in" option, clear messages for a wrong password, unavailable mail and too many attempts, and a brand panel that uses the configured name and tagline (`Branding:Tagline`).
 - The mailbox and compose pages now require sign-in: a signed-out visitor is sent to the login screen and, after signing in, back to the page they asked for. If the server ends the session (timeout, sign-out elsewhere), the app signs the user out and drops everything cached for them.
