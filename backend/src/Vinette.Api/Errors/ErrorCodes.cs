@@ -10,6 +10,7 @@ public static class ErrorCodes
     public const string ValidationFailed = "validation_failed";
     public const string Unauthorized = "unauthorized";
     public const string InvalidCredentials = "invalid_credentials";
+    public const string SessionRevoked = "session_revoked";
     public const string MailUnavailable = "mail_unavailable";
     public const string Forbidden = "forbidden";
     public const string CsrfFailed = "csrf_failed";

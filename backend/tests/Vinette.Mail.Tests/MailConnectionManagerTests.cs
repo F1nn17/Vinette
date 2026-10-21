@@ -5,6 +5,9 @@ namespace Vinette.Mail.Tests;
 /// <summary>The connection manager against a fake mail server: no network, no Docker.</summary>
 public sealed class MailConnectionManagerTests
 {
+    private static MailConnectionManager NewManager(IMailSessionFactory factory, int maxRetries = 3) =>
+        new(factory, new MailReconnectPolicy(maxRetries, TimeSpan.Zero, 1, 0));
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private static MailCredentials Credentials(string session = "s1", string address = "alice@vinette.test") =>
@@ -49,6 +52,9 @@ public sealed class MailConnectionManagerTests
 
         public TimeSpan OpenDelay { get; set; }
 
+        /// <summary>How many opens fail with <see cref="FailWith"/> before they succeed (0 = fail every time).</summary>
+        public int FailTimes { get; set; }
+
         public int Opened => Volatile.Read(ref opened);
 
         public async Task<IMailSession> OpenAsync(MailCredentials credentials, CancellationToken cancellationToken)
@@ -59,7 +65,7 @@ public sealed class MailConnectionManagerTests
                 await Task.Delay(OpenDelay, cancellationToken);
             }
 
-            if (FailWith is not null)
+            if (FailWith is not null && (FailTimes == 0 || Opened <= FailTimes))
             {
                 throw FailWith;
             }
@@ -112,7 +118,7 @@ public sealed class MailConnectionManagerTests
     public async Task Parallel_Requests_Of_One_Session_Share_One_Connection_And_Never_Overlap()
     {
         var factory = new FakeFactory { OpenDelay = TimeSpan.FromMilliseconds(50) };
-        await using var manager = new MailConnectionManager(factory);
+        await using var manager = NewManager(factory);
 
         await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token)));
 
@@ -125,7 +131,7 @@ public sealed class MailConnectionManagerTests
     public async Task Different_Sessions_Get_Their_Own_Connections()
     {
         var factory = new FakeFactory();
-        await using var manager = new MailConnectionManager(factory);
+        await using var manager = NewManager(factory);
 
         await manager.ExecuteAsync(Credentials("s1"), SlowCommandAsync, Token);
         await manager.ExecuteAsync(Credentials("s2", "bob@vinette.test"), SlowCommandAsync, Token);
@@ -137,7 +143,7 @@ public sealed class MailConnectionManagerTests
     [Fact]
     public async Task Different_Sessions_Do_Not_Wait_For_Each_Other()
     {
-        await using var manager = new MailConnectionManager(new FakeFactory());
+        await using var manager = NewManager(new FakeFactory());
         var blocked = new BlockedCommand();
         var first = manager.ExecuteAsync(Credentials("s1"), blocked.RunAsync, Token);
         await blocked.Started;
@@ -153,7 +159,7 @@ public sealed class MailConnectionManagerTests
     public async Task A_Dead_Connection_Is_Replaced_On_The_Next_Request()
     {
         var factory = new FakeFactory();
-        await using var manager = new MailConnectionManager(factory);
+        await using var manager = NewManager(factory);
         await manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token);
         factory.Sessions[0].IsConnected = false;
 
@@ -164,24 +170,141 @@ public sealed class MailConnectionManagerTests
     }
 
     [Fact]
-    public async Task A_Failed_Open_Is_Not_Remembered()
+    public async Task A_Failed_Open_Is_Retried_And_Then_Reported_As_Unavailable_Without_Being_Remembered()
     {
         var factory = new FakeFactory { FailWith = new MailUnavailableException("down") };
-        await using var manager = new MailConnectionManager(factory);
+        await using var manager = NewManager(factory);
+
         await Assert.ThrowsAsync<MailUnavailableException>(() => manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token));
+        Assert.Equal(4, factory.Opened); // the first try and three retries
 
         factory.FailWith = null;
         var result = await manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token);
 
         Assert.Equal(1, result);
+        Assert.Equal(5, factory.Opened);
+    }
+
+    [Fact]
+    public async Task A_Short_Outage_While_Connecting_Is_Invisible_To_The_Request()
+    {
+        var factory = new FakeFactory { FailWith = new MailUnavailableException("down"), FailTimes = 2 };
+        await using var manager = NewManager(factory);
+
+        var result = await manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token);
+
+        Assert.Equal(1, result);
+        Assert.Equal(3, factory.Opened);
+    }
+
+    [Fact]
+    public async Task A_Connection_Lost_During_A_Command_Is_Replaced_And_The_Command_Runs_Again()
+    {
+        var factory = new FakeFactory();
+        await using var manager = NewManager(factory);
+        var calls = 0;
+
+        var result = await manager.ExecuteAsync(Credentials(), (session, _) =>
+        {
+            calls++;
+            if (calls == 1)
+            {
+                ((FakeSession)session).IsConnected = false;
+                throw new IOException("connection reset");
+            }
+
+            return Task.FromResult(7);
+        }, Token);
+
+        Assert.Equal(7, result);
+        Assert.Equal(2, calls);
         Assert.Equal(2, factory.Opened);
+        Assert.True(factory.Sessions[0].Disposed);
+    }
+
+    [Fact]
+    public async Task A_Command_That_Must_Not_Run_Twice_Is_Not_Repeated_After_A_Lost_Connection()
+    {
+        var factory = new FakeFactory();
+        await using var manager = NewManager(factory);
+        var calls = 0;
+
+        await Assert.ThrowsAsync<MailUnavailableException>(() => manager.ExecuteAsync<int>(
+            Credentials(),
+            (_, _) =>
+            {
+                calls++;
+                throw new IOException("connection reset");
+            },
+            Token,
+            safeToRepeat: false));
+
+        Assert.Equal(1, calls);
+        Assert.True(factory.Sessions[0].Disposed);
+        Assert.Equal(1, await manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token)); // the next command reconnects
+    }
+
+    [Fact]
+    public async Task A_Command_Keeps_Failing_After_Reconnects_Until_The_Retries_Are_Used_Up()
+    {
+        var factory = new FakeFactory();
+        await using var manager = NewManager(factory, maxRetries: 2);
+        var calls = 0;
+
+        await Assert.ThrowsAsync<MailUnavailableException>(() => manager.ExecuteAsync<int>(
+            Credentials(),
+            (_, _) =>
+            {
+                calls++;
+                throw new IOException("connection reset");
+            },
+            Token));
+
+        Assert.Equal(3, calls);
+        Assert.Equal(3, factory.Opened);
+    }
+
+    [Fact]
+    public async Task A_Password_Rejected_After_Reconnecting_Is_Reported_At_Once_Without_Retries()
+    {
+        var factory = new FakeFactory();
+        await using var manager = NewManager(factory);
+        await manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token);
+        factory.Sessions[0].IsConnected = false;
+        factory.FailWith = new MailAccessRevokedException("password changed");
+
+        await Assert.ThrowsAsync<MailAccessRevokedException>(() => manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token));
+
+        Assert.Equal(2, factory.Opened); // no retries: more wrong passwords could lock the mailbox
+        Assert.True(factory.Sessions[0].Disposed);
+    }
+
+    [Fact]
+    public void The_Pauses_Between_Retries_Grow()
+    {
+        var policy = new MailReconnectPolicy(3, TimeSpan.FromMilliseconds(200), 3, 0);
+
+        Assert.Equal(TimeSpan.FromMilliseconds(200), policy.DelayBefore(1));
+        Assert.Equal(TimeSpan.FromMilliseconds(600), policy.DelayBefore(2));
+        Assert.Equal(TimeSpan.FromMilliseconds(1800), policy.DelayBefore(3));
+    }
+
+    [Fact]
+    public void The_Pauses_Are_Spread_By_The_Jitter()
+    {
+        var policy = MailReconnectPolicy.Default;
+
+        var delays = Enumerable.Range(0, 50).Select(_ => policy.DelayBefore(1).TotalMilliseconds).ToList();
+
+        Assert.All(delays, d => Assert.InRange(d, 160, 240));
+        Assert.True(delays.Distinct().Count() > 1);
     }
 
     [Fact]
     public async Task A_Failing_Command_Does_Not_Block_The_Next_One()
     {
         var factory = new FakeFactory();
-        await using var manager = new MailConnectionManager(factory);
+        await using var manager = NewManager(factory);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             manager.ExecuteAsync<int>(Credentials(), (_, _) => throw new InvalidOperationException("boom"), Token));
@@ -194,7 +317,7 @@ public sealed class MailConnectionManagerTests
     [Fact]
     public async Task A_Cancelled_Waiter_Leaves_The_Queue_Without_Breaking_It()
     {
-        await using var manager = new MailConnectionManager(new FakeFactory());
+        await using var manager = NewManager(new FakeFactory());
         var blocked = new BlockedCommand();
         var first = manager.ExecuteAsync(Credentials(), blocked.RunAsync, Token);
         await blocked.Started;
@@ -213,7 +336,7 @@ public sealed class MailConnectionManagerTests
     public async Task A_Hundred_Parallel_Requests_Of_Several_Users_Run_Without_Overlap_Or_Deadlock()
     {
         var factory = new FakeFactory { OpenDelay = TimeSpan.FromMilliseconds(5) };
-        await using var manager = new MailConnectionManager(factory);
+        await using var manager = NewManager(factory);
         var users = new[] { "s1", "s2", "s3", "s4", "s5" };
 
         var work = Enumerable.Range(0, 100)
@@ -229,7 +352,7 @@ public sealed class MailConnectionManagerTests
     [Fact]
     public async Task Requests_Of_One_Session_Run_In_The_Order_They_Were_Made()
     {
-        await using var manager = new MailConnectionManager(new FakeFactory());
+        await using var manager = NewManager(new FakeFactory());
         var order = new List<int>();
         var blocked = new BlockedCommand();
         var first = manager.ExecuteAsync(Credentials(), blocked.RunAsync, Token);
@@ -252,7 +375,7 @@ public sealed class MailConnectionManagerTests
     public async Task A_Command_Cancelled_While_Running_Drops_The_Connection_And_The_Next_Command_Reconnects()
     {
         var factory = new FakeFactory();
-        await using var manager = new MailConnectionManager(factory);
+        await using var manager = NewManager(factory);
         using var cancel = CancellationTokenSource.CreateLinkedTokenSource(Token);
         var started = new TaskCompletionSource();
         var running = manager.ExecuteAsync<int>(Credentials(), async (_, token) =>
@@ -275,7 +398,7 @@ public sealed class MailConnectionManagerTests
     public async Task A_Request_Cancelled_While_The_Connection_Opens_Does_Not_Leave_A_Stuck_Queue()
     {
         var factory = new FakeFactory { OpenDelay = TimeSpan.FromSeconds(30) };
-        await using var manager = new MailConnectionManager(factory);
+        await using var manager = NewManager(factory);
         using var cancel = CancellationTokenSource.CreateLinkedTokenSource(Token);
         var opening = manager.ExecuteAsync(Credentials(), SlowCommandAsync, cancel.Token);
         await cancel.CancelAsync();
@@ -290,7 +413,7 @@ public sealed class MailConnectionManagerTests
     public async Task Releasing_A_Session_Closes_Its_Connection()
     {
         var factory = new FakeFactory();
-        await using var manager = new MailConnectionManager(factory);
+        await using var manager = NewManager(factory);
         await manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token);
 
         await manager.ReleaseAsync("s1", Token);
@@ -303,7 +426,7 @@ public sealed class MailConnectionManagerTests
     public async Task Releasing_Waits_For_The_Running_Command()
     {
         var factory = new FakeFactory();
-        await using var manager = new MailConnectionManager(factory);
+        await using var manager = NewManager(factory);
         var blocked = new BlockedCommand();
         var running = manager.ExecuteAsync(Credentials(), blocked.RunAsync, Token);
         await blocked.Started;
@@ -322,7 +445,7 @@ public sealed class MailConnectionManagerTests
     public async Task A_Request_Queued_Before_The_Release_Still_Runs_And_A_Later_One_Opens_A_Fresh_Connection()
     {
         var factory = new FakeFactory();
-        await using var manager = new MailConnectionManager(factory);
+        await using var manager = NewManager(factory);
         var blocked = new BlockedCommand();
         var running = manager.ExecuteAsync(Credentials(), blocked.RunAsync, Token);
         await blocked.Started;
@@ -342,7 +465,7 @@ public sealed class MailConnectionManagerTests
     [Fact]
     public async Task Releasing_An_Unknown_Session_Does_Nothing()
     {
-        await using var manager = new MailConnectionManager(new FakeFactory());
+        await using var manager = NewManager(new FakeFactory());
 
         await manager.ReleaseAsync("nope", Token);
 
@@ -353,7 +476,7 @@ public sealed class MailConnectionManagerTests
     public async Task Disposing_The_Manager_Closes_Every_Connection()
     {
         var factory = new FakeFactory();
-        var manager = new MailConnectionManager(factory);
+        var manager = NewManager(factory);
         await manager.ExecuteAsync(Credentials("s1"), SlowCommandAsync, Token);
         await manager.ExecuteAsync(Credentials("s2"), SlowCommandAsync, Token);
 
