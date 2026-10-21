@@ -47,7 +47,18 @@ public sealed class MailConnectionManager(IMailSessionFactory factory) : IMailGa
                 connection.Session = session;
             }
 
-            return await command(session, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                return await command(session, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // A command cut off in the middle leaves the protocol stream in an unknown state (the server may still be
+                // answering it): the connection is dropped and the next command opens a clean one.
+                connection.Session = null;
+                await session.DisposeAsync().ConfigureAwait(false);
+                throw;
+            }
         }
         finally
         {

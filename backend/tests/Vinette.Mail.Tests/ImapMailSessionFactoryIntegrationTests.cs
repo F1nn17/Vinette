@@ -77,4 +77,24 @@ public sealed class ImapMailSessionFactoryIntegrationTests(DovecotFixture doveco
         Assert.Single(results.Distinct());
         Assert.Equal(1, manager.ConnectionCount);
     }
+
+    [Fact]
+    public async Task A_Command_Cancelled_Mid_Flight_Does_Not_Break_The_Next_One()
+    {
+        await using var manager = new MailConnectionManager(Create());
+        using var cancel = CancellationTokenSource.CreateLinkedTokenSource(Token);
+        cancel.CancelAfter(TimeSpan.FromMilliseconds(200));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            manager.ExecuteAsync<int>(Alice(), async (session, token) =>
+            {
+                while (true)
+                {
+                    await session.PingAsync(token);
+                }
+            }, cancel.Token));
+        await manager.ExecuteAsync(Alice(), (session, token) => session.PingAsync(token).ContinueWith(_ => 0, token), Token);
+
+        Assert.Equal(1, manager.ConnectionCount);
+    }
 }

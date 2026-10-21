@@ -210,6 +210,83 @@ public sealed class MailConnectionManagerTests
     }
 
     [Fact]
+    public async Task A_Hundred_Parallel_Requests_Of_Several_Users_Run_Without_Overlap_Or_Deadlock()
+    {
+        var factory = new FakeFactory { OpenDelay = TimeSpan.FromMilliseconds(5) };
+        await using var manager = new MailConnectionManager(factory);
+        var users = new[] { "s1", "s2", "s3", "s4", "s5" };
+
+        var work = Enumerable.Range(0, 100)
+            .Select(i => Task.Run(() => manager.ExecuteAsync(Credentials(users[i % users.Length]), SlowCommandAsync, Token), Token))
+            .ToArray();
+        _ = await Task.WhenAny(Task.WhenAll(work), Task.Delay(TimeSpan.FromSeconds(30), Token));
+
+        Assert.True(work.All(t => t.IsCompletedSuccessfully), "Some requests did not finish: deadlock or failure.");
+        Assert.Equal(users.Length, factory.Opened);
+        Assert.All(factory.Sessions, s => Assert.Equal(1, s.MaxRunning));
+    }
+
+    [Fact]
+    public async Task Requests_Of_One_Session_Run_In_The_Order_They_Were_Made()
+    {
+        await using var manager = new MailConnectionManager(new FakeFactory());
+        var order = new List<int>();
+        var blocked = new BlockedCommand();
+        var first = manager.ExecuteAsync(Credentials(), blocked.RunAsync, Token);
+        await blocked.Started;
+
+        var queued = Enumerable.Range(1, 20).Select(i =>
+            manager.ExecuteAsync(Credentials(), (_, _) =>
+            {
+                order.Add(i);
+                return Task.FromResult(i);
+            }, Token)).ToArray();
+        blocked.Release();
+        await first;
+        await Task.WhenAll(queued);
+
+        Assert.Equal(Enumerable.Range(1, 20), order);
+    }
+
+    [Fact]
+    public async Task A_Command_Cancelled_While_Running_Drops_The_Connection_And_The_Next_Command_Reconnects()
+    {
+        var factory = new FakeFactory();
+        await using var manager = new MailConnectionManager(factory);
+        using var cancel = CancellationTokenSource.CreateLinkedTokenSource(Token);
+        var started = new TaskCompletionSource();
+        var running = manager.ExecuteAsync<int>(Credentials(), async (_, token) =>
+        {
+            started.SetResult();
+            await Task.Delay(Timeout.Infinite, token);
+            return 0;
+        }, cancel.Token);
+        await started.Task;
+
+        await cancel.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => running);
+
+        Assert.True(factory.Sessions[0].Disposed);
+        Assert.Equal(1, await manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token));
+        Assert.Equal(2, factory.Opened);
+    }
+
+    [Fact]
+    public async Task A_Request_Cancelled_While_The_Connection_Opens_Does_Not_Leave_A_Stuck_Queue()
+    {
+        var factory = new FakeFactory { OpenDelay = TimeSpan.FromSeconds(30) };
+        await using var manager = new MailConnectionManager(factory);
+        using var cancel = CancellationTokenSource.CreateLinkedTokenSource(Token);
+        var opening = manager.ExecuteAsync(Credentials(), SlowCommandAsync, cancel.Token);
+        await cancel.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => opening);
+
+        factory.OpenDelay = TimeSpan.Zero;
+
+        Assert.Equal(1, await manager.ExecuteAsync(Credentials(), SlowCommandAsync, Token));
+    }
+
+    [Fact]
     public async Task Releasing_A_Session_Closes_Its_Connection()
     {
         var factory = new FakeFactory();
