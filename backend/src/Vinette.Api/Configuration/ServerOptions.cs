@@ -15,8 +15,11 @@ public sealed class ImapOptions : IValidatableObject
 
     public ConnectionSecurity Security { get; set; } = ConnectionSecurity.Tls;
 
-    /// <summary>Limit for connecting and for every reply of the mail server.</summary>
-    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(15);
+    /// <summary>
+    /// Limit for connecting and for every reply of the mail server. Must exceed Dovecot's delay for failed logins
+    /// (up to ~15 s when many failures come from one address), or a wrong password looks like an outage.
+    /// </summary>
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// Accept any TLS certificate of the mail server. Dev only (self-signed certificate); keep off in production,
