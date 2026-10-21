@@ -252,9 +252,7 @@ public sealed class LoginRateLimitTests : IDisposable
     [InlineData("Security:LoginRateLimit:MaxLockout", "00:00:10")]
     public void Invalid_Settings_Fail_Startup(string key, string value)
     {
-        using var broken = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting(key, value));
-
-        Assert.Throws<OptionsValidationException>(() => broken.CreateClient());
+        StartupFailure.AssertOptionsInvalid(b => b.UseSetting(key, value));
     }
 
     // ---- The tracker alone ----

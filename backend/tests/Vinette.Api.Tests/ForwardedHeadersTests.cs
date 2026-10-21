@@ -236,8 +236,6 @@ public sealed class ForwardedHeadersTests : IDisposable
     [InlineData("proxy.example.org")]
     public void Unusable_Trusted_Proxies_Fail_Startup(string entry)
     {
-        using var broken = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("Security:TrustedProxies:0", entry));
-
-        Assert.Throws<OptionsValidationException>(() => broken.CreateClient());
+        StartupFailure.AssertOptionsInvalid(b => b.UseSetting("Security:TrustedProxies:0", entry));
     }
 }
