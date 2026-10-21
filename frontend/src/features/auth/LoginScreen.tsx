@@ -16,10 +16,16 @@ function errorMessage(
       const minutes = Math.max(1, Math.ceil((error.retryAfterSeconds ?? 60) / 60));
       return t('login.errors.too_many_requests', { minutes });
     }
-    if (error.code === 'invalid_credentials' || error.code === 'mail_unavailable') {
+    if (
+      error.code === 'invalid_credentials' ||
+      error.code === 'mail_unavailable' ||
+      error.code === 'validation_failed'
+    ) {
       return t(`login.errors.${error.code}`);
     }
   }
+  // fetch rejects with a TypeError when the browser cannot reach the application at all.
+  if (error instanceof TypeError) return t('login.errors.network');
   return t('login.errors.unknown');
 }
 

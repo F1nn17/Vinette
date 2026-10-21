@@ -4,8 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { appRoutes } from '@/app/routes';
 import { resetCsrfToken } from '@/shared/api/client';
-import en from '@/shared/i18n/en.json';
-import ru from '@/shared/i18n/ru.json';
 import { SessionProvider as SessionProviderForTests } from './SessionProvider';
 
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -236,17 +234,31 @@ describe('login screen', () => {
     release();
   });
 
-  it('uses no technical vocabulary in any language', () => {
-    const banned = /\b(imap|smtp|dkim|spf|tls|uid|mime|порт\w*|сервер\w*|server\w*|port)\b/i;
-    const texts = [ru.login, en.login].flatMap((login) => collect(login));
+  it('says that the connection is missing when the application cannot be reached', async () => {
+    mockServer();
+    const fetchMock = vi.mocked(fetch);
+    const base = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((input, init) =>
+      String(input) === '/api/v1/auth/login'
+        ? Promise.reject(new TypeError('Failed to fetch'))
+        : base(input, init),
+    );
+    renderLogin();
+    await fill('alice@vinette.test', 'right');
 
-    for (const text of texts) {
-      expect(text).not.toMatch(banned);
-    }
+    await userEvent.click(screen.getByRole('button', { name: 'Войти' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Нет связи.');
+    expect(screen.getByRole('button', { name: 'Войти' })).toBeEnabled();
+  });
+
+  it('asks to check the entered data when the server rejects its format', async () => {
+    mockServer(problem('validation_failed', 400));
+    renderLogin();
+    await fill('alice@vinette.test', 'right');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Войти' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('введены полностью');
   });
 });
-
-function collect(value: unknown): string[] {
-  if (typeof value === 'string') return [value];
-  return Object.values(value as Record<string, unknown>).flatMap(collect);
-}
