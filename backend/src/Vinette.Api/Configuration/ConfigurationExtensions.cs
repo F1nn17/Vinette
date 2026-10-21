@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+
 namespace Vinette.Api.Configuration;
 
 public static class ConfigurationExtensions
@@ -26,6 +28,8 @@ public static class ConfigurationExtensions
         AddValidated<SmtpOptions>(services, configuration, SmtpOptions.SectionName);
         AddValidated<BrandingOptions>(services, configuration, BrandingOptions.SectionName);
         AddValidated<SessionLifetimeOptions>(services, configuration, SessionLifetimeOptions.SectionName);
+        AddValidated<RedisOptions>(services, configuration, RedisOptions.SectionName);
+        services.AddSingleton<IValidateOptions<RedisOptions>, RedisOptionsValidator>();
         AddValidated<KeyStorageOptions>(services, configuration, KeyStorageOptions.SectionName);
         AddValidated<RequestSecurityOptions>(services, configuration, RequestSecurityOptions.SectionName);
         AddValidated<LoginRateLimitOptions>(services, configuration, LoginRateLimitOptions.SectionName);
