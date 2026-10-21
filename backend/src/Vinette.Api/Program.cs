@@ -45,6 +45,7 @@ builder.Services.AddVinetteOptions(builder.Configuration);
 builder.Services.AddVinetteMail();
 builder.Services.AddVinetteSessions();
 builder.Services.AddVinetteAuthentication();
+builder.Services.AddVinetteForwardedHeaders();
 builder.Services.AddVinetteCsrf();
 builder.Services.AddVinetteLoginRateLimiting();
 builder.Services.AddVinetteProblemDetails();
@@ -66,6 +67,7 @@ if (!keysPersisted)
     SessionServices.LogKeysNotPersisted(app.Logger);
 }
 
+app.UseVinetteForwardedHeaders();
 app.UseVinetteProblemDetails();
 app.UseRateLimiter();
 
