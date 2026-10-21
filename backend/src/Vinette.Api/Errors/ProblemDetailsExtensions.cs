@@ -30,6 +30,7 @@ public static class ProblemDetailsExtensions
                 }
             };
         });
+        services.AddExceptionHandler<MailExceptionHandler>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddValidation();
         return services;
