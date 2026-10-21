@@ -28,6 +28,7 @@ public static class ConfigurationExtensions
         AddValidated<SessionLifetimeOptions>(services, configuration, SessionLifetimeOptions.SectionName);
         AddValidated<KeyStorageOptions>(services, configuration, KeyStorageOptions.SectionName);
         AddValidated<RequestSecurityOptions>(services, configuration, RequestSecurityOptions.SectionName);
+        AddValidated<LoginRateLimitOptions>(services, configuration, LoginRateLimitOptions.SectionName);
         return services;
     }
 

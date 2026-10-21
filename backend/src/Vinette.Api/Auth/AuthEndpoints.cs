@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.Extensions.Options;
 using Vinette.Api.Configuration;
 using Vinette.Api.Errors;
+using Vinette.Api.Security;
 using Vinette.Api.Sessions;
 using Vinette.Core.Authentication;
 
@@ -23,10 +24,12 @@ public static partial class AuthEndpoints
 
         auth.MapPost("/login", LoginAsync)
             .AllowAnonymous()
+            .RequireRateLimiting(LoginRateLimiting.PolicyName)
             .WithName("Login")
             .Produces<LoginResponse>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         auth.MapPost("/logout", LogoutAsync)
@@ -41,6 +44,7 @@ public static partial class AuthEndpoints
         LoginRequestBody body,
         HttpContext http,
         IAuthenticator authenticator,
+        LoginAttemptTracker attempts,
         SessionService sessions,
         IOptions<SessionLifetimeOptions> sessionOptions,
         TimeProvider time,
@@ -53,11 +57,20 @@ public static partial class AuthEndpoints
         var userAgent = http.Request.Headers.UserAgent.ToString();
         var client = new ClientInfo(clientIp, userAgent.Length > MaxUserAgentLength ? userAgent[..MaxUserAgentLength] : userAgent);
 
+        // Locked mailboxes and addresses are turned away without bothering the mail server, even for a correct password.
+        if (attempts.GetRetryAfter(address, clientIp) is { } wait)
+        {
+            LogLoginThrottled(logger, address, clientIp, (int)Math.Ceiling(wait.TotalSeconds));
+            await LoginRateLimiting.WriteTooManyRequestsAsync(http, wait, cancellationToken);
+            return Results.Empty;
+        }
+
         var result = await authenticator.AuthenticateAsync(new LoginRequest(address, body.Password), client, cancellationToken);
 
         switch (result.Outcome)
         {
             case AuthenticationOutcome.InvalidCredentials:
+                attempts.RegisterFailure(address, clientIp);
                 LogLoginRejected(logger, address, clientIp);
                 return Results.Problem(
                     statusCode: StatusCodes.Status401Unauthorized,
@@ -79,6 +92,7 @@ public static partial class AuthEndpoints
             await sessions.EndAsync(previous, cancellationToken);
         }
 
+        attempts.RegisterSuccess(address);
         var session = await sessions.CreateAsync(address, body.Password, body.RememberMe, clientIp, cancellationToken);
         SessionCookie.Write(http.Response, session.Id, body.RememberMe, sessionOptions.Value, time);
         LogLoginSucceeded(logger, address, clientIp, body.RememberMe);
@@ -97,6 +111,9 @@ public static partial class AuthEndpoints
         SessionCookie.Clear(http.Response);
         return Results.NoContent();
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Login throttled for {Address} from {ClientIp}: retry in {RetryAfterSeconds} s")]
+    private static partial void LogLoginThrottled(ILogger logger, string address, string? clientIp, int retryAfterSeconds);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Login rejected for {Address} from {ClientIp}")]
     private static partial void LogLoginRejected(ILogger logger, string address, string? clientIp);

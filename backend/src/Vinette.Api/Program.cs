@@ -46,6 +46,7 @@ builder.Services.AddVinetteMail();
 builder.Services.AddVinetteSessions();
 builder.Services.AddVinetteAuthentication();
 builder.Services.AddVinetteCsrf();
+builder.Services.AddVinetteLoginRateLimiting();
 builder.Services.AddVinetteProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
@@ -66,6 +67,7 @@ if (!keysPersisted)
 }
 
 app.UseVinetteProblemDetails();
+app.UseRateLimiter();
 
 app.UseStaticFiles();
 app.UseAuthentication();
