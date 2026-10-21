@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Options;
+using StackExchange.Redis;
+using Vinette.Api.Configuration;
 using Vinette.Core.Sessions;
 
 namespace Vinette.Api.Sessions;
@@ -9,10 +12,23 @@ public static partial class SessionServices
     {
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<ICredentialProtector, DataProtectionCredentialProtector>();
-        services.AddSingleton<ISessionStore, InMemorySessionStore>();
+        services.AddSingleton<InMemorySessionStore>();
+        services.AddSingleton<ISessionStore>(sp => sp.GetRequiredService<IOptions<SessionLifetimeOptions>>().Value.Store switch
+        {
+            SessionStoreKind.Redis => ActivatorUtilities.CreateInstance<RedisSessionStore>(sp),
+            _ => sp.GetRequiredService<InMemorySessionStore>(),
+        });
+        services.AddSingleton<IConnectionMultiplexer>(sp => ConnectRedis(sp.GetRequiredService<IOptions<RedisOptions>>().Value));
         services.AddSingleton<SessionService>();
         services.AddHostedService<SessionCleanupService>();
         return services;
+    }
+
+    private static ConnectionMultiplexer ConnectRedis(RedisOptions options)
+    {
+        var configuration = ConfigurationOptions.Parse(options.ConnectionString!);
+        configuration.AbortOnConnectFail = false; // the application starts and keeps retrying while Redis is down
+        return ConnectionMultiplexer.Connect(configuration);
     }
 
     [LoggerMessage(

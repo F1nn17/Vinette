@@ -44,6 +44,20 @@ public class OptionsValidationTests
     }
 
     [Fact]
+    public void Redis_Store_Without_A_Connection_String_Fails_Startup()
+    {
+        StartupFailure.AssertOptionsInvalid(b => b.UseSetting("Session:Store", "Redis"));
+    }
+
+    [Fact]
+    public void Sessions_Are_Kept_In_Memory_Unless_Redis_Is_Configured()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+
+        Assert.IsType<Vinette.Api.Sessions.InMemorySessionStore>(factory.Services.GetRequiredService<Vinette.Core.Sessions.ISessionStore>());
+    }
+
+    [Fact]
     public void Non_Positive_Imap_Timeout_Fails_Startup()
     {
         StartupFailure.AssertOptionsInvalid(b => b.UseSetting("Imap:Timeout", "00:00:00"));
