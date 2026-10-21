@@ -1,4 +1,4 @@
-import { ApiError, apiGet, apiPost, resetCsrfToken } from './client';
+import { ApiError, apiGet, apiPost, onUnauthorized, resetCsrfToken } from './client';
 
 type FetchMock = ReturnType<typeof vi.fn<typeof fetch>>;
 
@@ -146,5 +146,48 @@ describe('API client', () => {
     await apiPost('/api/v1/mail/something');
 
     expect(callsTo(mock, '/api/v1/csrf')).toHaveLength(2);
+  });
+
+  describe('unauthorized handler', () => {
+    it('is called when the server answers 401', async () => {
+      mockFetch(() => json({ code: 'unauthorized', title: 'Sign in required.' }, { status: 401 }));
+      const handler = vi.fn();
+      const off = onUnauthorized(handler);
+
+      await expect(apiGet('/api/v1/me')).rejects.toMatchObject({ status: 401 });
+
+      expect(handler).toHaveBeenCalledOnce();
+      off();
+    });
+
+    it('is not called for a wrong password: there 401 is the answer, not a lost session', async () => {
+      mockFetch((url) =>
+        url === '/api/v1/csrf'
+          ? json({ token: 't' })
+          : json({ code: 'invalid_credentials', title: 'No.' }, { status: 401 }),
+      );
+      const handler = vi.fn();
+      const off = onUnauthorized(handler);
+
+      await expect(apiPost('/api/v1/auth/login', {})).rejects.toMatchObject({
+        code: 'invalid_credentials',
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      off();
+    });
+
+    it('is not called for other errors or after unregistering', async () => {
+      mockFetch(() => json({ title: 'Broken' }, { status: 500 }));
+      const handler = vi.fn();
+      const off = onUnauthorized(handler);
+
+      await apiGet('/api/v1/me').catch(() => undefined);
+      off();
+      mockFetch(() => json({}, { status: 401 }));
+      await apiGet('/api/v1/me').catch(() => undefined);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
   });
 });

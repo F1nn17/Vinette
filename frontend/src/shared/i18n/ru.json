@@ -2,5 +2,5 @@
   "login": { "title": "Вход в {{name}}" },
   "mailbox": { "title": "Почта" },
   "compose": { "title": "Новое письмо" },
-  "common": { "close": "Закрыть" }
+  "common": { "close": "Закрыть", "loading": "Загрузка…" }
 }
