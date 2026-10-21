@@ -10,34 +10,27 @@ public class OptionsValidationTests
     [Fact]
     public void Invalid_Accent_Fails_Startup()
     {
-        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
-            b.UseSetting("Branding:Accent", "red"));
-
-        Assert.Throws<OptionsValidationException>(() => factory.CreateClient());
+        StartupFailure.AssertOptionsInvalid(b => b.UseSetting("Branding:Accent", "red"));
     }
 
     [Fact]
     public void MaxLifetime_Shorter_Than_IdleTimeout_Fails_Startup()
     {
-        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        StartupFailure.AssertOptionsInvalid(b =>
         {
             b.UseSetting("Session:IdleTimeout", "02:00:00");
             b.UseSetting("Session:MaxLifetime", "01:00:00");
         });
-
-        Assert.Throws<OptionsValidationException>(() => factory.CreateClient());
     }
 
     [Fact]
     public void RememberMeLifetime_Shorter_Than_MaxLifetime_Fails_Startup()
     {
-        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        StartupFailure.AssertOptionsInvalid(b =>
         {
             b.UseSetting("Session:MaxLifetime", "10.00:00:00");
             b.UseSetting("Session:RememberMeLifetime", "5.00:00:00");
         });
-
-        Assert.Throws<OptionsValidationException>(() => factory.CreateClient());
     }
 
     [Fact]
@@ -53,10 +46,7 @@ public class OptionsValidationTests
     [Fact]
     public void Non_Positive_Imap_Timeout_Fails_Startup()
     {
-        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
-            b.UseSetting("Imap:Timeout", "00:00:00"));
-
-        Assert.Throws<OptionsValidationException>(() => factory.CreateClient());
+        StartupFailure.AssertOptionsInvalid(b => b.UseSetting("Imap:Timeout", "00:00:00"));
     }
 
     [Fact]

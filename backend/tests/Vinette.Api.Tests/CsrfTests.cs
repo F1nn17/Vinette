@@ -261,10 +261,7 @@ public sealed class CsrfTests : IDisposable
     [InlineData("ftp://mail.example.org")]
     public void Malformed_Trusted_Origins_Fail_Startup(string origin)
     {
-        using var broken = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
-            b.UseSetting("Security:TrustedOrigins:0", origin));
-
-        Assert.Throws<OptionsValidationException>(() => broken.CreateClient());
+        StartupFailure.AssertOptionsInvalid(b => b.UseSetting("Security:TrustedOrigins:0", origin));
     }
 
     // ---- OriginPolicy in isolation ----
