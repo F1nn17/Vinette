@@ -1,4 +1,11 @@
-import { ApiError, apiGet, apiPost, onUnauthorized, resetCsrfToken } from './client';
+import {
+  ApiError,
+  apiGet,
+  apiPost,
+  onMailOutdated,
+  onUnauthorized,
+  resetCsrfToken,
+} from './client';
 
 type FetchMock = ReturnType<typeof vi.fn<typeof fetch>>;
 
@@ -157,6 +164,17 @@ describe('API client', () => {
       await expect(apiGet('/api/v1/me')).rejects.toMatchObject({ status: 401 });
 
       expect(handler).toHaveBeenCalledOnce();
+      off();
+    });
+
+    it('asks the mailbox data to be dropped when a folder was recreated', async () => {
+      mockFetch(() => json({ code: 'uid_validity_changed', title: 'x' }, { status: 409 }));
+      const handler = vi.fn();
+      const off = onMailOutdated(handler);
+
+      await apiGet('/api/v1/messages/x').catch(() => undefined);
+
+      expect(handler).toHaveBeenCalledTimes(1);
       off();
     });
 

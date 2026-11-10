@@ -56,6 +56,12 @@ public sealed class MailExceptionHandlerTests
         app.MapGet("/revoked", (Func<IResult>)(() => throw new MailAccessRevokedException("password changed")));
         app.MapGet("/busy", (Func<IResult>)(() => throw new MailBusyException("full", TimeSpan.FromSeconds(7))));
         app.MapGet("/down", (Func<IResult>)(() => throw new MailUnavailableException("IOException: reset")));
+        app.MapGet("/message/{id}", (MessageId id) => id.ToString());
+        app.MapGet("/folder-recreated", (Func<IResult>)(() =>
+        {
+            new MessageId("Секретная папка", 5, 1).EnsureCurrent(6);
+            return Results.Ok();
+        }));
         await app.StartAsync();
         return (app, app.GetTestClient(), app.Services.GetRequiredService<SessionService>(), gateway);
     }
@@ -121,5 +127,33 @@ public sealed class MailExceptionHandlerTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.Equal("mail_unavailable", JsonDocument.Parse(body).RootElement.GetProperty("code").GetString());
         Assert.DoesNotContain("IOException", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_Recreated_Folder_Gives_409_Without_The_Folder_Name()
+    {
+        var (app, client, _, _) = await StartAsync();
+        await using var _ = app;
+
+        var response = await client.GetAsync("/folder-recreated", Token);
+        var body = await response.Content.ReadAsStringAsync(Token);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("uid_validity_changed", JsonDocument.Parse(body).RootElement.GetProperty("code").GetString());
+        Assert.DoesNotContain("Секретная", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_Message_Id_In_The_Route_Is_Bound_And_A_Malformed_One_Is_A_400()
+    {
+        var (app, client, _, _) = await StartAsync();
+        await using var _ = app;
+        var id = new MessageId("INBOX", 1731000000, 42).ToString();
+
+        var good = await client.GetAsync($"/message/{id}", Token);
+        var bad = await client.GetAsync("/message/not-an-id", Token);
+
+        Assert.Equal(id, await good.Content.ReadAsStringAsync(Token));
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
     }
 }

@@ -12,6 +12,7 @@ public static class ErrorCodes
     public const string InvalidCredentials = "invalid_credentials";
     public const string MailBusy = "mail_busy";
     public const string SessionRevoked = "session_revoked";
+    public const string UidValidityChanged = "uid_validity_changed";
     public const string MailUnavailable = "mail_unavailable";
     public const string Forbidden = "forbidden";
     public const string CsrfFailed = "csrf_failed";

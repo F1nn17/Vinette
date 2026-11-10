@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { onUnauthorized } from '@/shared/api/client';
+import { onMailOutdated, onUnauthorized } from '@/shared/api/client';
 import { fetchMe, login, logout, type Me } from './api';
 import { ME_KEY, SessionContext, type SessionValue } from './session-context';
 
@@ -32,6 +32,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         endSession();
       }),
     [endSession],
+  );
+
+  // A recreated folder makes every cached message id of it wrong: reload what is on screen, forget the rest.
+  useEffect(
+    () =>
+      onMailOutdated(() => {
+        void queryClient.resetQueries({ predicate: (query) => query.queryKey[0] !== ME_KEY[0] });
+      }),
+    [queryClient],
   );
 
   const signIn = useCallback(

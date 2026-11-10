@@ -37,6 +37,19 @@ export function onUnauthorized(handler: UnauthorizedHandler): () => void {
   };
 }
 
+let mailOutdatedHandler: (() => void) | null = null;
+
+/**
+ * Registers what happens when the server says a folder was recreated (409 `uid_validity_changed`): message ids
+ * the client holds for it now point at other messages, so everything loaded from the mailbox must be dropped.
+ */
+export function onMailOutdated(handler: () => void): () => void {
+  mailOutdatedHandler = handler;
+  return () => {
+    if (mailOutdatedHandler === handler) mailOutdatedHandler = null;
+  };
+}
+
 let csrfToken: Promise<string> | null = null;
 
 /** Forgets the anti-forgery token: it is bound to the signed-in user, so it changes on sign-in and sign-out. */
@@ -118,6 +131,7 @@ export async function apiRequest<T>(
   if (!response.ok) {
     const error = await toApiError(response);
     if (response.status === 401 && path !== '/api/v1/auth/login') unauthorizedHandler?.(error.code);
+    if (response.status === 409 && error.code === 'uid_validity_changed') mailOutdatedHandler?.();
     throw error;
   }
   if (changesState && path.startsWith('/api/v1/auth/')) resetCsrfToken(); // sign-in/out changes the user

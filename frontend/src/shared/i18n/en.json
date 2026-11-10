@@ -38,6 +38,7 @@
     "mail_unavailable": "Mail is temporarily unavailable. Try again in a few minutes.",
     "mail_busy": "Mail is very busy right now. Wait a moment and try again.",
     "session_revoked": "Your mailbox password has changed or access was closed. Sign in again.",
+    "uid_validity_changed": "The folder changed on the mail side. The list was refreshed; open the message again.",
     "too_many_requests": "Too many attempts. Try again in {{minutes}} min.",
     "network": "No connection. Check your internet connection and try again.",
     "unknown": "Something went wrong. Try again."
