@@ -25,6 +25,12 @@ public sealed record FolderDto(
 /// <summary>Folders in sidebar order: special folders first, children right after their parent.</summary>
 public sealed record FoldersResponse(IReadOnlyList<FolderDto> Folders);
 
+/// <summary>Storage use of the mailbox, in bytes.</summary>
+public sealed record StorageDto(long UsedBytes, long LimitBytes);
+
+/// <summary>Mailbox quota. <c>storage</c> is absent when the server does not report one: show nothing then.</summary>
+public sealed record QuotaResponse(StorageDto? Storage);
+
 public static class FolderEndpoints
 {
     public static IEndpointRouteBuilder MapFolders(this IEndpointRouteBuilder api)
@@ -35,7 +41,26 @@ public static class FolderEndpoints
             .Produces<FoldersResponse>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+        api.MapGet("/quota", GetQuotaAsync)
+            .WithName("GetQuota")
+            .WithTags("Mail")
+            .Produces<QuotaResponse>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         return api;
+    }
+
+    private static async Task<QuotaResponse> GetQuotaAsync(
+        HttpContext http,
+        IMailGateway gateway,
+        SessionService sessions,
+        CancellationToken cancellationToken)
+    {
+        var quota = await gateway.ExecuteAsync(
+            http.GetMailCredentials(sessions),
+            (session, token) => session.GetQuotaAsync(token),
+            cancellationToken);
+        return new QuotaResponse(quota is null ? null : new StorageDto(quota.UsedBytes, quota.LimitBytes));
     }
 
     private static async Task<FoldersResponse> GetFoldersAsync(

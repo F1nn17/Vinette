@@ -38,6 +38,9 @@ public sealed class MailConnectionManagerTests
 
         public Task<IReadOnlyList<MailFolderInfo>> GetFoldersAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<MailFolderInfo>>([]);
 
+
+        public Task<MailQuota?> GetQuotaAsync(CancellationToken cancellationToken) => Task.FromResult<MailQuota?>(null);
+
         public int Enter()
         {
             var now = Interlocked.Increment(ref running);

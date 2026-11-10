@@ -17,4 +17,10 @@ public interface IMailSession : IAsyncDisposable
     /// Every folder of the mailbox with its message and unread counters (IMAP LIST and STATUS), unsorted; see <see cref="FolderOrder"/>.
     /// </summary>
     Task<IReadOnlyList<MailFolderInfo>> GetFoldersAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// How much of the mailbox's storage is used (IMAP GETQUOTAROOT). Null when the server has no quota extension or
+    /// sets no storage limit for this mailbox: then there is nothing to show.
+    /// </summary>
+    Task<MailQuota?> GetQuotaAsync(CancellationToken cancellationToken);
 }

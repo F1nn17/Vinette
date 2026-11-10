@@ -174,4 +174,35 @@ public sealed class AuthIntegrationTests(DovecotFixture dovecot) : IDisposable
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
+
+    [Fact]
+    public async Task The_Quota_Needs_A_Session()
+    {
+        var response = await CreateClient().GetAsync("/api/v1/quota", Token);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task The_Quota_Answers_With_Or_Without_A_Storage_Figure_And_Never_Fails()
+    {
+        var client = CreateClient();
+        var login = await CsrfClient.PostJsonAsync(
+            client,
+            "/api/v1/auth/login",
+            new { address = DovecotFixture.Bob.Address, password = DovecotFixture.Bob.Password, rememberMe = false },
+            Token);
+        var cookie = login.Headers.GetValues("Set-Cookie").Single(v => v.StartsWith(SessionCookie.Name + "=", StringComparison.Ordinal)).Split(';')[0];
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/quota");
+        request.Headers.Add("Cookie", cookie);
+        var response = await client.SendAsync(request, Token);
+        var body = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement;
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        if (body.TryGetProperty("storage", out var storage) && storage.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            Assert.True(storage.GetProperty("limitBytes").GetInt64() > 0); // the dev mailbox may have no limit: then "storage" is absent
+        }
+    }
 }
