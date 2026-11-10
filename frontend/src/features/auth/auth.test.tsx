@@ -58,6 +58,9 @@ function mockServer(initial: Partial<Server> = {}): Server {
           json({ code: 'unauthorized', title: 'Sign in required.' }, { status: 401 }),
         );
       }
+      if (url === '/api/v1/recreated') {
+        return Promise.resolve(json({ code: 'uid_validity_changed', title: 'x' }, { status: 409 }));
+      }
       return Promise.resolve(json({}, { status: 404 }));
     }),
   );
@@ -198,6 +201,20 @@ describe('authentication', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     expect(queryClient.getQueryData(['mail', 'inbox'])).toBeUndefined(); // nothing of the previous user is kept
+  });
+
+  it('drops the cached mailbox data, but keeps the user, when a folder was recreated on the mail side', async () => {
+    mockServer({ signedIn: true });
+    const { router, queryClient } = renderApp('/mail/inbox');
+    await screen.findByRole('heading', { level: 1, name: 'Почта' });
+    queryClient.setQueryData(['mail', 'inbox'], ['stale message list']);
+
+    await act(async () => {
+      await apiGet('/api/v1/recreated').catch(() => undefined);
+    });
+
+    await waitFor(() => expect(queryClient.getQueryData(['mail', 'inbox'])).toBeUndefined());
+    expect(router.state.location.pathname).toBe('/mail/inbox'); // still signed in
   });
 
   it('signs in: asks the server, learns who the user is and leaves the login screen', async () => {

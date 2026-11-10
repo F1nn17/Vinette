@@ -46,6 +46,15 @@ public sealed partial class MailExceptionHandler(
                     "Mail is busy right now. Try again in a moment.",
                     ErrorCodes.MailBusy);
 
+            case UidValidityChangedException:
+                // The folder name is the user's data: it stays out of the log and the answer.
+                LogUidValidityChanged(httpContext.User.Identity?.Name);
+                return await WriteAsync(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "The folder was recreated on the mail server; what was loaded from it is out of date.",
+                    ErrorCodes.UidValidityChanged);
+
             default:
                 return false;
         }
@@ -79,6 +88,9 @@ public sealed partial class MailExceptionHandler(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "No free mail connection for {Address}: answered 503 with Retry-After")]
     private partial void LogBusy(string? address);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "A message id of {Address} refers to a folder that was recreated: answered 409")]
+    private partial void LogUidValidityChanged(string? address);
 
     // The exception text names its type and the mail server's message, never the credentials.
     [LoggerMessage(Level = LogLevel.Warning, Message = "The mail server is unavailable for {Address}")]
