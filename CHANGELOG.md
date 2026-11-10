@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Servers that do not mark their special folders are handled too: Drafts, Sent, Archive, Spam and Trash are found by their usual names (English and Russian, also inside `INBOX` or `[Gmail]`). The web app shows these folders under its own names in the interface language, whatever the server calls them.
 - `GET /api/v1/folders`: the folders of the signed-in user's mailbox in sidebar order (Inbox, Drafts, Sent, Archive, Spam, Trash, then own folders with sub-folders after their parent), each with its role, total and unread counts.
 - Messages are identified by folder, folder version (`UIDVALIDITY`) and message number in the API as one opaque string, e.g. `SU5CT1g.1731000000.42`. If a folder was deleted and created again on the mail server, requests with old ids get `409` with the error code `uid_validity_changed` and the web app reloads what it showed instead of opening a wrong message.
 - When the mail provider stops accepting the saved password (changed or revoked), the user is signed out and the login screen explains why ("Your mailbox password has changed or access was closed. Sign in again."). Plain-language texts for "mail unavailable" and "mail busy" are ready for the mailbox screens; the error table is in `docs/api-errors.md`.

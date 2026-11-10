@@ -42,5 +42,13 @@
     "too_many_requests": "Too many attempts. Try again in {{minutes}} min.",
     "network": "No connection. Check your internet connection and try again.",
     "unknown": "Something went wrong. Try again."
+  },
+  "folders": {
+    "inbox": "Inbox",
+    "drafts": "Drafts",
+    "sent": "Sent",
+    "archive": "Archive",
+    "junk": "Spam",
+    "trash": "Trash"
   }
 }

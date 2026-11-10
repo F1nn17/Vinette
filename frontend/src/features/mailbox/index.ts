@@ -1,1 +1,1 @@
-export {};
+export { folderLabel } from './folder-label';
