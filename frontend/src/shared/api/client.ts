@@ -22,7 +22,8 @@ export class ApiError extends Error {
   }
 }
 
-type UnauthorizedHandler = () => void;
+/** `code` is the error code of the 401 answer, e.g. `session_revoked` when the mail provider rejected the saved password. */
+type UnauthorizedHandler = (code?: string) => void;
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 
 /**
@@ -114,8 +115,11 @@ export async function apiRequest<T>(
     }
   }
 
-  if (response.status === 401 && path !== '/api/v1/auth/login') unauthorizedHandler?.();
-  if (!response.ok) throw await toApiError(response);
+  if (!response.ok) {
+    const error = await toApiError(response);
+    if (response.status === 401 && path !== '/api/v1/auth/login') unauthorizedHandler?.(error.code);
+    throw error;
+  }
   if (changesState && path.startsWith('/api/v1/auth/')) resetCsrfToken(); // sign-in/out changes the user
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;

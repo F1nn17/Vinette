@@ -160,6 +160,17 @@ describe('API client', () => {
       off();
     });
 
+    it('tells the handler why: the code of the 401 answer', async () => {
+      mockFetch(() => json({ code: 'session_revoked', title: 'x' }, { status: 401 }));
+      const handler = vi.fn();
+      const off = onUnauthorized(handler);
+
+      await apiGet('/api/v1/me').catch(() => undefined);
+
+      expect(handler).toHaveBeenCalledWith('session_revoked');
+      off();
+    });
+
     it('is not called for a wrong password: there 401 is the answer, not a lost session', async () => {
       mockFetch((url) =>
         url === '/api/v1/csrf'

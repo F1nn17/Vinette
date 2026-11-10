@@ -31,7 +31,7 @@ function errorMessage(
 
 function LoginForm() {
   const { t } = useTranslation();
-  const { signIn } = useSession();
+  const { signIn, notice } = useSession();
   const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -104,6 +104,15 @@ function LoginForm() {
         checked={rememberMe}
         onChange={(event) => setRememberMe(event.target.checked)}
       />
+
+      {notice === 'sessionRevoked' && !formError && (
+        <p
+          role="status"
+          className="rounded-sm bg-warning-bg px-3 py-2.5 text-secondary text-warning"
+        >
+          {t('errors.session_revoked')}
+        </p>
+      )}
 
       {formError && (
         <p
