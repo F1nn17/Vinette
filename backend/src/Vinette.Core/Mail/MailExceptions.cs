@@ -38,3 +38,30 @@ public sealed class MailAccessRevokedException : Exception
     {
     }
 }
+
+/// <summary>
+/// Too many mail connections are open (per user or in total) and none became free in time. Unlike
+/// <see cref="MailUnavailableException"/> the mail server is fine: the application is busy. Trying again shortly may work.
+/// </summary>
+public sealed class MailBusyException : Exception
+{
+    public MailBusyException()
+    {
+    }
+
+    public MailBusyException(string message)
+        : base(message)
+    {
+    }
+
+    public MailBusyException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+
+    public MailBusyException(string message, TimeSpan retryAfter)
+        : base(message) => RetryAfter = retryAfter;
+
+    /// <summary>When to try again.</summary>
+    public TimeSpan RetryAfter { get; } = TimeSpan.FromSeconds(5);
+}
