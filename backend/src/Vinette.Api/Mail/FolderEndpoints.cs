@@ -48,7 +48,7 @@ public static class FolderEndpoints
             http.GetMailCredentials(sessions),
             (session, token) => session.GetFoldersAsync(token),
             cancellationToken);
-        return new FoldersResponse([.. FolderOrder.Sort(folders).Select(ToDto)]);
+        return new FoldersResponse([.. FolderOrder.Sort(FolderRoleGuesser.Complete(folders)).Select(ToDto)]);
     }
 
     private static FolderDto ToDto(MailFolderInfo folder) => new(
