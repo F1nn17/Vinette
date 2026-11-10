@@ -75,6 +75,46 @@
         }
       }
     },
+    "/api/v1/folders": {
+      "get": {
+        "tags": [
+          "Mail"
+        ],
+        "operationId": "GetFolders",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FoldersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "tags": [
@@ -169,6 +209,72 @@
         "properties": {
           "token": {
             "type": "string"
+          }
+        }
+      },
+      "FolderDto": {
+        "required": [
+          "path",
+          "name",
+          "parentPath",
+          "role",
+          "canContainMessages",
+          "total",
+          "unread",
+          "subscribed"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentPath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role": {
+            "type": "string"
+          },
+          "canContainMessages": {
+            "type": "boolean"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unread": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "subscribed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FoldersResponse": {
+        "required": [
+          "folders"
+        ],
+        "type": "object",
+        "properties": {
+          "folders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FolderDto"
+            }
           }
         }
       },
@@ -277,6 +383,9 @@
     },
     {
       "name": "Auth"
+    },
+    {
+      "name": "Mail"
     }
   ]
 }

@@ -12,4 +12,9 @@ public interface IMailSession : IAsyncDisposable
 
     /// <summary>Keeps the connection alive and detects a dead one (the IMAP NOOP command).</summary>
     Task PingAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Every folder of the mailbox with its message and unread counters (IMAP LIST and STATUS), unsorted; see <see cref="FolderOrder"/>.
+    /// </summary>
+    Task<IReadOnlyList<MailFolderInfo>> GetFoldersAsync(CancellationToken cancellationToken);
 }

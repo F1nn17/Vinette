@@ -141,4 +141,37 @@ public sealed class AuthIntegrationTests(DovecotFixture dovecot) : IDisposable
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
+
+    [Fact]
+    public async Task The_Folder_List_Of_A_Signed_In_User_Comes_Sorted_With_Roles_And_Counters()
+    {
+        var client = CreateClient();
+        var login = await CsrfClient.PostJsonAsync(
+            client,
+            "/api/v1/auth/login",
+            new { address = DovecotFixture.Alice.Address, password = DovecotFixture.Alice.Password, rememberMe = false },
+            Token);
+        var cookie = login.Headers.GetValues("Set-Cookie").Single(v => v.StartsWith(SessionCookie.Name + "=", StringComparison.Ordinal)).Split(';')[0];
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/folders");
+        request.Headers.Add("Cookie", cookie);
+        var response = await client.SendAsync(request, Token);
+        var body = await response.Content.ReadAsStringAsync(Token);
+        var folders = System.Text.Json.JsonDocument.Parse(body).RootElement.GetProperty("folders").EnumerateArray().ToList();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("INBOX", folders[0].GetProperty("path").GetString());
+        Assert.Equal("inbox", folders[0].GetProperty("role").GetString());
+        Assert.True(folders[0].GetProperty("total").GetInt32() >= dovecot.SeededMessageCount);
+        Assert.Contains(folders, f => f.GetProperty("role").GetString() == "trash");
+        Assert.DoesNotContain(DovecotFixture.Alice.Password, body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task The_Folder_List_Needs_A_Session()
+    {
+        var response = await CreateClient().GetAsync("/api/v1/folders", Token);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
 }

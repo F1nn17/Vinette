@@ -36,6 +36,8 @@ public sealed class MailConnectionManagerTests
 
         public Task PingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
+        public Task<IReadOnlyList<MailFolderInfo>> GetFoldersAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<MailFolderInfo>>([]);
+
         public int Enter()
         {
             var now = Interlocked.Increment(ref running);

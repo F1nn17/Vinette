@@ -15,6 +15,8 @@ public sealed class MailConnectionLimitsTests
 
         public Task PingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
+        public Task<IReadOnlyList<MailFolderInfo>> GetFoldersAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<MailFolderInfo>>([]);
+
         public ValueTask DisposeAsync()
         {
             IsConnected = false;

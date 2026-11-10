@@ -52,6 +52,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetFolders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -90,6 +106,21 @@ export interface components {
     schemas: {
         CsrfResponse: {
             token: string;
+        };
+        FolderDto: {
+            path: string;
+            name: string;
+            parentPath: null | string;
+            role: string;
+            canContainMessages: boolean;
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            unread: number | string;
+            subscribed: boolean;
+        };
+        FoldersResponse: {
+            folders: components["schemas"]["FolderDto"][];
         };
         HealthResponse: {
             status: string;
@@ -188,6 +219,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CsrfResponse"];
+                };
+            };
+        };
+    };
+    GetFolders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoldersResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
         };
