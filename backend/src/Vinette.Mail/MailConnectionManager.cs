@@ -11,8 +11,12 @@ namespace Vinette.Mail;
 public sealed class MailConnectionManager(
     IMailSessionFactory factory,
     MailReconnectPolicy? reconnectPolicy = null,
-    TimeProvider? timeProvider = null) : IMailGateway, IAsyncDisposable
+    TimeProvider? timeProvider = null,
+    MailConnectionLimits? connectionLimits = null) : IMailGateway, IAsyncDisposable
 {
+    private readonly MailConnectionLimits limits = connectionLimits ?? MailConnectionLimits.Default;
+    private readonly SemaphoreSlim totalSlots = new((connectionLimits ?? MailConnectionLimits.Default).MaxTotal);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> userSlots = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, Connection> connections = new(StringComparer.Ordinal);
     private readonly MailReconnectPolicy policy = reconnectPolicy ?? MailReconnectPolicy.Default;
     private readonly TimeProvider time = timeProvider ?? TimeProvider.System;
@@ -158,17 +162,78 @@ public sealed class MailConnectionManager(
         }
 
         await DropAsync(connection).ConfigureAwait(false);
-        var session = await factory.OpenAsync(credentials, cancellationToken).ConfigureAwait(false);
-        connection.Session = session;
-        return session;
+        await AcquireSlotAsync(connection, credentials.Address, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var session = await factory.OpenAsync(credentials, cancellationToken).ConfigureAwait(false);
+            connection.Session = session;
+            return session;
+        }
+        catch
+        {
+            ReleaseSlot(connection);
+            throw;
+        }
     }
 
-    private static async Task DropAsync(Connection connection)
+    // A place for a new connection: the user's own limit first, then the global one.
+    private async Task AcquireSlotAsync(Connection connection, string address, CancellationToken cancellationToken)
+    {
+        var user = userSlots.GetOrAdd(address, _ => new SemaphoreSlim(limits.MaxPerUser));
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(limits.WaitTimeout);
+        var haveUser = false;
+        try
+        {
+            await user.WaitAsync(timeout.Token).ConfigureAwait(false);
+            haveUser = true;
+            await totalSlots.WaitAsync(timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            if (haveUser)
+            {
+                _ = user.Release();
+            }
+
+            throw new MailBusyException("Too many mail connections are open.", limits.WaitTimeout);
+        }
+        catch
+        {
+            if (haveUser)
+            {
+                _ = user.Release();
+            }
+
+            throw;
+        }
+
+        connection.SlotAddress = address;
+    }
+
+    private void ReleaseSlot(Connection connection)
+    {
+        if (connection.SlotAddress is { } address)
+        {
+            connection.SlotAddress = null;
+            _ = userSlots[address].Release();
+            _ = totalSlots.Release();
+        }
+    }
+
+    private async Task DropAsync(Connection connection)
     {
         if (connection.Session is { } session)
         {
             connection.Session = null;
-            await session.DisposeAsync().ConfigureAwait(false);
+            try
+            {
+                await session.DisposeAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                ReleaseSlot(connection);
+            }
         }
     }
 
@@ -201,17 +266,13 @@ public sealed class MailConnectionManager(
     }
 
     // Waits for the command that is running (if any), then closes the connection.
-    private static async Task CloseAsync(Connection connection, CancellationToken cancellationToken)
+    private async Task CloseAsync(Connection connection, CancellationToken cancellationToken)
     {
         await connection.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             connection.Closed = true;
-            if (connection.Session is not null)
-            {
-                await connection.Session.DisposeAsync().ConfigureAwait(false);
-                connection.Session = null;
-            }
+            await DropAsync(connection).ConfigureAwait(false);
         }
         finally
         {
@@ -232,5 +293,8 @@ public sealed class MailConnectionManager(
         public bool Evicted { get; set; }
 
         public long LastUsed { get; set; }
+
+        /// <summary>The mailbox whose connection place this one holds, or null when it holds none.</summary>
+        public string? SlotAddress { get; set; }
     }
 }

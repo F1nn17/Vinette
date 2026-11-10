@@ -54,6 +54,7 @@ public sealed class MailExceptionHandlerTests
         var app = builder.Build();
         app.UseVinetteProblemDetails();
         app.MapGet("/revoked", (Func<IResult>)(() => throw new MailAccessRevokedException("password changed")));
+        app.MapGet("/busy", (Func<IResult>)(() => throw new MailBusyException("full", TimeSpan.FromSeconds(7))));
         app.MapGet("/down", (Func<IResult>)(() => throw new MailUnavailableException("IOException: reset")));
         await app.StartAsync();
         return (app, app.GetTestClient(), app.Services.GetRequiredService<SessionService>(), gateway);
@@ -92,6 +93,20 @@ public sealed class MailExceptionHandlerTests
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.Empty(gateway.Released);
+    }
+
+    [Fact]
+    public async Task Too_Many_Connections_Give_503_With_Retry_After()
+    {
+        var (app, client, _, _) = await StartAsync();
+        await using var _ = app;
+
+        var response = await client.GetAsync("/busy", Token);
+        var problem = await ReadProblemAsync(response);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal("mail_busy", problem.GetProperty("code").GetString());
+        Assert.Equal("7", response.Headers.GetValues("Retry-After").Single());
     }
 
     [Fact]

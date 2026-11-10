@@ -23,7 +23,13 @@ public static class MailServices
             return new ImapMailSessionFactory(
                 new ImapConnectionSettings(imap.Host, imap.Port, imap.Security, imap.Timeout, imap.AllowInvalidCertificate));
         });
-        services.AddSingleton<MailConnectionManager>();
+        services.AddSingleton(provider =>
+        {
+            var imap = provider.GetRequiredService<IOptions<ImapOptions>>().Value;
+            return new MailConnectionManager(
+                provider.GetRequiredService<IMailSessionFactory>(),
+                connectionLimits: new MailConnectionLimits(imap.MaxConnectionsPerUser, imap.MaxConnections, imap.ConnectionWaitTimeout));
+        });
         services.AddSingleton<IMailGateway>(provider => provider.GetRequiredService<MailConnectionManager>());
         services.AddHostedService<MailConnectionCleanupService>();
         return services;

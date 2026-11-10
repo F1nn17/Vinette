@@ -37,6 +37,15 @@ public sealed partial class MailExceptionHandler(
                     "The mail server is temporarily unavailable.",
                     ErrorCodes.MailUnavailable);
 
+            case MailBusyException busy:
+                LogBusy(httpContext.User.Identity?.Name);
+                httpContext.Response.Headers.RetryAfter = ((int)Math.Ceiling(busy.RetryAfter.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                return await WriteAsync(
+                    httpContext,
+                    StatusCodes.Status503ServiceUnavailable,
+                    "Mail is busy right now. Try again in a moment.",
+                    ErrorCodes.MailBusy);
+
             default:
                 return false;
         }
@@ -67,6 +76,9 @@ public sealed partial class MailExceptionHandler(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "The mail server rejected the saved password of {Address}: session ended")]
     private partial void LogRevoked(string? address);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "No free mail connection for {Address}: answered 503 with Retry-After")]
+    private partial void LogBusy(string? address);
 
     // The exception text names its type and the mail server's message, never the credentials.
     [LoggerMessage(Level = LogLevel.Warning, Message = "The mail server is unavailable for {Address}")]
