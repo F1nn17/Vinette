@@ -87,6 +87,7 @@ var api = app.MapGroup("/api/v1");
 api.MapHealth();
 api.MapAuth();
 api.MapCsrf();
+api.MapFolders();
 app.MapHub<MailHub>("/hubs/mail");
 app.MapBranding();
 

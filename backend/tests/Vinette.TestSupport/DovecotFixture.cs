@@ -163,6 +163,38 @@ public sealed class DovecotFixture : IAsyncLifetime
         return changed;
     }
 
+    /// <summary>Creates a folder in a mailbox (a hierarchy separator in the name nests it) and subscribes the mailbox to it.</summary>
+    public async Task CreateFolderAsync(MailAccount account, string folder, CancellationToken cancellationToken)
+    {
+        var result = await Container.ExecAsync(["doveadm", "mailbox", "create", "-s", "-u", account.Address, folder], cancellationToken);
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"Creating folder {folder} failed (exit {result.ExitCode}): {result.Stderr}");
+        }
+    }
+
+    /// <summary>Puts one of the fixture emails (by file name, e.g. "plain-text.eml") into a folder of a mailbox.</summary>
+    public async Task SaveFixtureAsync(MailAccount account, string folder, string fixtureFile, CancellationToken cancellationToken)
+    {
+        var result = await Container.ExecAsync(
+            ["sh", "-c", $"doveadm save -u {account.Address} -m '{folder}' < {FixturesInContainer}/{fixtureFile}"],
+            cancellationToken);
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"Saving {fixtureFile} into {folder} failed (exit {result.ExitCode}): {result.Stderr}");
+        }
+    }
+
+    /// <summary>Marks every message of a folder as read.</summary>
+    public async Task MarkFolderReadAsync(MailAccount account, string folder, CancellationToken cancellationToken)
+    {
+        var result = await Container.ExecAsync(["doveadm", "flags", "add", "-u", account.Address, "\\Seen", "mailbox", folder, "all"], cancellationToken);
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"Marking {folder} read failed (exit {result.ExitCode}): {result.Stderr}");
+        }
+    }
+
     private async Task<bool> CanConnectAsync(CancellationToken cancellationToken)
     {
         try
