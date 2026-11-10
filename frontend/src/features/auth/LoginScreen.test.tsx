@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { appRoutes } from '@/app/routes';
-import { resetCsrfToken } from '@/shared/api/client';
+import { apiGet, resetCsrfToken } from '@/shared/api/client';
 import { SessionProvider as SessionProviderForTests } from './SessionProvider';
 
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -39,15 +39,19 @@ function mockServer(loginResponse?: () => Response): Server {
         if (response.ok) server.signedIn = true;
         return Promise.resolve(response);
       }
+      if (url === '/api/v1/revoked') {
+        server.signedIn = false;
+        return Promise.resolve(json({ code: 'session_revoked', title: 'x' }, { status: 401 }));
+      }
       return Promise.resolve(json({}, { status: 404 }));
     }),
   );
   return server;
 }
 
-function renderLogin() {
+function renderLogin(entry = '/login') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const router = createMemoryRouter(appRoutes, { initialEntries: ['/login'] });
+  const router = createMemoryRouter(appRoutes, { initialEntries: [entry] });
   render(
     <QueryClientProvider client={queryClient}>
       <SessionProviderForTests>
@@ -89,6 +93,31 @@ describe('login screen', () => {
     ).not.toBeChecked();
     expect(screen.getByRole('button', { name: 'Войти' })).toHaveAttribute('type', 'submit');
     expect(screen.getByText('Пароль не сохраняется в браузере.')).toBeInTheDocument();
+  });
+
+  it('explains on the login screen that the mailbox password changed when the session was ended for that', async () => {
+    const server = mockServer();
+    server.signedIn = true;
+    const router = renderLogin('/mail/inbox');
+    await screen.findByRole('heading', { level: 1, name: 'Почта' });
+
+    await act(async () => {
+      await apiGet('/api/v1/revoked').catch(() => undefined);
+    });
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Пароль от почты изменился или доступ закрыт. Войдите снова.',
+    );
+  });
+
+  it('shows no such notice on a plain visit to the login screen', async () => {
+    mockServer();
+
+    renderLogin();
+    await screen.findByRole('heading', { level: 1, name: 'Вход' });
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('does not offer signing in with a work account when none is configured', async () => {

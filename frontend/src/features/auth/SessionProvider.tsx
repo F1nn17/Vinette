@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { onUnauthorized } from '@/shared/api/client';
 import { fetchMe, login, logout, type Me } from './api';
 import { ME_KEY, SessionContext, type SessionValue } from './session-context';
@@ -10,6 +10,7 @@ import { ME_KEY, SessionContext, type SessionValue } from './session-context';
  */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const [notice, setNotice] = useState<SessionValue['notice']>(null);
 
   const { data, isPending } = useQuery<Me | null>({
     queryKey: ME_KEY,
@@ -24,11 +25,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryClient.setQueryData<Me | null>(ME_KEY, null);
   }, [queryClient]);
 
-  useEffect(() => onUnauthorized(endSession), [endSession]);
+  useEffect(
+    () =>
+      onUnauthorized((code) => {
+        setNotice(code === 'session_revoked' ? 'sessionRevoked' : null);
+        endSession();
+      }),
+    [endSession],
+  );
 
   const signIn = useCallback(
     async (address: string, password: string, rememberMe: boolean) => {
       const me = await login({ address, password, rememberMe });
+      setNotice(null);
       queryClient.setQueryData<Me | null>(ME_KEY, me);
     },
     [queryClient],
@@ -46,10 +55,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     () => ({
       status: isPending ? 'loading' : data ? 'signedIn' : 'signedOut',
       address: data?.address ?? null,
+      notice,
       signIn,
       signOut,
     }),
-    [data, isPending, signIn, signOut],
+    [data, isPending, notice, signIn, signOut],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
