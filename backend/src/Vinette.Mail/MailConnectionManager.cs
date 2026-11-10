@@ -20,7 +20,12 @@ public sealed class MailConnectionManager(
     private readonly ConcurrentDictionary<string, Connection> connections = new(StringComparer.Ordinal);
     private readonly MailReconnectPolicy policy = reconnectPolicy ?? MailReconnectPolicy.Default;
     private readonly TimeProvider time = timeProvider ?? TimeProvider.System;
+    private MailMetrics? metricsInstance;
+    private int openCount;
+    private int waitingCount;
     private bool disposed;
+
+    internal MailMetrics Metrics => metricsInstance ??= new MailMetrics(() => Volatile.Read(ref openCount), () => Volatile.Read(ref waitingCount));
 
     /// <summary>Number of web sessions that currently have a connection slot.</summary>
     public int ConnectionCount => connections.Count;
@@ -38,7 +43,16 @@ public sealed class MailConnectionManager(
         while (true)
         {
             var connection = connections.GetOrAdd(credentials.SessionId, _ => new Connection { LastUsed = time.GetTimestamp() });
-            await connection.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            _ = Interlocked.Increment(ref waitingCount);
+            try
+            {
+                await connection.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                _ = Interlocked.Decrement(ref waitingCount);
+            }
+
             try
             {
                 if (connection.Evicted)
@@ -87,7 +101,7 @@ public sealed class MailConnectionManager(
                 _ = connections.TryRemove(new KeyValuePair<string, Connection>(id, connection));
                 if (connection.Session is not null)
                 {
-                    await DropAsync(connection).ConfigureAwait(false);
+                    await DropAsync(connection, "idle").ConfigureAwait(false);
                     closed++;
                 }
             }
@@ -116,23 +130,29 @@ public sealed class MailConnectionManager(
             try
             {
                 var session = await EnsureSessionAsync(connection, credentials, cancellationToken).ConfigureAwait(false);
+                var started = time.GetTimestamp();
                 try
                 {
-                    return await command(session, cancellationToken).ConfigureAwait(false);
+                    var result = await command(session, cancellationToken).ConfigureAwait(false);
+                    Metrics.CommandFinished(time.GetElapsedTime(started), "ok");
+                    return result;
                 }
                 catch (OperationCanceledException)
                 {
+                    Metrics.CommandFinished(time.GetElapsedTime(started), "cancelled");
                     // A command cut off in the middle leaves the protocol stream in an unknown state (the server may still be
                     // answering it): the connection is dropped and the next command opens a clean one.
-                    await DropAsync(connection).ConfigureAwait(false);
+                    await DropAsync(connection, "cancelled").ConfigureAwait(false);
                     throw;
                 }
                 catch (Exception exception) when (IsConnectionFailure(exception))
                 {
-                    await DropAsync(connection).ConfigureAwait(false);
+                    Metrics.CommandFinished(time.GetElapsedTime(started), "error");
+                    await DropAsync(connection, "lost").ConfigureAwait(false);
                     if (!safeToRepeat)
                     {
                         giveUp = true;
+                        Metrics.Error("unavailable");
                         throw AsUnavailable(exception); // the command may have been carried out: never run it twice
                     }
 
@@ -147,8 +167,11 @@ public sealed class MailConnectionManager(
             failures++;
             if (failures > policy.MaxRetries)
             {
+                Metrics.Error("unavailable");
                 throw AsUnavailable(failure);
             }
+
+            Metrics.Reconnect();
 
             await Task.Delay(policy.DelayBefore(failures), time, cancellationToken).ConfigureAwait(false);
         }
@@ -161,13 +184,30 @@ public sealed class MailConnectionManager(
             return existing;
         }
 
-        await DropAsync(connection).ConfigureAwait(false);
-        await AcquireSlotAsync(connection, credentials.Address, cancellationToken).ConfigureAwait(false);
+        await DropAsync(connection, "lost").ConfigureAwait(false);
+        _ = Interlocked.Increment(ref waitingCount); // waiting for a free place counts as queued
+        try
+        {
+            await AcquireSlotAsync(connection, credentials.Address, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _ = Interlocked.Decrement(ref waitingCount);
+        }
+
         try
         {
             var session = await factory.OpenAsync(credentials, cancellationToken).ConfigureAwait(false);
             connection.Session = session;
+            _ = Interlocked.Increment(ref openCount);
+            Metrics.ConnectionOpened();
             return session;
+        }
+        catch (MailAccessRevokedException)
+        {
+            ReleaseSlot(connection);
+            Metrics.Error("revoked");
+            throw;
         }
         catch
         {
@@ -196,6 +236,7 @@ public sealed class MailConnectionManager(
                 _ = user.Release();
             }
 
+            Metrics.Error("busy");
             throw new MailBusyException("Too many mail connections are open.", limits.WaitTimeout);
         }
         catch
@@ -221,11 +262,13 @@ public sealed class MailConnectionManager(
         }
     }
 
-    private async Task DropAsync(Connection connection)
+    private async Task DropAsync(Connection connection, string reason)
     {
         if (connection.Session is { } session)
         {
             connection.Session = null;
+            _ = Interlocked.Decrement(ref openCount);
+            Metrics.ConnectionClosed(reason);
             try
             {
                 await session.DisposeAsync().ConfigureAwait(false);
@@ -249,7 +292,7 @@ public sealed class MailConnectionManager(
         ArgumentNullException.ThrowIfNull(sessionId);
         if (connections.TryRemove(sessionId, out var connection))
         {
-            await CloseAsync(connection, cancellationToken).ConfigureAwait(false);
+            await CloseAsync(connection, shutdown: false, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -260,19 +303,21 @@ public sealed class MailConnectionManager(
         {
             if (connections.TryRemove(id, out var connection))
             {
-                await CloseAsync(connection, CancellationToken.None).ConfigureAwait(false);
+                await CloseAsync(connection, shutdown: true, CancellationToken.None).ConfigureAwait(false);
             }
         }
+
+        metricsInstance?.Dispose();
     }
 
     // Waits for the command that is running (if any), then closes the connection.
-    private async Task CloseAsync(Connection connection, CancellationToken cancellationToken)
+    private async Task CloseAsync(Connection connection, bool shutdown, CancellationToken cancellationToken)
     {
         await connection.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             connection.Closed = true;
-            await DropAsync(connection).ConfigureAwait(false);
+            await DropAsync(connection, shutdown ? "shutdown" : "released").ConfigureAwait(false);
         }
         finally
         {

@@ -23,7 +23,7 @@ public static partial class SpaIndex
         app.MapFallback(async (HttpContext ctx, IWebHostEnvironment env, IOptions<BrandingOptions> branding) =>
         {
             var path = ctx.Request.Path;
-            if (path.StartsWithSegments("/api") || path.StartsWithSegments("/hubs") || path.StartsWithSegments("/branding"))
+            if (path.StartsWithSegments("/api") || path.StartsWithSegments("/hubs") || path.StartsWithSegments("/branding") || path.StartsWithSegments("/metrics"))
             {
                 return Results.NotFound();
             }
