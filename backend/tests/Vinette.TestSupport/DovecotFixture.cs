@@ -119,6 +119,108 @@ public sealed class DovecotFixture : IAsyncLifetime
         }
     }
 
+    /// <summary>
+    /// Restarts the real Dovecot inside the container (every IMAP connection is dropped) and returns when it answers again.
+    /// Other test classes of the collection run one after another, so none is using it meanwhile.
+    /// </summary>
+    public async Task RestartDovecotAsync(CancellationToken cancellationToken)
+    {
+        // A restart alone leaves running IMAP processes alone, so the open connections are dropped first, as a crash would.
+        var result = await Container.ExecAsync(["sh", "-c", "doveadm kick '*'; supervisorctl restart dovecot"], cancellationToken);
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"Restarting Dovecot failed (exit {result.ExitCode}): {result.Stderr}");
+        }
+
+        await WaitUntilAsync(async () => await CanConnectAsync(cancellationToken), TimeSpan.FromSeconds(60), "Dovecot did not come back after the restart.", cancellationToken);
+    }
+
+    /// <summary>Creates a mailbox of its own, so a test can change or drop its password without touching alice and bob.</summary>
+    public async Task<MailAccount> CreateAccountAsync(string name, CancellationToken cancellationToken)
+    {
+        var account = new MailAccount($"{name}@{Domain}", $"{name}-pass");
+        var result = await Container.ExecAsync(["setup", "email", "add", account.Address, account.Password], cancellationToken);
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"Creating {account.Address} failed (exit {result.ExitCode}): {result.Stderr}");
+        }
+
+        await WaitUntilAsync(async () => await CanLoginAsync(account, cancellationToken), TimeSpan.FromSeconds(90), $"{account.Address} cannot sign in after it was created.", cancellationToken);
+        return account;
+    }
+
+    /// <summary>Changes the password the way an administrator does and returns once Dovecot accepts the new one and refuses the old one.</summary>
+    public async Task<MailAccount> ChangePasswordAsync(MailAccount account, string newPassword, CancellationToken cancellationToken)
+    {
+        var result = await Container.ExecAsync(["setup", "email", "update", account.Address, newPassword], cancellationToken);
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"Changing the password of {account.Address} failed (exit {result.ExitCode}): {result.Stderr}");
+        }
+
+        var changed = account with { Password = newPassword };
+        await WaitUntilAsync(async () => await CanLoginAsync(changed, cancellationToken), TimeSpan.FromSeconds(90), "The new password was not accepted in time.", cancellationToken);
+        return changed;
+    }
+
+    private async Task<bool> CanConnectAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var client = new System.Net.Sockets.TcpClient();
+            await client.ConnectAsync(Host, ImapPort, cancellationToken);
+            using var reader = new StreamReader(client.GetStream(), Encoding.ASCII);
+            var greeting = await reader.ReadLineAsync(cancellationToken);
+            return greeting?.StartsWith("* OK", StringComparison.Ordinal) == true;
+        }
+        catch (Exception exception) when (exception is IOException or System.Net.Sockets.SocketException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>A bare IMAP LOGIN over a plain connection: true when the server accepts the password.</summary>
+    public async Task<bool> CanLoginAsync(MailAccount account, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var client = new System.Net.Sockets.TcpClient();
+            await client.ConnectAsync(Host, ImapPort, cancellationToken);
+            var stream = client.GetStream();
+            using var reader = new StreamReader(stream, Encoding.ASCII);
+            _ = await reader.ReadLineAsync(cancellationToken);
+            var command = Encoding.ASCII.GetBytes($"a1 LOGIN \"{account.Address}\" \"{account.Password}\"\r\n");
+            await stream.WriteAsync(command, cancellationToken);
+            while (await reader.ReadLineAsync(cancellationToken) is { } line)
+            {
+                if (line.StartsWith("a1 ", StringComparison.Ordinal))
+                {
+                    return line.StartsWith("a1 OK", StringComparison.Ordinal);
+                }
+            }
+
+            return false;
+        }
+        catch (Exception exception) when (exception is IOException or System.Net.Sockets.SocketException)
+        {
+            return false;
+        }
+    }
+
+    private static async Task WaitUntilAsync(Func<Task<bool>> condition, TimeSpan limit, string failure, CancellationToken cancellationToken)
+    {
+        var deadline = DateTime.UtcNow + limit;
+        while (!await condition())
+        {
+            if (DateTime.UtcNow > deadline)
+            {
+                throw new TimeoutException(failure);
+            }
+
+            await Task.Delay(500, cancellationToken);
+        }
+    }
+
     /// <summary>Loads the fixture emails byte-for-byte with doveadm (no MIME re-serialization).</summary>
     private async Task SeedFixtureEmailsAsync(string fixturesDirectory)
     {
