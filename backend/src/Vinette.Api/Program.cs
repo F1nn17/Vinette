@@ -43,6 +43,7 @@ builder.Logging.AddJsonConsole(o =>
 
 builder.Services.AddVinetteOptions(builder.Configuration);
 builder.Services.AddVinetteMail();
+builder.Services.AddVinetteMetrics(builder.Configuration);
 builder.Services.AddVinetteSessions();
 builder.Services.AddVinetteAuthentication();
 builder.Services.AddVinetteForwardedHeaders();
@@ -70,6 +71,7 @@ if (!keysPersisted)
 app.UseVinetteForwardedHeaders();
 app.UseVinetteProblemDetails();
 app.UseRateLimiter();
+app.UseVinetteMetrics();
 
 app.UseStaticFiles();
 app.UseAuthentication();
