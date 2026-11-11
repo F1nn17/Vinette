@@ -23,6 +23,7 @@ public sealed class ProblemDetailsTests
         app.MapGet("/boom", (Func<IResult>)(() => throw new InvalidOperationException("secret detail")));
         app.MapPost("/validate", () => Results.ValidationProblem(new Dictionary<string, string[]> { ["name"] = ["Required"] }));
         app.MapGet("/ok", () => "ok");
+        app.MapGet("/number", (int value) => value);
         await app.StartAsync();
         return (app, app.GetTestClient());
     }
@@ -134,5 +135,19 @@ public sealed class ProblemDetailsTests
     public void ErrorCodes_Map_Status(int status, string code)
     {
         Assert.Equal(code, ErrorCodes.ForStatus(status));
+    }
+
+    [Fact]
+    public async Task A_Parameter_That_Does_Not_Parse_Is_A_400_Problem_Not_A_500()
+    {
+        var (app, client) = await StartAsync();
+        await using var _ = app;
+
+        var response = await client.GetAsync("/number?value=abc", TestContext.Current.CancellationToken);
+        var problem = await ReadProblemAsync(response);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("bad_request", problem.GetProperty("code").GetString());
+        Assert.DoesNotContain("abc", problem.GetRawText(), StringComparison.Ordinal);
     }
 }

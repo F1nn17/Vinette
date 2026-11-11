@@ -65,3 +65,21 @@ public sealed class MailBusyException : Exception
     /// <summary>When to try again.</summary>
     public TimeSpan RetryAfter { get; } = TimeSpan.FromSeconds(5);
 }
+
+/// <summary>The folder does not exist (or cannot hold messages). Not a server problem: the request names something that is not there.</summary>
+public sealed class MailFolderNotFoundException : Exception
+{
+    public MailFolderNotFoundException()
+    {
+    }
+
+    public MailFolderNotFoundException(string message)
+        : base(message)
+    {
+    }
+
+    public MailFolderNotFoundException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}

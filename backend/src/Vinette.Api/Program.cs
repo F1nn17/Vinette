@@ -88,6 +88,7 @@ api.MapHealth();
 api.MapAuth();
 api.MapCsrf();
 api.MapFolders();
+api.MapMessageList();
 app.MapHub<MailHub>("/hubs/mail");
 app.MapBranding();
 

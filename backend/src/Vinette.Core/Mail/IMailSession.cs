@@ -19,6 +19,14 @@ public interface IMailSession : IAsyncDisposable
     Task<IReadOnlyList<MailFolderInfo>> GetFoldersAsync(CancellationToken cancellationToken);
 
     /// <summary>
+    /// One page of the messages of a folder, newest or oldest first, by arrival. The pages are stable: new mail does not
+    /// shift them, because the cursor is a UID and not a position.
+    /// </summary>
+    /// <exception cref="MailFolderNotFoundException">There is no such folder, or it cannot hold messages.</exception>
+    /// <exception cref="UidValidityChangedException">The cursor belongs to an earlier incarnation of the folder.</exception>
+    Task<MessagePage> ListMessagesAsync(MessageListQuery query, CancellationToken cancellationToken);
+
+    /// <summary>
     /// How much of the mailbox's storage is used (IMAP GETQUOTAROOT). Null when the server has no quota extension or
     /// sets no storage limit for this mailbox: then there is nothing to show.
     /// </summary>

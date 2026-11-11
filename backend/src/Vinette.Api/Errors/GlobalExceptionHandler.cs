@@ -20,6 +20,23 @@ public sealed partial class GlobalExceptionHandler(
             return true;
         }
 
+        if (exception is BadHttpRequestException bad)
+        {
+            // A malformed request (a parameter that does not parse, a broken body): the caller's mistake, not a failure.
+            LogBadRequest();
+            httpContext.Response.StatusCode = bad.StatusCode;
+            return await problemDetails.TryWriteAsync(new ProblemDetailsContext
+            {
+                HttpContext = httpContext,
+                ProblemDetails =
+                {
+                    Status = bad.StatusCode,
+                    Title = "The request is malformed.",
+                    Extensions = { ["code"] = ErrorCodes.ForStatus(bad.StatusCode) },
+                },
+            });
+        }
+
         LogUnhandled(exception);
         httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
@@ -37,6 +54,9 @@ public sealed partial class GlobalExceptionHandler(
             },
         });
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "A malformed request was answered with an error")]
+    private partial void LogBadRequest();
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Request was cancelled by the client")]
     private partial void LogClientCancelled();

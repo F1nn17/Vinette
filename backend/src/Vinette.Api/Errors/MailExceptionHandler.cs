@@ -46,6 +46,10 @@ public sealed partial class MailExceptionHandler(
                     "Mail is busy right now. Try again in a moment.",
                     ErrorCodes.MailBusy);
 
+            case MailFolderNotFoundException:
+                // The folder name is the user's data: not in the answer, not in the log.
+                return await WriteAsync(httpContext, StatusCodes.Status404NotFound, "There is no such folder.", ErrorCodes.NotFound);
+
             case UidValidityChangedException:
                 // The folder name is the user's data: it stays out of the log and the answer.
                 LogUidValidityChanged(httpContext.User.Identity?.Name);
