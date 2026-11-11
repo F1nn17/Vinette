@@ -185,6 +185,27 @@ public sealed class DovecotFixture : IAsyncLifetime
         }
     }
 
+    /// <summary>Sets the storage limit of a mailbox, e.g. "10M" (docker-mailserver's <c>setup quota set</c>).</summary>
+    public async Task SetQuotaAsync(MailAccount account, string limit, CancellationToken cancellationToken)
+    {
+        var result = await Container.ExecAsync(["setup", "quota", "set", account.Address, limit], cancellationToken);
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"Setting the quota of {account.Address} failed (exit {result.ExitCode}): {result.Stderr}{result.Stdout}");
+        }
+
+        // Dovecot picks the new limit up a little later: wait until it reports one.
+        await WaitUntilAsync(
+            async () => System.Text.RegularExpressions.Regex.IsMatch(
+                (await Container.ExecAsync(["doveadm", "quota", "get", "-u", account.Address], cancellationToken)).Stdout,
+                @"STORAGE\s+\d+\s+\d+",
+                System.Text.RegularExpressions.RegexOptions.None,
+                TimeSpan.FromSeconds(1)),
+            TimeSpan.FromSeconds(60),
+            "Dovecot did not apply the quota in time.",
+            cancellationToken);
+    }
+
     /// <summary>Marks every message of a folder as read.</summary>
     public async Task MarkFolderReadAsync(MailAccount account, string folder, CancellationToken cancellationToken)
     {

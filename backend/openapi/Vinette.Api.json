@@ -115,6 +115,46 @@
         }
       }
     },
+    "/api/v1/quota": {
+      "get": {
+        "tags": [
+          "Mail"
+        ],
+        "operationId": "GetQuota",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotaResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "tags": [
@@ -372,6 +412,49 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "QuotaResponse": {
+        "required": [
+          "storage"
+        ],
+        "type": "object",
+        "properties": {
+          "storage": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/StorageDto"
+              }
+            ]
+          }
+        }
+      },
+      "StorageDto": {
+        "required": [
+          "usedBytes",
+          "limitBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "usedBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "limitBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
           }
         }
       }
