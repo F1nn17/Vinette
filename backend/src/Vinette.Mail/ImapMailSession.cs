@@ -10,6 +10,8 @@ namespace Vinette.Mail;
 /// </summary>
 internal sealed class ImapMailSession(ImapClient client, bool previewExtension = true) : IMailSession
 {
+    static ImapMailSession() => LegacyCharsets.Ensure();
+
     private bool PreviewExtension => previewExtension;
 
     public bool IsConnected => client.IsConnected && client.IsAuthenticated;

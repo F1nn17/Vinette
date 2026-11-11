@@ -45,4 +45,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Subjects, senders and previews written in KOI8-R, Windows-1251 and other legacy charsets are shown correctly in the message list (the application did not load these charsets before).
 - A request parameter the server cannot read (e.g. `limit=abc`) now answers `400` with a problem body instead of `500`.

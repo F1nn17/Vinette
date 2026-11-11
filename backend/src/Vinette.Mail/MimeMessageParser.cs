@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using MimeKit;
 using Vinette.Core.Mail;
 
@@ -15,6 +16,8 @@ public sealed class MimeMessageParser : IMessageParser
 
     /// <summary>How many parts are looked at; the rest is ignored.</summary>
     public const int MaxParts = 2000;
+
+    static MimeMessageParser() => LegacyCharsets.Ensure();
 
     public async Task<ParsedMessage> ParseAsync(Stream source, CancellationToken cancellationToken)
     {
@@ -50,6 +53,22 @@ public sealed class MimeMessageParser : IMessageParser
             bodies.Add(markup);
         }
 
+        // Old and careless programs label 8-bit text "us-ascii" (or nothing); the label would turn it into question marks.
+        foreach (var part in bodies)
+        {
+            if (await RecodeMislabelledAsync(part, cancellationToken).ConfigureAwait(false) is { } recoded)
+            {
+                if (part.IsHtml)
+                {
+                    html = recoded;
+                }
+                else
+                {
+                    text = recoded;
+                }
+            }
+        }
+
         var attachments = new List<MessageAttachment>();
         var inline = new List<InlinePart>();
         var counter = new Counter();
@@ -70,6 +89,38 @@ public sealed class MimeMessageParser : IMessageParser
             attachments,
             inline,
             [.. message.Headers.Where(h => h.Id == HeaderId.AuthenticationResults).Select(h => h.Value)]);
+    }
+
+    private static readonly UTF8Encoding StrictUtf8 = new(false, true);
+
+    /// <summary>
+    /// The text of a part whose charset is missing or "us-ascii" but whose bytes are not ASCII: read as UTF-8 if the bytes
+    /// are valid UTF-8, else as windows-1252. Null if the label can be trusted (or the part is plain ASCII).
+    /// </summary>
+    private static async Task<string?> RecodeMislabelledAsync(TextPart part, CancellationToken cancellationToken)
+    {
+        var charset = part.ContentType.Charset;
+        if (part.Content is null || (!string.IsNullOrWhiteSpace(charset) && !charset.Equals("us-ascii", StringComparison.OrdinalIgnoreCase) && !charset.Equals("ascii", StringComparison.OrdinalIgnoreCase)))
+        {
+            return null;
+        }
+
+        using var buffer = new MemoryStream();
+        await part.Content.DecodeToAsync(buffer, cancellationToken).ConfigureAwait(false);
+        var bytes = buffer.GetBuffer().AsSpan(0, (int)buffer.Length);
+        if (!bytes.ContainsAnyInRange((byte)0x80, (byte)0xFF))
+        {
+            return null;
+        }
+
+        try
+        {
+            return StrictUtf8.GetString(bytes);
+        }
+        catch (DecoderFallbackException)
+        {
+            return Encoding.GetEncoding(1252).GetString(bytes);
+        }
     }
 
     private sealed class Counter
@@ -140,7 +191,13 @@ public sealed class MimeMessageParser : IMessageParser
 
     private static string? FileNameOf(MimeEntity entity)
     {
-        var name = entity.ContentDisposition?.FileName ?? entity.ContentType.Name;
+        // MimeKit gives an empty string, not null, when the parameter is missing: both places are tried.
+        var name = entity.ContentDisposition?.FileName;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            name = entity.ContentType.Name;
+        }
+
         return string.IsNullOrWhiteSpace(name) ? null : name;
     }
 
