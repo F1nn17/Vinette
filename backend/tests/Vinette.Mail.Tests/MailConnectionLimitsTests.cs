@@ -20,6 +20,10 @@ public sealed class MailConnectionLimitsTests
 
         public Task<MailQuota?> GetQuotaAsync(CancellationToken cancellationToken) => Task.FromResult<MailQuota?>(null);
 
+
+
+        public Task<MessagePage> ListMessagesAsync(MessageListQuery query, CancellationToken cancellationToken) => Task.FromResult(new MessagePage(1, [], null, 0));
+
         public ValueTask DisposeAsync()
         {
             IsConnected = false;

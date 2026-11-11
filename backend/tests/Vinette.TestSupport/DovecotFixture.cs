@@ -206,6 +206,16 @@ public sealed class DovecotFixture : IAsyncLifetime
             cancellationToken);
     }
 
+    /// <summary>Runs <c>doveadm</c> inside the container, for test set-ups the helpers above do not cover (flags, expunge).</summary>
+    public async Task DoveadmAsync(CancellationToken cancellationToken, params string[] arguments)
+    {
+        var result = await Container.ExecAsync(["doveadm", .. arguments], cancellationToken);
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"doveadm {string.Join(' ', arguments)} failed (exit {result.ExitCode}): {result.Stderr}");
+        }
+    }
+
     /// <summary>Marks every message of a folder as read.</summary>
     public async Task MarkFolderReadAsync(MailAccount account, string folder, CancellationToken cancellationToken)
     {

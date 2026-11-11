@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `GET /api/v1/folders/{folder}/messages`: the messages of a folder, newest first (or oldest first with `order=oldest`), 50 per page (up to 100): sender, recipients, subject, date, read/flagged/answered/draft marks, attachment mark, labels, size. Pages are followed with the `next` cursor, so new or deleted mail never shifts or repeats them, and a folder with tens of thousands of messages is as fast as a small one.
 - `GET /api/v1/quota`: how much of the mailbox's storage is used and the limit, in bytes. The `storage` field is absent when the mail server reports no storage limit, so the web app shows nothing then.
 - Servers that do not mark their special folders are handled too: Drafts, Sent, Archive, Spam and Trash are found by their usual names (English and Russian, also inside `INBOX` or `[Gmail]`). The web app shows these folders under its own names in the interface language, whatever the server calls them.
 - `GET /api/v1/folders`: the folders of the signed-in user's mailbox in sidebar order (Inbox, Drafts, Sent, Archive, Spam, Trash, then own folders with sub-folders after their parent), each with its role, total and unread counts.
@@ -32,3 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI primitives (Button, IconButton, Chip, LabelTag, Avatar, Badge, TextField, TextArea, Select, Checkbox, ProgressBar, Logo) with tests and a dev-only `/dev/ui` catalogue.
 
 - Project scaffold: backend (ASP.NET Core, .NET 10) and frontend (React + Vite) skeletons, build tooling, CI/CD, Docker and systemd deployment, documentation.
+
+### Fixed
+
+- A request parameter the server cannot read (e.g. `limit=abc`) now answers `400` with a problem body instead of `500`.
