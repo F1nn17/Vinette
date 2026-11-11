@@ -84,10 +84,12 @@ public sealed class MailLifecycleTests
         await UseConnectionAsync(gateway, "s2", "bob@vinette.test");
         Assert.All(fake.Sessions, s => Assert.False(s.Disposed));
 
-        await app.DisposeAsync();
+        // Stopped, not just disposed: disposing a test factory may return before the container finished disposing.
+        await app.Services.GetRequiredService<IHost>().StopAsync(Token);
 
         Assert.Equal(2, fake.Sessions.Count);
         Assert.All(fake.Sessions, s => Assert.True(s.Disposed));
+        await app.DisposeAsync();
     }
 
     [Fact]

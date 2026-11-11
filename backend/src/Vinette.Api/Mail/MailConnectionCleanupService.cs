@@ -31,6 +31,16 @@ public sealed partial class MailConnectionCleanupService(
         }
     }
 
+    /// <summary>
+    /// Closes every mail connection when the application stops, in the stop phase, where the host waits for it. Leaving it
+    /// to the disposal of the container works too but nothing waits for that to finish.
+    /// </summary>
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await base.StopAsync(cancellationToken);
+        await connections.DisposeAsync();
+    }
+
     internal async Task CloseIdleAsync(CancellationToken cancellationToken)
     {
         try
