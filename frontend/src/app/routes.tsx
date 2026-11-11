@@ -14,6 +14,7 @@ export const appRoutes: RouteObject[] = [
     element: <RequireAuth />,
     children: [
       { path: '/mail/:folder', element: <MailboxPage /> },
+      { path: '/mail/:folder/:messageId', element: <MailboxPage /> },
       { path: '/compose', element: <ComposePage /> },
     ],
   },
