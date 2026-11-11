@@ -26,7 +26,7 @@ RUN dotnet publish backend/src/Vinette.Api/Vinette.Api.csproj \
       -p:UseAppHost=false -o /app
 COPY --from=frontend /src/frontend/dist /app/wwwroot
 # Writable data directory for the non-root user (chiseled images have no shell to create it).
-RUN mkdir -p /data/keys
+RUN mkdir -p /data/keys /data/settings
 
 # ---- Runtime: chiseled (distroless-style), non-root ----
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled AS final
@@ -42,7 +42,8 @@ WORKDIR /app
 COPY --from=backend /app ./
 COPY --from=backend --chown=1654:1654 /data /data
 ENV ASPNETCORE_HTTP_PORTS=8080 \
-    VINETTE_DataProtection__KeysPath=/data/keys
+    VINETTE_DataProtection__KeysPath=/data/keys \
+    VINETTE_Settings__Path=/data/settings
 USER 1654:1654
 EXPOSE 8080
 VOLUME /data

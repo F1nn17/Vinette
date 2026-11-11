@@ -14,6 +14,37 @@ public class OptionsValidationTests
     }
 
     [Fact]
+    public void An_Unknown_Settings_Store_Fails_Startup()
+    {
+        // A value that is not a store at all cannot even be read into the option: the application does not start either way.
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("Settings:Store", "Carrier pigeon"));
+
+        Assert.ThrowsAny<Exception>(() => factory.CreateClient());
+    }
+
+    [Fact]
+    public void The_Settings_Store_Is_Registered_In_DI_And_Uses_The_Configured_Directory()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "vinette-settings-di-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("Settings:Path", directory));
+
+            var store = factory.Services.GetRequiredService<Vinette.Core.Settings.IUserSettingsStore>();
+
+            Assert.IsType<Vinette.Api.Settings.FileUserSettingsStore>(store);
+            Assert.True(Directory.Exists(directory));
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void MaxLifetime_Shorter_Than_IdleTimeout_Fails_Startup()
     {
         StartupFailure.AssertOptionsInvalid(b =>
