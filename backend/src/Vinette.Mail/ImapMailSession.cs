@@ -74,6 +74,11 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
             throw new UidValidityChangedException(query.Folder, after.UidValidity, uidValidity);
         }
 
+        if (query.Filter != MessageFilter.All)
+        {
+            return await ListFilteredAsync(folder, query, uidValidity, cancellationToken).ConfigureAwait(false);
+        }
+
         var total = folder.Count;
 
         // The messages are in UID order, so the position of a UID among them is the number of messages up to it. Counting
@@ -114,6 +119,43 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         var hasMore = query.NewestFirst ? first > 0 : last + 1 < total;
         MessageCursor? next = hasMore && items.Count > 0 ? new MessageCursor(uidValidity, items[^1].Id.Uid) : null;
         return new MessagePage(uidValidity, items, next, total);
+    }
+
+    /// <summary>
+    /// A filtered list: the server searches for the matching UIDs (one command, the answer is just numbers), the page is
+    /// cut out of them by the cursor's UID, and only those messages are fetched. Deleted or newly arrived mail cannot shift
+    /// a page, because the position is a UID and never an index.
+    /// </summary>
+    private async Task<MessagePage> ListFilteredAsync(IMailFolder folder, MessageListQuery query, uint uidValidity, CancellationToken cancellationToken)
+    {
+        var search = query.Filter == MessageFilter.Unread ? SearchQuery.NotSeen : SearchQuery.Flagged;
+        var matching = (await folder.SearchAsync(search, cancellationToken).ConfigureAwait(false)).Select(u => u.Id).Order().ToList();
+
+        IEnumerable<uint> candidates = matching;
+        if (query.After is { } after)
+        {
+            candidates = query.NewestFirst ? matching.Where(u => u < after.Uid) : matching.Where(u => u > after.Uid);
+        }
+
+        var ordered = query.NewestFirst ? candidates.Reverse() : candidates;
+        var left = ordered.ToList();
+        var pageUids = left.Take(query.Limit).ToList();
+        var items = new List<MessageListItem>(pageUids.Count);
+        if (pageUids.Count > 0)
+        {
+            var wanted = query.IncludePreview ? SummaryItems | MessageSummaryItems.PreviewText : SummaryItems;
+            if (!PreviewExtension)
+            {
+                client.Capabilities &= ~ImapCapabilities.Preview;
+            }
+
+            var fetched = await folder.FetchAsync([.. pageUids.Select(u => new UniqueId(u))], wanted, cancellationToken).ConfigureAwait(false);
+            IEnumerable<IMessageSummary> inOrder = query.NewestFirst ? fetched.OrderByDescending(m => m.UniqueId.Id) : fetched.OrderBy(m => m.UniqueId.Id);
+            items.AddRange(inOrder.Select(m => ToSummary(query.Folder, uidValidity, m)));
+        }
+
+        MessageCursor? next = left.Count > pageUids.Count && items.Count > 0 ? new MessageCursor(uidValidity, items[^1].Id.Uid) : null;
+        return new MessagePage(uidValidity, items, next, matching.Count);
     }
 
     private const MessageSummaryItems SummaryItems =
