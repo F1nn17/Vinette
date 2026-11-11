@@ -17,6 +17,7 @@ Environment=ASPNETCORE_URLS=http://127.0.0.1:8080
 Environment=ASPNETCORE_ENVIRONMENT=Production
 Environment=VINETTE_CONFIG=/etc/vinette/appsettings.json
 Environment=VINETTE_DataProtection__KeysPath=/var/lib/vinette/keys
+Environment=VINETTE_Settings__Path=/var/lib/vinette/settings
 
 # Hardening
 NoNewPrivileges=true

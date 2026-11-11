@@ -7,6 +7,7 @@ using Vinette.Api.Hubs;
 using Vinette.Api.Mail;
 using Vinette.Api.Security;
 using Vinette.Api.Sessions;
+using Vinette.Api.Settings;
 using Vinette.Api.Spa;
 
 // Container HEALTHCHECK: chiseled images ship no curl, so the app probes itself.
@@ -45,6 +46,7 @@ builder.Services.AddVinetteOptions(builder.Configuration);
 builder.Services.AddVinetteMail();
 builder.Services.AddVinetteMetrics(builder.Configuration);
 builder.Services.AddVinetteSessions();
+builder.Services.AddVinetteSettings();
 builder.Services.AddVinetteAuthentication();
 builder.Services.AddVinetteForwardedHeaders();
 builder.Services.AddVinetteCsrf();
