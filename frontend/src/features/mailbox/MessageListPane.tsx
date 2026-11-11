@@ -1,12 +1,13 @@
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
-import { describeApiError } from '@/shared/api/describe-error';
 import { dateGroupKey, dateGroupLabel, groupByDate } from '@/shared/lib';
 import { Button, Chip, IconButton, SearchField } from '@/shared/ui';
 import { useFolders, useMessages, type ListFilter } from './api';
 import { folderLabel, folderSlug } from './folder-label';
+import { ListEmpty, ListError, ListNoFolder, ListSkeleton, OfflineBanner } from './list-states';
 import { MessageRow } from './MessageRow';
+import { useOnline } from './use-online';
 
 const FILTERS: ListFilter[] = ['all', 'unread', 'flagged'];
 
@@ -30,6 +31,7 @@ export function MessageListPane({ folderSlug: slug, messageId }: MessageListPane
   const { t, i18n } = useTranslation();
   const [params, setParams] = useSearchParams();
   const filter = filterOf(params.get('filter'));
+  const online = useOnline();
   const folders = useFolders();
   const folder = folders.data?.find((f) => folderSlug(f) === slug);
   const messages = useMessages(folder?.path, filter);
@@ -88,33 +90,16 @@ export function MessageListPane({ folderSlug: slug, messageId }: MessageListPane
         </div>
       </header>
 
+      {!online && <OfflineBanner />}
+
       <div className="flex-1 border-t border-subtle" aria-busy={loading}>
-        {loading && (
-          <div role="status" aria-label={t('common.loading')}>
-            {Array.from({ length: 8 }, (_, i) => (
-              <div key={i} className="border-b border-subtle px-5 py-3.5">
-                <div className="h-3.5 w-1/3 animate-pulse rounded-xs bg-line" />
-                <div className="mt-2 h-3.5 w-3/4 animate-pulse rounded-xs bg-line/70" />
-                <div className="mt-2 h-3 w-full animate-pulse rounded-xs bg-line/50" />
-              </div>
-            ))}
-          </div>
-        )}
+        {loading && <ListSkeleton />}
 
-        {error && (
-          <div role="alert" className="flex flex-col items-start gap-2 p-5 text-text-2">
-            <p>{describeApiError(error, t)}</p>
-            <Button variant="secondary" size="sm" onClick={refresh}>
-              {t('common.retry')}
-            </Button>
-          </div>
-        )}
+        {error && <ListError error={error} onRetry={refresh} />}
 
-        {missing && !error && <p className="p-5 text-muted">{t('list.noFolder')}</p>}
+        {missing && !error && <ListNoFolder />}
 
-        {!loading && !error && folder && items.length === 0 && (
-          <p className="p-5 text-muted">{t('list.empty')}</p>
-        )}
+        {!loading && !error && folder && items.length === 0 && <ListEmpty />}
 
         {groups.map(({ group, items: rows }) => {
           const key = dateGroupKey(group);

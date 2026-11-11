@@ -248,6 +248,18 @@ describe('MessageListPane', () => {
   });
 });
 
+describe('offline', () => {
+  it('shows the banner while the browser is offline and keeps the loaded list', async () => {
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
+    renderPane();
+
+    expect(await screen.findByText('Subject 1')).toBeInTheDocument();
+    expect(screen.getByText(/Нет связи/u)).toBeInTheDocument();
+    online.mockRestore();
+  });
+});
+
 describe('date groups in the list', () => {
   it('puts the messages under headings of their days, in the order the server gave them', async () => {
     const day = 24 * 60 * 60 * 1000;

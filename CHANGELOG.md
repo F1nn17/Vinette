@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The message list shows a banner while the browser has no connection; what was already loaded stays on screen. Loading, empty and error states of the list are covered by component tests.
 - The message list is split under headings by date: Today, Yesterday, Earlier this week, then one heading per month (with the year for earlier years). Days change at the user's local midnight.
 - The mailbox screen shows the message list: the folder title with the number of unread messages, a refresh button, a search box (not wired yet), the "All / Unread / Flagged" filters (kept in the address, so a reload keeps them), and the messages with sender (recipient in Sent and Drafts), subject, preview, labels, unread, flag and attachment marks, and a date as in the design. More messages are loaded with "Show more". Opening a message puts its address in the URL.
 - The mailbox screen has a sidebar: logo, the mailbox address, a "Compose" button, the folders with counters (unread messages; the number of drafts for Drafts), a "Flagged" view right after the inbox, a labels section and the used storage. On a tablet it is a rail of icons. The current folder is highlighted and everything can be reached with the keyboard.
