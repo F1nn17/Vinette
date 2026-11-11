@@ -1,4 +1,5 @@
-export { folderLabel } from './folder-label';
+export { folderLabel, folderSlug } from './folder-label';
+export { Sidebar, type SidebarProps } from './Sidebar';
 export { AppShell, type AppShellProps } from './AppShell';
 export { useShell, type ShellState } from './shell-context';
 export { useLayout, DESKTOP_MIN_WIDTH, TABLET_MIN_WIDTH, type Layout } from './use-layout';
