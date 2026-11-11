@@ -1,13 +1,15 @@
 import { RefreshCw } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 import { dateGroupKey, dateGroupLabel, groupByDate } from '@/shared/lib';
-import { Button, Chip, IconButton, SearchField } from '@/shared/ui';
-import { useFolders, useMessages, type ListFilter } from './api';
+import { Chip, IconButton, SearchField } from '@/shared/ui';
+import { useFolders, useMessages, type ListFilter, type MessageItem } from './api';
 import { folderLabel, folderSlug } from './folder-label';
 import { ListEmpty, ListError, ListNoFolder, ListSkeleton, OfflineBanner } from './list-states';
 import { MessageRow } from './MessageRow';
 import { useOnline } from './use-online';
+import { VirtualMessageRows, type ListEntry } from './VirtualMessageRows';
 
 const FILTERS: ListFilter[] = ['all', 'unread', 'flagged'];
 
@@ -32,6 +34,7 @@ export function MessageListPane({ folderSlug: slug, messageId }: MessageListPane
   const [params, setParams] = useSearchParams();
   const filter = filterOf(params.get('filter'));
   const online = useOnline();
+  const [scroller, setScroller] = useState<HTMLElement | null>(null);
   const folders = useFolders();
   const folder = folders.data?.find((f) => folderSlug(f) === slug);
   const messages = useMessages(folder?.path, filter);
@@ -45,7 +48,18 @@ export function MessageListPane({ folderSlug: slug, messageId }: MessageListPane
     yesterday: t('list.group.yesterday'),
     week: t('list.group.week'),
   };
-  const groups = groupByDate(items, (m) => new Date(m.date), now);
+  const entries: ListEntry<MessageItem>[] = groupByDate(
+    items,
+    (m) => new Date(m.date),
+    now,
+  ).flatMap(({ group, items: rows }) => [
+    {
+      type: 'heading' as const,
+      key: `h:${dateGroupKey(group)}:${rows[0]?.id}`,
+      label: dateGroupLabel(group, now, i18n.language, groupWords),
+    },
+    ...rows.map((item) => ({ type: 'row' as const, key: item.id, item })),
+  ]);
   const showRecipient = folder?.role === 'sent' || folder?.role === 'drafts';
   const title = folder ? folderLabel(folder, t) : slug === 'inbox' ? t('folders.inbox') : '';
   const error = folders.isError ? folders.error : messages.isError ? messages.error : null;
@@ -65,7 +79,7 @@ export function MessageListPane({ folderSlug: slug, messageId }: MessageListPane
   };
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex flex-col gap-3.5 px-5 pt-[18px] pb-3">
         <div className="flex items-center gap-2">
           <h1 className="flex min-w-0 flex-1 items-baseline gap-2">
@@ -92,7 +106,11 @@ export function MessageListPane({ folderSlug: slug, messageId }: MessageListPane
 
       {!online && <OfflineBanner />}
 
-      <div className="flex-1 border-t border-subtle" aria-busy={loading}>
+      <div
+        ref={setScroller}
+        className="min-h-0 flex-1 overflow-y-auto border-t border-subtle"
+        aria-busy={loading}
+      >
         {loading && <ListSkeleton />}
 
         {error && <ListError error={error} onRetry={refresh} />}
@@ -101,44 +119,32 @@ export function MessageListPane({ folderSlug: slug, messageId }: MessageListPane
 
         {!loading && !error && folder && items.length === 0 && <ListEmpty />}
 
-        {groups.map(({ group, items: rows }) => {
-          const key = dateGroupKey(group);
-          return (
-            <section
-              key={key + rows[0]?.id}
-              aria-label={dateGroupLabel(group, now, i18n.language, groupWords)}
-            >
-              <h2 className="bg-surface px-5 pt-3.5 pb-1.5 text-caps font-semibold tracking-wider text-muted uppercase">
-                {dateGroupLabel(group, now, i18n.language, groupWords)}
-              </h2>
-              <ul>
-                {rows.map((m) => (
-                  <li key={m.id}>
-                    <MessageRow
-                      message={m}
-                      to={`/mail/${encodeURIComponent(slug)}/${m.id}${search}`}
-                      selected={m.id === messageId}
-                      showRecipient={showRecipient}
-                      now={now}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          );
-        })}
-
-        {messages.hasNextPage && (
-          <div className="p-4">
-            <Button
-              variant="secondary"
-              fullWidth
-              disabled={messages.isFetchingNextPage}
-              onClick={() => void messages.fetchNextPage()}
-            >
-              {messages.isFetchingNextPage ? t('common.loading') : t('list.more')}
-            </Button>
-          </div>
+        {items.length > 0 && (
+          <VirtualMessageRows
+            scrollElement={scroller}
+            entries={entries}
+            hasMore={messages.hasNextPage && !messages.isFetchNextPageError}
+            loadingMore={messages.isFetchingNextPage}
+            onLoadMore={() => void messages.fetchNextPage()}
+            renderRow={(m) => (
+              <MessageRow
+                message={m}
+                to={`/mail/${encodeURIComponent(slug)}/${m.id}${search}`}
+                selected={m.id === messageId}
+                showRecipient={showRecipient}
+                now={now}
+              />
+            )}
+            footer={
+              messages.isFetchingNextPage ? (
+                <div role="status" aria-label={t('common.loading')} className="p-4">
+                  <div className="mx-auto h-3.5 w-1/3 animate-pulse rounded-xs bg-line" />
+                </div>
+              ) : messages.isFetchNextPageError ? (
+                <ListError error={messages.error} onRetry={() => void messages.fetchNextPage()} />
+              ) : null
+            }
+          />
         )}
       </div>
     </div>

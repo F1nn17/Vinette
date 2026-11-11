@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { MessageListPane } from './MessageListPane';
@@ -85,7 +85,24 @@ function renderPane(url = '/mail/inbox', slug = 'inbox', messageId?: string) {
   return router;
 }
 
-afterEach(() => vi.unstubAllGlobals());
+/** jsdom has no layout: the list box is 800 px high, a row is 96 px, a heading 36 px. */
+beforeEach(() => {
+  const size = (el: HTMLElement) =>
+    el.dataset.index === undefined ? 800 : el.querySelector('h2') ? 36 : 96;
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return size(this);
+  });
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(400);
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(800);
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(400);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe('MessageListPane', () => {
   it('shows the title, the unread count, search, filters and the rows with their texts', async () => {
@@ -99,11 +116,11 @@ describe('MessageListPane', () => {
     );
     expect(screen.getByRole('searchbox', { name: 'Поиск в почте' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Все' })).toHaveAttribute('aria-pressed', 'true');
-    const group = await screen.findByRole('region', { name: 'Сегодня' });
-    expect(within(group).getAllByRole('listitem')).toHaveLength(2);
-    expect(within(group).getByText('Sender 1')).toBeInTheDocument();
-    expect(within(group).getByText('Subject 1')).toBeInTheDocument();
-    expect(within(group).getByText('Preview 1')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Сегодня' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link')).toHaveLength(2);
+    expect(screen.getByText('Sender 1')).toBeInTheDocument();
+    expect(screen.getByText('Subject 1')).toBeInTheDocument();
+    expect(screen.getByText('Preview 1')).toBeInTheDocument();
   });
 
   it('marks unread, flagged and with-attachments messages, and the selected row', async () => {
@@ -168,7 +185,7 @@ describe('MessageListPane', () => {
     const server = mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
     const user = userEvent.setup();
     const router = renderPane('/mail/Работа%2FОтчёты', 'Работа/Отчёты');
-    await screen.findByRole('region', { name: 'Сегодня' });
+    await screen.findByRole('heading', { level: 2, name: 'Сегодня' });
     expect(server.urls.some((u) => u.startsWith('/api/v1/folders/%D0%A0'))).toBe(true);
 
     await user.click(screen.getByRole('button', { name: 'Непрочитанные' }));
@@ -193,21 +210,18 @@ describe('MessageListPane', () => {
     expect(server.urls.some((u) => u.includes('filter=flagged'))).toBe(true);
   });
 
-  it('loads the next page on request with the cursor, and hides the button on the last page', async () => {
+  it('loads the next page by itself when the end of the list is near, with the cursor, and stops on the last page', async () => {
     const server = mockServer((url) =>
       url.searchParams.get('after') === '1.5'
         ? { items: [message(3)], next: null, total: 3 }
         : { items: [message(1), message(2)], next: '1.5', total: 3 },
     );
-    const user = userEvent.setup();
     renderPane();
 
-    await user.click(await screen.findByRole('button', { name: 'Показать ещё' }));
-
     expect(await screen.findByText('Subject 3')).toBeInTheDocument();
+    expect(server.urls.filter((u) => u.includes('/messages'))).toHaveLength(2);
     expect(server.urls.at(-1)).toContain('after=1.5');
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
-    expect(screen.queryByRole('button', { name: 'Показать ещё' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link')).toHaveLength(3);
   });
 
   it('says in plain words that the list could not be loaded and tries again on request', async () => {
@@ -260,6 +274,40 @@ describe('offline', () => {
   });
 });
 
+describe('a long list', () => {
+  const many = (from: number, count: number) =>
+    Array.from({ length: count }, (_, i) => message(from + i));
+
+  it('keeps only the rows near the visible part in the page, however many there are', async () => {
+    mockServer(() => ({ items: many(1, 50), next: '1.50', total: 50000 }));
+    renderPane();
+
+    await screen.findByText('Subject 1');
+    const rendered = screen.getAllByRole('link').length;
+    expect(rendered).toBeGreaterThan(5);
+    expect(rendered).toBeLessThan(30);
+  });
+
+  it('asks for the next page when the user scrolls to the end of what is loaded', async () => {
+    const server = mockServer((url) => {
+      const after = url.searchParams.get('after');
+      const from = after ? Number(after.split('.')[1]) + 1 : 1;
+      return { items: many(from, 50), next: `1.${from + 49}`, total: 50000 };
+    });
+    renderPane();
+    await screen.findByText('Subject 1');
+    const pages = () => server.urls.filter((u) => u.includes('/messages')).length;
+    expect(pages()).toBe(1); // the end is far away: nothing is loaded ahead of need
+
+    const scroller = document.querySelector<HTMLElement>('.overflow-y-auto')!;
+    scroller.scrollTop = 50 * 96;
+    act(() => void scroller.dispatchEvent(new Event('scroll')));
+
+    await waitFor(() => expect(pages()).toBe(2));
+    expect(server.urls.at(-1)).toContain('after=1.50');
+  });
+});
+
 describe('date groups in the list', () => {
   it('puts the messages under headings of their days, in the order the server gave them', async () => {
     const day = 24 * 60 * 60 * 1000;
@@ -276,13 +324,11 @@ describe('date groups in the list', () => {
     }));
     renderPane();
 
-    await screen.findByRole('region', { name: 'Сегодня' });
+    await screen.findByRole('heading', { level: 2, name: 'Сегодня' });
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(headings.slice(0, 3)).toEqual(['Сегодня', 'Вчера', 'Ранее на неделе']);
     expect(headings).toHaveLength(4); // and the month of the oldest one
-    expect(
-      within(screen.getByRole('region', { name: 'Вчера' })).getByText('Subject 2'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Subject 2')).toBeInTheDocument();
   });
 });
 

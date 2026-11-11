@@ -84,10 +84,10 @@ export function AppShell({ nav, list, reader, messageOpen, onBack }: AppShellPro
         {showList && (
           <section
             aria-label={t('mailbox.list')}
-            className="min-w-0 overflow-y-auto border-x border-line bg-surface"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden border-x border-line bg-surface"
           >
             {drawer && (
-              <div className="p-2">
+              <div className="shrink-0 p-2">
                 <IconButton aria-label={t('mailbox.menu')} onClick={state.openNav}>
                   <Menu size={18} strokeWidth={1.8} aria-hidden />
                 </IconButton>
