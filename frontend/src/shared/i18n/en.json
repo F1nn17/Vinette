@@ -25,7 +25,13 @@
     }
   },
   "mailbox": {
-    "title": "Mail"
+    "title": "Mail",
+    "nav": "Folders",
+    "list": "Message list",
+    "reader": "Reading pane",
+    "menu": "Menu",
+    "back": "Back to the list",
+    "noMessage": "Select a message to read"
   },
   "compose": {
     "title": "New message"
