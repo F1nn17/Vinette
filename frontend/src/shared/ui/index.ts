@@ -7,6 +7,7 @@ export * from './IconButton';
 export * from './LabelTag';
 export * from './Logo';
 export * from './ProgressBar';
+export * from './SearchField';
 export * from './Select';
 export * from './TextArea';
 export * from './TextField';

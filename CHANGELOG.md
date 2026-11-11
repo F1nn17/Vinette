@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The mailbox screen shows the message list: the folder title with the number of unread messages, a refresh button, a search box (not wired yet), the "All / Unread / Flagged" filters (kept in the address, so a reload keeps them), and the messages with sender (recipient in Sent and Drafts), subject, preview, labels, unread, flag and attachment marks, and a date as in the design. More messages are loaded with "Show more". Opening a message puts its address in the URL.
 - The mailbox screen has a sidebar: logo, the mailbox address, a "Compose" button, the folders with counters (unread messages; the number of drafts for Drafts), a "Flagged" view right after the inbox, a labels section and the used storage. On a tablet it is a rail of icons. The current folder is highlighted and everything can be reached with the keyboard.
 - The mailbox screen has its frame: three columns (folders, list, reading area) on a desktop of 1200 px and wider, a narrow folder rail beside list and reader on a tablet (768–1199 px), and a single column with a folder drawer on a phone. A message has its own address, `/mail/<folder>/<message>`.
 - The message list now carries a one-line text preview (up to 200 characters) for every message, also for servers that cannot make previews themselves, and for messages in quoted-printable, base64, KOI8-R or Windows-1251. `preview=false` leaves it out.

@@ -66,5 +66,28 @@
     "noLabels": "No labels yet.",
     "storage": "{{used}} of {{limit}} used",
     "storageBar": "Mailbox storage used"
+  },
+  "list": {
+    "noSender": "No sender",
+    "noSubject": "(no subject)",
+    "yesterday": "Yesterday",
+    "to": "To: {{name}}",
+    "unread": "Unread",
+    "flagged": "Flagged",
+    "attachments": "Has attachments",
+    "unreadCount_one": "{{count}} unread",
+    "unreadCount_other": "{{count}} unread",
+    "refresh": "Refresh",
+    "search": "Search mail",
+    "filters": "List filters",
+    "filter": {
+      "all": "All",
+      "unread": "Unread",
+      "flagged": "Flagged"
+    },
+    "messages": "Messages",
+    "empty": "It is empty here. Try another filter.",
+    "noFolder": "There is no such folder.",
+    "more": "Show more"
   }
 }
