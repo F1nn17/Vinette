@@ -5,9 +5,11 @@ import { useSearchParams } from 'react-router';
 import { dateGroupKey, dateGroupLabel, groupByDate } from '@/shared/lib';
 import { cn } from '@/shared/lib';
 import { Avatar, Chip, IconButton, SearchField } from '@/shared/ui';
+import { useListDensity, useSettings, useUpdateSettings } from '@/features/settings';
 import { useFolders, useMessages, type ListFilter, type MessageItem } from './api';
 import { folderLabel, folderSlug } from './folder-label';
 import { ListEmpty, ListError, ListNoFolder, ListSkeleton, OfflineBanner } from './list-states';
+import { ListOptionsMenu } from './ListOptionsMenu';
 import { MessageRow } from './MessageRow';
 import { NavMenuButton } from './NavMenuButton';
 import { useShell } from './shell-context';
@@ -46,7 +48,12 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
   const [scroller, setScroller] = useState<HTMLElement | null>(null);
   const folders = useFolders();
   const folder = folders.data?.find((f) => folderSlug(f) === slug);
-  const messages = useMessages(folder?.path, filter);
+  const settings = useSettings();
+  const density = useListDensity();
+  const updateSettings = useUpdateSettings();
+  // Phones keep the preview whatever the choice (DESIGN.md §8 has one density).
+  const compact = density === 'compact' && !mobile;
+  const messages = useMessages(folder?.path, filter, !compact, !settings.isPending);
 
   const items = messages.data?.pages.flatMap((p) => p.items) ?? [];
   const unread = folder ? Number(folder.unread) : 0;
@@ -123,9 +130,15 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
               )}
             </>
           ) : (
-            <IconButton aria-label={t('list.refresh')} onClick={refresh}>
-              <RefreshCw size={18} strokeWidth={1.8} aria-hidden />
-            </IconButton>
+            <>
+              <IconButton aria-label={t('list.refresh')} onClick={refresh}>
+                <RefreshCw size={18} strokeWidth={1.8} aria-hidden />
+              </IconButton>
+              <ListOptionsMenu
+                density={density}
+                onDensityChange={(next) => updateSettings.mutate({ density: next })}
+              />
+            </>
           )}
         </div>
         {(!mobile || searchOpen) && (
@@ -159,6 +172,7 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
           <VirtualMessageRows
             scrollElement={scroller}
             entries={entries}
+            compact={compact}
             hasMore={messages.hasNextPage && !messages.isFetchNextPageError}
             loadingMore={messages.isFetchingNextPage}
             onLoadMore={() => void messages.fetchNextPage()}
@@ -170,6 +184,7 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
                 showRecipient={showRecipient}
                 now={now}
                 avatar={mobile}
+                compact={compact}
               />
             )}
             footer={

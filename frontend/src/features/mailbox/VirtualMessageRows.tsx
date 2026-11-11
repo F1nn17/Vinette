@@ -7,6 +7,7 @@ export type ListEntry<T> =
 
 const HEADING_HEIGHT = 36;
 const ROW_HEIGHT = 96;
+const COMPACT_ROW_HEIGHT = 56;
 /** How many rows before the end the next page is asked for, so that it is there before the user scrolls to it. */
 const LOAD_AHEAD = 10;
 
@@ -14,6 +15,8 @@ export interface VirtualMessageRowsProps<T> {
   /** The scrolling container the rows live in. */
   scrollElement: HTMLElement | null;
   entries: ListEntry<T>[];
+  /** Rows without the preview are lower: only the first guess of the height, it is measured as it appears. */
+  compact?: boolean;
   renderRow: (item: T) => ReactNode;
   /** Whether there is a next page to load. */
   hasMore: boolean;
@@ -31,6 +34,7 @@ export interface VirtualMessageRowsProps<T> {
 export function VirtualMessageRows<T>({
   scrollElement,
   entries,
+  compact = false,
   renderRow,
   hasMore,
   loadingMore,
@@ -42,7 +46,12 @@ export function VirtualMessageRows<T>({
   const virtualizer = useVirtualizer({
     count: entries.length,
     getScrollElement: () => scrollElement,
-    estimateSize: (index) => (entries[index]?.type === 'heading' ? HEADING_HEIGHT : ROW_HEIGHT),
+    estimateSize: (index) =>
+      entries[index]?.type === 'heading'
+        ? HEADING_HEIGHT
+        : compact
+          ? COMPACT_ROW_HEIGHT
+          : ROW_HEIGHT,
     getItemKey: (index) => entries[index]?.key ?? index,
     overscan: 6,
   });

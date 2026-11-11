@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The list options button (next to refresh) switches the message list between the comfortable and the compact density; the compact one has lower rows without the preview and does not ask the mail server for previews. The choice is saved per mailbox (`GET` and `PATCH /api/v1/settings`) and kept after a reload and on other devices. On a phone the list always shows the preview.
 - User settings (list density, language, label colors) are kept on the server per mailbox in files under `Settings:Path` (`VINETTE_Settings__Path`; `/data/settings` in the Docker image, `/var/lib/vinette/settings` in the systemd unit). Keep the directory on persistent storage; it is part of what to back up.
 - The mailbox screen on a phone follows the mobile design: a header with the menu button, the folder title, a search button and the account, the filter chips, rows with the sender's avatar and the unread dot beside the preview, and a floating "Compose" button. Filter chips have a touch-friendly hit area.
 - The message list is virtualized: only the rows near the visible part exist in the page, so a folder of tens of thousands of messages scrolls smoothly. The next page loads by itself when you get close to the end of what is loaded (the "Show more" button is gone). The header and filters stay in place while the list scrolls.

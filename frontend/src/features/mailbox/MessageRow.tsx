@@ -16,6 +16,8 @@ export interface MessageRowProps {
   now: Date;
   /** Mobile: an avatar on the left and the unread dot beside the preview (DESIGN.md §8). */
   avatar?: boolean;
+  /** The compact density: lower rows and no preview (DESIGN.md §5). */
+  compact?: boolean;
 }
 
 /** One line of the list (DESIGN.md §5): sender, subject, preview, labels; unread, flag and attachment marks. */
@@ -26,6 +28,7 @@ export function MessageRow({
   showRecipient,
   now,
   avatar = false,
+  compact = false,
 }: MessageRowProps) {
   const { t, i18n } = useTranslation();
   const person = showRecipient ? message.to[0] : message.from;
@@ -79,7 +82,8 @@ export function MessageRow({
     </span>
   );
   const linkClass = cn(
-    'block border-b border-subtle py-3.5 transition-colors',
+    'block border-b border-subtle transition-colors',
+    compact && !avatar ? 'py-[9px]' : 'py-3.5',
     selected ? 'bg-accent-soft' : 'hover:bg-bg',
   );
 
@@ -136,7 +140,7 @@ export function MessageRow({
       <span className={cn('mt-0.5 block truncate text-base text-ink', unread && 'font-semibold')}>
         {subject}
       </span>
-      {message.preview && (
+      {message.preview && !compact && (
         <span className="mt-0.5 block truncate text-secondary text-muted">{message.preview}</span>
       )}
       {labels}
