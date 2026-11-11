@@ -119,6 +119,19 @@ Vinette — шлюз между браузером и почтовым серв�
 - HTML письма санитайзится на сервере (HtmlSanitizer) и показывается во фронтенде только в `iframe` с атрибутом `sandbox`.
 - Внешние изображения заблокированы по умолчанию. Если пользователь разрешил загрузку, изображения запрашиваются через прокси бэкенда — адрес и IP пользователя отправителю не раскрываются.
 
+### Санитайзер HTML
+
+`IMessageHtmlSanitizer` (Core) / `MessageHtmlSanitizer` (Mail, пакет HtmlSanitizer, MIT). Это первый из трёх слоёв: дальше идут `iframe` с `sandbox` без `allow-scripts` и `allow-same-origin` и собственная CSP внутри `srcdoc` (VIN-063). Результат — `SanitizedHtml(Html, BlockedExternalResources, Truncated, Rejected)`; HTML без санитайзера наружу не отдаётся. Правила — белый список, всё остальное удаляется (вместе с содержимым, чтобы текст скриптов и стилей не превращался в видимый):
+
+- **Теги:** `a abbr acronym address article aside b bdi bdo big blockquote br caption center cite code col colgroup dd del dfn div dl dt em figcaption figure font footer h1–h6 header hr i img ins kbd li main mark nav ol p pre q s samp section small span strike strong style sub sup table tbody td tfoot th thead tr tt u ul var wbr`. Нет: `script iframe frame object embed applet form input button select textarea svg math meta base link template noscript video audio` и всё неизвестное.
+- **Атрибуты:** `align alt bgcolor border cellpadding cellspacing class color colspan dir face height href hspace id lang nowrap rowspan size src start style title valign vspace width span type`. Нет `on*`, `data-*`, `name`, `ping`, `download`, `srcset`, `background`, `contenteditable`, `tabindex`, `accesskey`, `hidden`. `target` и `rel` ставит сам санитайзер на каждую ссылку (`_blank`, `noopener noreferrer`).
+- **Ссылки (`a href`):** только `http`, `https`, `mailto`, `tel` и якоря `#…`; `javascript:`, `vbscript:`, `data:`, `file:`, `ftp:`, `//host` и относительные пути удаляются (текст ссылки остаётся).
+- **Картинки (`img src`):** `cid:…` остаётся (часть самого письма, VIN-060), `data:image/png|jpeg|gif|webp;base64` до 1 МБ остаётся (внешней сети не касается); SVG, любые другие `data:`, `http`/`https`/`//` удаляются, а внешние считаются в `BlockedExternalResources` — по этому числу фронтенд предлагает «Показать изображения» (прокси — VIN-059). Фоны таблиц (`background`), `srcset`, `poster` — то же самое.
+- **CSS (атрибут `style` и блоки `<style>`):** белый список свойств (цвет, шрифт, отступы, границы, размеры, выравнивание, `display`, `float`, `overflow`, `visibility`, `white-space`, `opacity` и т. п.). Нет `position`, `z-index`, `content`, `filter`, `behavior`, `-moz-binding`, `background-image`. Правила `@media` и обычные остаются; `@import`, `@font-face`, `@namespace` и прочие at-правила удаляются. Любая декларация с `url(`, `image-set(`, `expression(`, `javascript:`, `behavior:`, обратной косой чертой (CSS-экранирование) удаляется целиком — после работы библиотеки это проверяется ещё раз по тексту результата.
+- **Ограничения:** вход длиннее 1 000 000 символов обрезается (`Truncated`); вложенность элементов глубже 200 отклоняется заранее (`Rejected`, показывается текст) — глубокое дерево может исчерпать стек, а это исключение не перехватить. На любой вход санитайзер не бросает исключений; повторная очистка результата ничего не меняет.
+
+Набор известных XSS-векторов, которые правила обязаны выдерживать, — в тестах (`MessageHtmlSanitizerTests`, расширяется данными в VIN-057).
+
 ## White-label
 
 Брендинг (`Branding:*`: название, логотип, favicon, акцентный цвет, подпись, «Powered by») берётся из конфигурации и подставляется сервером прямо в `index.html`: `<title>`, favicon и JSON-блок `<script id="vinette-config" type="application/json">` с настройками. Фронтенду не нужен отдельный запрос до первого рендера. Логотип и favicon из файлов отдаются по `/branding/logo` и `/branding/favicon`.
