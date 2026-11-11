@@ -47,15 +47,33 @@ const message = (n: number, extra: Record<string, unknown> = {}) => ({
 interface Server {
   urls: string[];
   pages: (url: URL) => unknown;
+  /** What the settings endpoint answers; when absent the endpoint does not exist (404). */
+  settings?: { density: string; language: string | null; labelColors: Record<string, string> };
+  /** Bodies of the changes of settings that were sent. */
+  patches: unknown[];
+  /** Makes the next change of settings fail. */
+  failPatch?: boolean;
 }
 
 function mockServer(pages: (url: URL) => unknown): Server {
-  const server: Server = { urls: [], pages };
+  const server: Server = { urls: [], pages, patches: [] };
   vi.stubGlobal(
     'fetch',
-    vi.fn<typeof fetch>((input) => {
+    vi.fn<typeof fetch>((input, init) => {
       const url = new URL(String(input), 'http://localhost');
       server.urls.push(url.pathname + url.search);
+      if (url.pathname === '/api/v1/csrf') return Promise.resolve(json({ token: 'csrf' }));
+      if (url.pathname === '/api/v1/settings' && server.settings) {
+        if (init?.method === 'PATCH') {
+          server.patches.push(JSON.parse(String(init.body)));
+          if (server.failPatch) {
+            return Promise.resolve(json({ code: 'internal_error', title: 'x' }, { status: 500 }));
+          }
+          const { density } = JSON.parse(String(init.body)) as { density: string | null };
+          server.settings = { ...server.settings, density: density ?? server.settings.density };
+        }
+        return Promise.resolve(json(server.settings));
+      }
       if (url.pathname === '/api/v1/folders') return Promise.resolve(json({ folders: FOLDERS }));
       if (url.pathname.endsWith('/messages')) {
         const body = server.pages(url);
@@ -352,6 +370,105 @@ describe('mobile and tablet', () => {
     expect(screen.queryByRole('button', { name: 'Написать' })).not.toBeInTheDocument();
     expect(screen.getByRole('searchbox')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Обновить' })).toBeInTheDocument();
+  });
+});
+
+describe('list density', () => {
+  const settings = (density: string) => ({ density, language: null, labelColors: {} });
+
+  it('shows the preview and asks for it in the comfortable density', async () => {
+    const server = mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
+    server.settings = settings('comfortable');
+    renderPane();
+
+    expect(await screen.findByText('Preview 1')).toBeInTheDocument();
+    expect(
+      server.urls.filter((u) => u.includes('/messages')).every((u) => !u.includes('preview=false')),
+    ).toBe(true);
+  });
+
+  it('shows no preview in the compact density and does not ask the server for it', async () => {
+    const server = mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
+    server.settings = settings('compact');
+    renderPane();
+
+    expect(await screen.findByText('Subject 1')).toBeInTheDocument();
+    expect(screen.queryByText('Preview 1')).not.toBeInTheDocument();
+    const requests = server.urls.filter((u) => u.includes('/messages'));
+    expect(requests).toHaveLength(1); // the list waited for the settings: no request for previews first
+    expect(requests[0]).toContain('preview=false');
+  });
+
+  it('switches from the options panel at once, saves the choice and asks for previews again when going back', async () => {
+    const server = mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
+    server.settings = settings('comfortable');
+    const user = userEvent.setup();
+    renderPane();
+    await screen.findByText('Preview 1');
+
+    await user.click(screen.getByRole('button', { name: 'Параметры списка' }));
+    await user.click(screen.getByRole('button', { name: 'Компактная' }));
+
+    await waitFor(() => expect(screen.queryByText('Preview 1')).not.toBeInTheDocument());
+    expect(server.patches).toEqual([{ density: 'compact', language: null, labelColors: null }]);
+    expect(screen.queryByRole('group', { name: 'Плотность списка' })).not.toBeInTheDocument(); // the panel closed
+
+    await user.click(screen.getByRole('button', { name: 'Параметры списка' }));
+    expect(screen.getByRole('button', { name: 'Компактная' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await user.click(screen.getByRole('button', { name: 'Обычная' }));
+    expect(await screen.findByText('Preview 1')).toBeInTheDocument();
+  });
+
+  it('goes back to the old choice when the server refuses to save', async () => {
+    const server = mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
+    server.settings = settings('comfortable');
+    server.failPatch = true;
+    const user = userEvent.setup();
+    renderPane();
+    await screen.findByText('Preview 1');
+
+    await user.click(screen.getByRole('button', { name: 'Параметры списка' }));
+    await user.click(screen.getByRole('button', { name: 'Компактная' }));
+
+    await waitFor(() => expect(server.patches).toHaveLength(1));
+    expect(await screen.findByText('Preview 1')).toBeInTheDocument();
+  });
+
+  it('keeps the comfortable list when the settings cannot be read', async () => {
+    mockServer(() => ({ items: [message(1)], next: null, total: 1 })); // no settings endpoint
+    renderPane();
+
+    expect(await screen.findByText('Preview 1')).toBeInTheDocument();
+  });
+
+  it('the options panel closes on Escape and on a click outside', async () => {
+    const server = mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
+    server.settings = settings('comfortable');
+    const user = userEvent.setup();
+    renderPane();
+    await screen.findByText('Preview 1');
+
+    await user.click(screen.getByRole('button', { name: 'Параметры списка' }));
+    expect(screen.getByRole('group', { name: 'Плотность списка' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('group', { name: 'Плотность списка' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Параметры списка' }));
+    await user.click(document.body);
+    expect(screen.queryByRole('group', { name: 'Плотность списка' })).not.toBeInTheDocument();
+  });
+
+  it('a phone keeps the preview and has no options button', async () => {
+    const server = mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
+    server.settings = settings('compact');
+    setWidth(400);
+    renderPane();
+
+    expect(await screen.findByText('Preview 1')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Параметры списка' })).not.toBeInTheDocument();
   });
 });
 

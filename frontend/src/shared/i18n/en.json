@@ -93,6 +93,12 @@
       "yesterday": "Yesterday",
       "week": "Earlier this week"
     },
-    "offline": "No connection. You see what was already loaded; the list will refresh when the connection is back."
+    "offline": "No connection. You see what was already loaded; the list will refresh when the connection is back.",
+    "options": "List options",
+    "density": "List density",
+    "densityOption": {
+      "comfortable": "Comfortable",
+      "compact": "Compact"
+    }
   }
 }

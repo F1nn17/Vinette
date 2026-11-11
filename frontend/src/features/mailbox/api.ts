@@ -31,18 +31,26 @@ export type ListFilter = 'all' | 'unread' | 'flagged';
 
 export const PAGE_SIZE = 50;
 
-export const messagesKey = (folderPath: string, filter: ListFilter) =>
-  ['messages', folderPath, filter] as const;
+export const messagesKey = (folderPath: string, filter: ListFilter, preview: boolean) =>
+  ['messages', folderPath, filter, preview] as const;
 
 /** The messages of a folder, page after page (cursor paging): the newest first, narrowed by the filter. */
-export function useMessages(folderPath: string | undefined, filter: ListFilter) {
+export function useMessages(
+  folderPath: string | undefined,
+  filter: ListFilter,
+  /** Ask for the text previews; the compact list does not show them, so the server is spared the work. */
+  preview: boolean,
+  /** False holds the request back (the settings that decide how to ask are not known yet). */
+  ready = true,
+) {
   return useInfiniteQuery({
-    queryKey: messagesKey(folderPath ?? '', filter),
-    enabled: folderPath !== undefined,
+    queryKey: messagesKey(folderPath ?? '', filter, preview),
+    enabled: folderPath !== undefined && ready,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam, signal }) => {
       const query = new URLSearchParams({ limit: String(PAGE_SIZE) });
       if (filter !== 'all') query.set('filter', filter);
+      if (!preview) query.set('preview', 'false');
       if (pageParam) query.set('after', pageParam);
       return apiGet<MessageListResponse>(
         `/api/v1/folders/${encodeURIComponent(folderPath ?? '')}/messages?${query.toString()}`,
