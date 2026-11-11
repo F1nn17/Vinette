@@ -1,4 +1,4 @@
-import { ArrowLeft, Menu } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib';
@@ -86,13 +86,6 @@ export function AppShell({ nav, list, reader, messageOpen, onBack }: AppShellPro
             aria-label={t('mailbox.list')}
             className="flex min-h-0 min-w-0 flex-col overflow-hidden border-x border-line bg-surface"
           >
-            {drawer && (
-              <div className="shrink-0 p-2">
-                <IconButton aria-label={t('mailbox.menu')} onClick={state.openNav}>
-                  <Menu size={18} strokeWidth={1.8} aria-hidden />
-                </IconButton>
-              </div>
-            )}
             {list}
           </section>
         )}

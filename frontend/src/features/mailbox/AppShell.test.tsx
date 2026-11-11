@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AppShell } from './AppShell';
+import { NavMenuButton } from './NavMenuButton';
 import { DESKTOP_MIN_WIDTH, TABLET_MIN_WIDTH } from './use-layout';
 
 type Listener = () => void;
@@ -34,7 +35,12 @@ function renderShell(messageOpen = false, onBack = vi.fn()) {
       messageOpen={messageOpen}
       onBack={onBack}
       nav={<p>folders-content</p>}
-      list={<p>list-content</p>}
+      list={
+        <>
+          <NavMenuButton />
+          <p>list-content</p>
+        </>
+      }
       reader={<p>reader-content</p>}
     />,
   );

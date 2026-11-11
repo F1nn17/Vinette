@@ -16,7 +16,9 @@ export function MailboxPage() {
       messageOpen={messageId !== undefined}
       onBack={() => void navigate(`/mail/${encodeURIComponent(folder)}${search}`)}
       nav={<Sidebar address={address ?? ''} folderSlug={folder} />}
-      list={<MessageListPane folderSlug={folder} messageId={messageId} />}
+      list={
+        <MessageListPane folderSlug={folder} messageId={messageId} address={address ?? undefined} />
+      }
       reader={
         <div className="p-8">
           <h1 className="text-subject font-bold text-ink">{t('mailbox.title')}</h1>
