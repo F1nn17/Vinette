@@ -61,6 +61,18 @@ public sealed class MessageListApiTests(DovecotFixture dovecot) : IDisposable
     }
 
     [Fact]
+    public async Task Previews_Come_With_The_List_And_Can_Be_Left_Out()
+    {
+        var (client, cookie) = await SignInAsync(DovecotFixture.Bob);
+
+        var (_, with) = await GetAsync(client, cookie, "/api/v1/folders/INBOX/messages?limit=3&order=oldest");
+        var (_, without) = await GetAsync(client, cookie, "/api/v1/folders/INBOX/messages?limit=3&order=oldest&preview=false");
+
+        Assert.Equal("Hello, this is a plain message.", with.GetProperty("items")[0].GetProperty("preview").GetString());
+        Assert.All(without.GetProperty("items").EnumerateArray(), i => Assert.Equal(string.Empty, i.GetProperty("preview").GetString()));
+    }
+
+    [Fact]
     public async Task The_Oldest_Order_Starts_With_The_First_Message()
     {
         var (client, cookie) = await SignInAsync(DovecotFixture.Bob);

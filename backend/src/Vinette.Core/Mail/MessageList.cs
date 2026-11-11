@@ -19,6 +19,7 @@ public sealed record MailAddressInfo(string Name, string Address);
 /// <param name="HasAttachments">Has at least one attached file.</param>
 /// <param name="Labels">The message's own keywords (labels), without the system ones that begin with "$" or "\".</param>
 /// <param name="Size">The size on the server, in bytes.</param>
+/// <param name="Preview">The beginning of the text, one line, at most <see cref="PreviewText.MaxLength"/> characters; empty if there is none or it was not asked for.</param>
 public sealed record MessageListItem(
     MessageId Id,
     MailAddressInfo? From,
@@ -31,7 +32,8 @@ public sealed record MessageListItem(
     bool Draft,
     bool HasAttachments,
     IReadOnlyList<string> Labels,
-    long Size);
+    long Size,
+    string Preview);
 
 /// <summary>
 /// A position in a message list: the last message the client has, so the next page starts right after it. It names the
@@ -82,7 +84,8 @@ public readonly record struct MessageCursor
 /// <param name="After">Where the previous page ended; null for the first page.</param>
 /// <param name="Limit">How many messages at most, see <see cref="MaxLimit"/>.</param>
 /// <param name="NewestFirst">Newest arrived first (the default of a mailbox) or oldest first.</param>
-public sealed record MessageListQuery(string Folder, MessageCursor? After, int Limit, bool NewestFirst = true)
+/// <param name="IncludePreview">Fetch the text preview; costs the server a look into every message, so the compact list leaves it out.</param>
+public sealed record MessageListQuery(string Folder, MessageCursor? After, int Limit, bool NewestFirst = true, bool IncludePreview = true)
 {
     public const int DefaultLimit = 50;
 

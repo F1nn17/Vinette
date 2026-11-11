@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The message list now carries a one-line text preview (up to 200 characters) for every message, also for servers that cannot make previews themselves, and for messages in quoted-printable, base64, KOI8-R or Windows-1251. `preview=false` leaves it out.
 - `GET /api/v1/folders/{folder}/messages`: the messages of a folder, newest first (or oldest first with `order=oldest`), 50 per page (up to 100): sender, recipients, subject, date, read/flagged/answered/draft marks, attachment mark, labels, size. Pages are followed with the `next` cursor, so new or deleted mail never shifts or repeats them, and a folder with tens of thousands of messages is as fast as a small one.
 - `GET /api/v1/quota`: how much of the mailbox's storage is used and the limit, in bytes. The `storage` field is absent when the mail server reports no storage limit, so the web app shows nothing then.
 - Servers that do not mark their special folders are handled too: Drafts, Sent, Archive, Spam and Trash are found by their usual names (English and Russian, also inside `INBOX` or `[Gmail]`). The web app shows these folders under its own names in the interface language, whatever the server calls them.

@@ -195,6 +195,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "preview",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -511,7 +518,8 @@
           "draft",
           "hasAttachments",
           "labels",
-          "size"
+          "size",
+          "preview"
         ],
         "type": "object",
         "properties": {
@@ -569,6 +577,9 @@
               "string"
             ],
             "format": "int64"
+          },
+          "preview": {
+            "type": "string"
           }
         }
       },

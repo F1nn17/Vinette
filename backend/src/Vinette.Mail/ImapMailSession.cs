@@ -8,8 +8,10 @@ namespace Vinette.Mail;
 /// <summary>
 /// One authenticated IMAP connection. Not thread-safe by design: the connection manager lets only one command run at a time.
 /// </summary>
-internal sealed class ImapMailSession(ImapClient client) : IMailSession
+internal sealed class ImapMailSession(ImapClient client, bool previewExtension = true) : IMailSession
 {
+    private bool PreviewExtension => previewExtension;
+
     public bool IsConnected => client.IsConnected && client.IsAuthenticated;
 
     public Task PingAsync(CancellationToken cancellationToken) => client.NoOpAsync(cancellationToken);
@@ -94,7 +96,13 @@ internal sealed class ImapMailSession(ImapClient client) : IMailSession
         var items = new List<MessageListItem>();
         if (last >= first && total > 0)
         {
-            var fetched = await folder.FetchAsync(first, last, SummaryItems, cancellationToken).ConfigureAwait(false);
+            var wanted = query.IncludePreview ? SummaryItems | MessageSummaryItems.PreviewText : SummaryItems;
+            if (!PreviewExtension)
+            {
+                client.Capabilities &= ~ImapCapabilities.Preview; // test switch: use the fallback that reads the beginning of the body
+            }
+
+            var fetched = await folder.FetchAsync(first, last, wanted, cancellationToken).ConfigureAwait(false);
             IEnumerable<IMessageSummary> ordered = query.NewestFirst ? fetched.OrderByDescending(m => m.UniqueId.Id) : fetched.OrderBy(m => m.UniqueId.Id);
 
             // Mail may have been deleted between the count and the fetch: only what is really on the right side of the cursor.
@@ -150,7 +158,8 @@ internal sealed class ImapMailSession(ImapClient client) : IMailSession
             flags.HasFlag(MessageFlags.Draft),
             message.Attachments.Any(),
             [.. (message.Keywords is { } keywords ? keywords : new HashSet<string>()).Where(k => k.Length > 0 && k[0] is not '$' and not '\\').Order(StringComparer.Ordinal)],
-            message.Size ?? 0);
+            message.Size ?? 0,
+            PreviewText.Normalize(message.PreviewText));
     }
 
     private static MailAddressInfo ToAddress(MimeKit.MailboxAddress mailbox) => new(mailbox.Name ?? string.Empty, mailbox.Address);
