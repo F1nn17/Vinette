@@ -85,9 +85,13 @@
       "unread": "Unread",
       "flagged": "Flagged"
     },
-    "messages": "Messages",
     "empty": "It is empty here. Try another filter.",
     "noFolder": "There is no such folder.",
-    "more": "Show more"
+    "more": "Show more",
+    "group": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "week": "Earlier this week"
+    }
   }
 }

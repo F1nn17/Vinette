@@ -7,6 +7,10 @@ export interface ListDateWords {
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
+/** Whole calendar days from `date` to `now` by the user's local midnights; 0 for today, negative for the future. */
+export const calendarDaysAgo = (date: Date, now: Date): number =>
+  Math.round((startOfDay(now) - startOfDay(date)) / DAY);
+
 const capitalize = (text: string) => text.charAt(0).toLocaleUpperCase() + text.slice(1);
 
 /**
@@ -19,7 +23,7 @@ export function formatListDate(
   language: string,
   words: ListDateWords,
 ): string {
-  const days = Math.round((startOfDay(now) - startOfDay(date)) / DAY);
+  const days = calendarDaysAgo(date, now);
   if (days <= 0) {
     // Also a message "from the future" (a clock that is off) shows as a time, not as a date.
     return new Intl.DateTimeFormat(language, { hour: '2-digit', minute: '2-digit' }).format(date);
