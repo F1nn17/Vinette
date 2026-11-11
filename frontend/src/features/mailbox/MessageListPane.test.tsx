@@ -99,11 +99,11 @@ describe('MessageListPane', () => {
     );
     expect(screen.getByRole('searchbox', { name: 'Поиск в почте' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Все' })).toHaveAttribute('aria-pressed', 'true');
-    const list = await screen.findByRole('list', { name: 'Письма' });
-    expect(within(list).getAllByRole('listitem')).toHaveLength(2);
-    expect(within(list).getByText('Sender 1')).toBeInTheDocument();
-    expect(within(list).getByText('Subject 1')).toBeInTheDocument();
-    expect(within(list).getByText('Preview 1')).toBeInTheDocument();
+    const group = await screen.findByRole('region', { name: 'Сегодня' });
+    expect(within(group).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(group).getByText('Sender 1')).toBeInTheDocument();
+    expect(within(group).getByText('Subject 1')).toBeInTheDocument();
+    expect(within(group).getByText('Preview 1')).toBeInTheDocument();
   });
 
   it('marks unread, flagged and with-attachments messages, and the selected row', async () => {
@@ -168,7 +168,7 @@ describe('MessageListPane', () => {
     const server = mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
     const user = userEvent.setup();
     const router = renderPane('/mail/Работа%2FОтчёты', 'Работа/Отчёты');
-    await screen.findByRole('list', { name: 'Письма' });
+    await screen.findByRole('region', { name: 'Сегодня' });
     expect(server.urls.some((u) => u.startsWith('/api/v1/folders/%D0%A0'))).toBe(true);
 
     await user.click(screen.getByRole('button', { name: 'Непрочитанные' }));
@@ -245,6 +245,32 @@ describe('MessageListPane', () => {
     await waitFor(() =>
       expect(server.urls.filter((u) => u.includes('/messages')).length).toBeGreaterThan(before),
     );
+  });
+});
+
+describe('date groups in the list', () => {
+  it('puts the messages under headings of their days, in the order the server gave them', async () => {
+    const day = 24 * 60 * 60 * 1000;
+    const at = (daysBack: number) => new Date(Date.now() - daysBack * day).toISOString();
+    mockServer(() => ({
+      items: [
+        message(1),
+        message(2, { date: at(1) }),
+        message(3, { date: at(3) }),
+        message(4, { date: at(40) }),
+      ],
+      next: null,
+      total: 4,
+    }));
+    renderPane();
+
+    await screen.findByRole('region', { name: 'Сегодня' });
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+    expect(headings.slice(0, 3)).toEqual(['Сегодня', 'Вчера', 'Ранее на неделе']);
+    expect(headings).toHaveLength(4); // and the month of the oldest one
+    expect(
+      within(screen.getByRole('region', { name: 'Вчера' })).getByText('Subject 2'),
+    ).toBeInTheDocument();
   });
 });
 

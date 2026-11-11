@@ -2,6 +2,7 @@ import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 import { describeApiError } from '@/shared/api/describe-error';
+import { dateGroupKey, dateGroupLabel, groupByDate } from '@/shared/lib';
 import { Button, Chip, IconButton, SearchField } from '@/shared/ui';
 import { useFolders, useMessages, type ListFilter } from './api';
 import { folderLabel, folderSlug } from './folder-label';
@@ -26,7 +27,7 @@ export interface MessageListPaneProps {
  * with the sidebar's "Flagged".
  */
 export function MessageListPane({ folderSlug: slug, messageId }: MessageListPaneProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [params, setParams] = useSearchParams();
   const filter = filterOf(params.get('filter'));
   const folders = useFolders();
@@ -37,6 +38,12 @@ export function MessageListPane({ folderSlug: slug, messageId }: MessageListPane
   const unread = folder ? Number(folder.unread) : 0;
   const search = params.toString() ? `?${params.toString()}` : '';
   const now = new Date();
+  const groupWords = {
+    today: t('list.group.today'),
+    yesterday: t('list.group.yesterday'),
+    week: t('list.group.week'),
+  };
+  const groups = groupByDate(items, (m) => new Date(m.date), now);
   const showRecipient = folder?.role === 'sent' || folder?.role === 'drafts';
   const title = folder ? folderLabel(folder, t) : slug === 'inbox' ? t('folders.inbox') : '';
   const error = folders.isError ? folders.error : messages.isError ? messages.error : null;
@@ -109,21 +116,32 @@ export function MessageListPane({ folderSlug: slug, messageId }: MessageListPane
           <p className="p-5 text-muted">{t('list.empty')}</p>
         )}
 
-        {items.length > 0 && (
-          <ul aria-label={t('list.messages')}>
-            {items.map((m) => (
-              <li key={m.id}>
-                <MessageRow
-                  message={m}
-                  to={`/mail/${encodeURIComponent(slug)}/${m.id}${search}`}
-                  selected={m.id === messageId}
-                  showRecipient={showRecipient}
-                  now={now}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
+        {groups.map(({ group, items: rows }) => {
+          const key = dateGroupKey(group);
+          return (
+            <section
+              key={key + rows[0]?.id}
+              aria-label={dateGroupLabel(group, now, i18n.language, groupWords)}
+            >
+              <h2 className="bg-surface px-5 pt-3.5 pb-1.5 text-caps font-semibold tracking-wider text-muted uppercase">
+                {dateGroupLabel(group, now, i18n.language, groupWords)}
+              </h2>
+              <ul>
+                {rows.map((m) => (
+                  <li key={m.id}>
+                    <MessageRow
+                      message={m}
+                      to={`/mail/${encodeURIComponent(slug)}/${m.id}${search}`}
+                      selected={m.id === messageId}
+                      showRecipient={showRecipient}
+                      now={now}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
 
         {messages.hasNextPage && (
           <div className="p-4">
