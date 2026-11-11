@@ -11,6 +11,7 @@ import {
   LabelTag,
   Logo,
   ProgressBar,
+  SearchField,
   Select,
   TextArea,
   TextField,
@@ -48,6 +49,16 @@ export function DevUiPage() {
         </Button>
         <Button size="lg">Large 44</Button>
         <Button size="xl">Extra 48</Button>
+      </Section>
+
+      <Section title="SearchField">
+        <SearchField aria-label="Search mail" placeholder="Search mail" className="w-80" />
+        <SearchField
+          aria-label="Search mail (disabled)"
+          placeholder="Disabled"
+          disabled
+          className="w-80"
+        />
       </Section>
 
       <Section title="IconButton">

@@ -66,5 +66,30 @@
     "noLabels": "Меток пока нет.",
     "storage": "Занято {{used}} из {{limit}}",
     "storageBar": "Занятое место в почте"
+  },
+  "list": {
+    "noSender": "Без отправителя",
+    "noSubject": "(без темы)",
+    "yesterday": "Вчера",
+    "to": "Кому: {{name}}",
+    "unread": "Не прочитано",
+    "flagged": "С флажком",
+    "attachments": "Есть вложения",
+    "unreadCount_one": "{{count}} непрочитанное",
+    "unreadCount_few": "{{count}} непрочитанных",
+    "unreadCount_many": "{{count}} непрочитанных",
+    "unreadCount_other": "{{count}} непрочитанных",
+    "refresh": "Обновить",
+    "search": "Поиск в почте",
+    "filters": "Фильтры списка",
+    "filter": {
+      "all": "Все",
+      "unread": "Непрочитанные",
+      "flagged": "С флажком"
+    },
+    "messages": "Письма",
+    "empty": "Здесь пусто. Попробуйте другой фильтр.",
+    "noFolder": "Такой папки нет.",
+    "more": "Показать ещё"
   }
 }
