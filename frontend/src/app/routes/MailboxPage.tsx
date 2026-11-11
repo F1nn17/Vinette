@@ -1,18 +1,20 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
-import { AppShell } from '@/features/mailbox';
+import { useSession } from '@/features/auth';
+import { AppShell, Sidebar } from '@/features/mailbox';
 
 /** The mailbox screen: `/mail/:folder` and `/mail/:folder/:messageId`. The panes are placeholders until VIN-047…049. */
 export function MailboxPage() {
   const { t } = useTranslation();
   const { folder = 'inbox', messageId } = useParams();
   const navigate = useNavigate();
+  const { address } = useSession();
 
   return (
     <AppShell
       messageOpen={messageId !== undefined}
       onBack={() => void navigate(`/mail/${encodeURIComponent(folder)}`)}
-      nav={<h2 className="p-4 text-base font-semibold text-ink">{t('mailbox.title')}</h2>}
+      nav={<Sidebar address={address ?? ''} folderSlug={folder} />}
       list={<p className="p-5 text-muted">{folder}</p>}
       reader={
         <div className="p-8">

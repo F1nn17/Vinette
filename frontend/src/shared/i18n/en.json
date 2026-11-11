@@ -38,7 +38,8 @@
   },
   "common": {
     "close": "Close",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "retry": "Try again"
   },
   "errors": {
     "mail_unavailable": "Mail is temporarily unavailable. Try again in a few minutes.",
@@ -55,6 +56,15 @@
     "sent": "Sent",
     "archive": "Archive",
     "junk": "Spam",
-    "trash": "Trash"
+    "trash": "Trash",
+    "flagged": "Flagged"
+  },
+  "sidebar": {
+    "compose": "Compose",
+    "account": "Account",
+    "labels": "Labels",
+    "noLabels": "No labels yet.",
+    "storage": "{{used}} of {{limit}} used",
+    "storageBar": "Mailbox storage used"
   }
 }
