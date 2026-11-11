@@ -2,7 +2,7 @@ import { Flag, Paperclip } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { cn, formatListDate } from '@/shared/lib';
-import { LabelTag } from '@/shared/ui';
+import { Avatar, LabelTag } from '@/shared/ui';
 import type { MessageItem } from './api';
 import { labelColor } from './label-color';
 
@@ -14,10 +14,19 @@ export interface MessageRowProps {
   /** Sent mail and drafts show who the message is to, not who it is from. */
   showRecipient: boolean;
   now: Date;
+  /** Mobile: an avatar on the left and the unread dot beside the preview (DESIGN.md §8). */
+  avatar?: boolean;
 }
 
 /** One line of the list (DESIGN.md §5): sender, subject, preview, labels; unread, flag and attachment marks. */
-export function MessageRow({ message, to, selected, showRecipient, now }: MessageRowProps) {
+export function MessageRow({
+  message,
+  to,
+  selected,
+  showRecipient,
+  now,
+  avatar = false,
+}: MessageRowProps) {
   const { t, i18n } = useTranslation();
   const person = showRecipient ? message.to[0] : message.from;
   const who = person ? person.name || person.address : t('list.noSender');
@@ -28,49 +37,101 @@ export function MessageRow({ message, to, selected, showRecipient, now }: Messag
     yesterday: t('list.yesterday'),
   });
 
-  return (
-    <Link
-      to={to}
-      aria-current={selected ? 'true' : undefined}
-      className={cn(
-        'block border-b border-subtle px-5 py-3.5 transition-colors',
-        selected ? 'bg-accent-soft' : 'hover:bg-bg',
+  const marks = (
+    <>
+      {message.flagged && (
+        <Flag
+          size={14}
+          strokeWidth={1.8}
+          role="img"
+          aria-label={t('list.flagged')}
+          className="shrink-0 fill-flag text-flag"
+        />
       )}
-    >
-      <span className="flex items-center gap-2">
-        {unread && (
+      {message.hasAttachments && (
+        <Paperclip
+          size={14}
+          strokeWidth={1.8}
+          role="img"
+          aria-label={t('list.attachments')}
+          className="shrink-0 text-muted"
+        />
+      )}
+      <time dateTime={message.date} className="shrink-0 text-meta text-muted">
+        {time}
+      </time>
+    </>
+  );
+  const dot = (
+    <span
+      role="img"
+      aria-label={t('list.unread')}
+      className="size-2 shrink-0 rounded-full bg-accent"
+    />
+  );
+  const labels = message.labels.length > 0 && (
+    <span className="mt-1.5 flex flex-wrap gap-1.5">
+      {message.labels.map((label) => (
+        <LabelTag key={label} color={labelColor(label)}>
+          {label}
+        </LabelTag>
+      ))}
+    </span>
+  );
+  const linkClass = cn(
+    'block border-b border-subtle py-3.5 transition-colors',
+    selected ? 'bg-accent-soft' : 'hover:bg-bg',
+  );
+
+  if (avatar) {
+    return (
+      <Link
+        to={to}
+        aria-current={selected ? 'true' : undefined}
+        className={cn(linkClass, 'flex items-start gap-3 px-4')}
+      >
+        <span aria-hidden="true" className="shrink-0">
+          <Avatar name={who} size={40} tone="neutral" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span
+              className={cn(
+                'min-w-0 flex-1 truncate text-base text-ink',
+                unread && 'font-semibold',
+              )}
+            >
+              {sender}
+            </span>
+            {marks}
+          </span>
           <span
-            role="img"
-            aria-label={t('list.unread')}
-            className="size-2 shrink-0 rounded-full bg-accent"
-          />
-        )}
+            className={cn('mt-0.5 block truncate text-base text-ink', unread && 'font-semibold')}
+          >
+            {subject}
+          </span>
+          <span className="mt-0.5 flex items-center gap-2">
+            <span className="min-w-0 flex-1 truncate text-secondary text-muted">
+              {message.preview}
+            </span>
+            {unread && dot}
+          </span>
+          {labels}
+        </span>
+      </Link>
+    );
+  }
+
+  return (
+    <Link to={to} aria-current={selected ? 'true' : undefined} className={cn(linkClass, 'px-5')}>
+      <span className="flex items-center gap-2">
+        {unread && dot}
         <span
           className={cn('min-w-0 flex-1 truncate text-base text-ink', unread && 'font-semibold')}
         >
           {sender}
         </span>
-        {message.flagged && (
-          <Flag
-            size={14}
-            strokeWidth={1.8}
-            role="img"
-            aria-label={t('list.flagged')}
-            className="shrink-0 fill-flag text-flag"
-          />
-        )}
-        {message.hasAttachments && (
-          <Paperclip
-            size={14}
-            strokeWidth={1.8}
-            role="img"
-            aria-label={t('list.attachments')}
-            className="shrink-0 text-muted"
-          />
-        )}
-        <time dateTime={message.date} className="shrink-0 text-meta text-muted">
-          {time}
-        </time>
+        {marks}
       </span>
       <span className={cn('mt-0.5 block truncate text-base text-ink', unread && 'font-semibold')}>
         {subject}
@@ -78,15 +139,7 @@ export function MessageRow({ message, to, selected, showRecipient, now }: Messag
       {message.preview && (
         <span className="mt-0.5 block truncate text-secondary text-muted">{message.preview}</span>
       )}
-      {message.labels.length > 0 && (
-        <span className="mt-1.5 flex flex-wrap gap-1.5">
-          {message.labels.map((label) => (
-            <LabelTag key={label} color={labelColor(label)}>
-              {label}
-            </LabelTag>
-          ))}
-        </span>
-      )}
+      {labels}
     </Link>
   );
 }

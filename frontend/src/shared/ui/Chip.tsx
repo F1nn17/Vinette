@@ -12,7 +12,7 @@ export function Chip({ pressed, className, type = 'button', ...rest }: ChipProps
       type={type}
       aria-pressed={pressed}
       className={cn(
-        'inline-flex h-[30px] items-center rounded-pill px-3.5 text-secondary font-medium transition-colors',
+        'relative inline-flex h-[30px] items-center rounded-pill px-3.5 text-secondary font-medium transition-colors max-md:after:absolute max-md:after:inset-x-0 max-md:after:-inset-y-2 max-md:after:content-[""]',
         pressed
           ? 'bg-ink text-surface'
           : 'border border-control bg-surface text-text-2 hover:bg-bg',

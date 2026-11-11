@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
+import { AppShell } from './AppShell';
 import { MessageListPane } from './MessageListPane';
 import { labelColor } from './label-color';
 
@@ -71,7 +72,21 @@ function renderPane(url = '/mail/inbox', slug = 'inbox', messageId?: string) {
     [
       {
         path: '*',
-        element: <MessageListPane folderSlug={slug} messageId={messageId} />,
+        element: (
+          <AppShell
+            messageOpen={false}
+            onBack={() => undefined}
+            nav={<p>folders</p>}
+            list={
+              <MessageListPane
+                folderSlug={slug}
+                messageId={messageId}
+                address="alice@vinette.test"
+              />
+            }
+            reader="reader"
+          />
+        ),
       },
     ],
     { initialEntries: [url] },
@@ -86,7 +101,17 @@ function renderPane(url = '/mail/inbox', slug = 'inbox', messageId?: string) {
 }
 
 /** jsdom has no layout: the list box is 800 px high, a row is 96 px, a heading 36 px. */
+function setWidth(width: number) {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: width >= Number(/min-width: (\d+)px/.exec(query)?.[1]),
+    media: query,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }));
+}
+
 beforeEach(() => {
+  setWidth(1400);
   const size = (el: HTMLElement) =>
     el.dataset.index === undefined ? 800 : el.querySelector('h2') ? 36 : 96;
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
@@ -274,6 +299,62 @@ describe('offline', () => {
   });
 });
 
+describe('mobile and tablet', () => {
+  beforeEach(() => setWidth(400));
+
+  it('has the header of the phone: menu, title, search button, account; the search box opens on demand', async () => {
+    mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
+    const user = userEvent.setup();
+    renderPane();
+
+    await screen.findByText('Subject 1');
+    expect(screen.getByRole('button', { name: 'Меню' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'alice@vinette.test', hidden: true }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Обновить' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Поиск в почте' }));
+
+    expect(screen.getByRole('searchbox', { name: 'Поиск в почте' })).toBeInTheDocument();
+  });
+
+  it('opens the folders from the menu button', async () => {
+    mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
+    const user = userEvent.setup();
+    renderPane();
+
+    await user.click(await screen.findByRole('button', { name: 'Меню' }));
+
+    expect(screen.getByRole('navigation', { name: 'Папки' })).toBeVisible();
+  });
+
+  it('shows rows with an avatar of the sender and the floating "Compose" button', async () => {
+    mockServer(() => ({ items: [message(1, { seen: false })], next: null, total: 1 }));
+    const user = userEvent.setup();
+    const router = renderPane();
+
+    const row = await screen.findByRole('link');
+    expect(within(row).getByRole('img', { name: 'Не прочитано' })).toBeInTheDocument();
+    expect(within(row).getByText('Sender 1')).toBeInTheDocument();
+    expect(within(row).getByText('S1')).toBeInTheDocument(); // the avatar's initials
+    await user.click(screen.getByRole('button', { name: 'Написать' }));
+    expect(router.state.location.pathname).toBe('/compose');
+  });
+
+  it('on a desktop and a tablet there is no floating button and the search box is always there', async () => {
+    mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
+    setWidth(900);
+    renderPane();
+
+    await screen.findByText('Subject 1');
+    expect(screen.queryByRole('button', { name: 'Написать' })).not.toBeInTheDocument();
+    expect(screen.getByRole('searchbox')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Обновить' })).toBeInTheDocument();
+  });
+});
+
 describe('a long list', () => {
   const many = (from: number, count: number) =>
     Array.from({ length: count }, (_, i) => message(from + i));
@@ -299,7 +380,7 @@ describe('a long list', () => {
     const pages = () => server.urls.filter((u) => u.includes('/messages')).length;
     expect(pages()).toBe(1); // the end is far away: nothing is loaded ahead of need
 
-    const scroller = document.querySelector<HTMLElement>('.overflow-y-auto')!;
+    const scroller = document.querySelector<HTMLElement>('[aria-busy]')!;
     scroller.scrollTop = 50 * 96;
     act(() => void scroller.dispatchEvent(new Event('scroll')));
 

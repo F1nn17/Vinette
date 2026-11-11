@@ -1,13 +1,17 @@
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Search } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 import { dateGroupKey, dateGroupLabel, groupByDate } from '@/shared/lib';
-import { Chip, IconButton, SearchField } from '@/shared/ui';
+import { cn } from '@/shared/lib';
+import { Avatar, Chip, IconButton, SearchField } from '@/shared/ui';
 import { useFolders, useMessages, type ListFilter, type MessageItem } from './api';
 import { folderLabel, folderSlug } from './folder-label';
 import { ListEmpty, ListError, ListNoFolder, ListSkeleton, OfflineBanner } from './list-states';
 import { MessageRow } from './MessageRow';
+import { NavMenuButton } from './NavMenuButton';
+import { useShell } from './shell-context';
+import { ComposeFab } from './ComposeFab';
 import { useOnline } from './use-online';
 import { VirtualMessageRows, type ListEntry } from './VirtualMessageRows';
 
@@ -22,6 +26,8 @@ export interface MessageListPaneProps {
   folderSlug: string;
   /** The open message, if any; its row is highlighted. */
   messageId?: string;
+  /** The signed-in address: its initials are the account button of the mobile header. */
+  address?: string;
 }
 
 /**
@@ -29,11 +35,14 @@ export interface MessageListPaneProps {
  * loaded on request ("Show more"); the filter lives in the address (`?filter=`), so it survives a reload and is shared
  * with the sidebar's "Flagged".
  */
-export function MessageListPane({ folderSlug: slug, messageId }: MessageListPaneProps) {
+export function MessageListPane({ folderSlug: slug, messageId, address }: MessageListPaneProps) {
   const { t, i18n } = useTranslation();
   const [params, setParams] = useSearchParams();
   const filter = filterOf(params.get('filter'));
   const online = useOnline();
+  const { layout } = useShell();
+  const mobile = layout === 'mobile';
+  const [searchOpen, setSearchOpen] = useState(false);
   const [scroller, setScroller] = useState<HTMLElement | null>(null);
   const folders = useFolders();
   const folder = folders.data?.find((f) => folderSlug(f) === slug);
@@ -80,21 +89,48 @@ export function MessageListPane({ folderSlug: slug, messageId }: MessageListPane
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex flex-col gap-3.5 px-5 pt-[18px] pb-3">
+      <header
+        className={cn('flex flex-col px-5 pb-3', mobile ? 'gap-3 px-4 pt-3' : 'gap-3.5 pt-[18px]')}
+      >
         <div className="flex items-center gap-2">
+          {mobile && <NavMenuButton />}
           <h1 className="flex min-w-0 flex-1 items-baseline gap-2">
-            <span className="truncate text-heading font-bold text-ink">{title}</span>
-            {unread > 0 && (
+            <span
+              className={cn('truncate font-bold text-ink', mobile ? 'text-lead' : 'text-heading')}
+              style={mobile ? { fontSize: 20 } : undefined}
+            >
+              {title}
+            </span>
+            {unread > 0 && !mobile && (
               <span className="shrink-0 text-secondary text-muted">
                 {t('list.unreadCount', { count: unread })}
               </span>
             )}
           </h1>
-          <IconButton aria-label={t('list.refresh')} onClick={refresh}>
-            <RefreshCw size={18} strokeWidth={1.8} aria-hidden />
-          </IconButton>
+          {mobile ? (
+            <>
+              <IconButton
+                aria-label={t('list.search')}
+                aria-expanded={searchOpen}
+                onClick={() => setSearchOpen((open) => !open)}
+              >
+                <Search size={20} strokeWidth={1.8} aria-hidden />
+              </IconButton>
+              {address && (
+                <span aria-hidden="true">
+                  <Avatar name={address} size={36} />
+                </span>
+              )}
+            </>
+          ) : (
+            <IconButton aria-label={t('list.refresh')} onClick={refresh}>
+              <RefreshCw size={18} strokeWidth={1.8} aria-hidden />
+            </IconButton>
+          )}
         </div>
-        <SearchField aria-label={t('list.search')} placeholder={t('list.search')} />
+        {(!mobile || searchOpen) && (
+          <SearchField aria-label={t('list.search')} placeholder={t('list.search')} />
+        )}
         <div role="group" aria-label={t('list.filters')} className="flex flex-wrap gap-2">
           {FILTERS.map((f) => (
             <Chip key={f} pressed={filter === f} onClick={() => setFilter(f)}>
@@ -133,6 +169,7 @@ export function MessageListPane({ folderSlug: slug, messageId }: MessageListPane
                 selected={m.id === messageId}
                 showRecipient={showRecipient}
                 now={now}
+                avatar={mobile}
               />
             )}
             footer={
@@ -147,6 +184,7 @@ export function MessageListPane({ folderSlug: slug, messageId }: MessageListPane
           />
         )}
       </div>
+      {mobile && <ComposeFab />}
     </div>
   );
 }
