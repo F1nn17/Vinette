@@ -79,13 +79,27 @@ public readonly record struct MessageCursor
     }
 }
 
+/// <summary>Which messages of a folder the list shows.</summary>
+public enum MessageFilter
+{
+    /// <summary>Every message.</summary>
+    All,
+
+    /// <summary>Messages not read yet.</summary>
+    Unread,
+
+    /// <summary>Messages marked with a flag.</summary>
+    Flagged,
+}
+
 /// <summary>Which page of a folder to list.</summary>
 /// <param name="Folder">The folder's path.</param>
 /// <param name="After">Where the previous page ended; null for the first page.</param>
 /// <param name="Limit">How many messages at most, see <see cref="MaxLimit"/>.</param>
 /// <param name="NewestFirst">Newest arrived first (the default of a mailbox) or oldest first.</param>
 /// <param name="IncludePreview">Fetch the text preview; costs the server a look into every message, so the compact list leaves it out.</param>
-public sealed record MessageListQuery(string Folder, MessageCursor? After, int Limit, bool NewestFirst = true, bool IncludePreview = true)
+/// <param name="Filter">Which messages to show; the cursor and the order apply to the filtered list.</param>
+public sealed record MessageListQuery(string Folder, MessageCursor? After, int Limit, bool NewestFirst = true, bool IncludePreview = true, MessageFilter Filter = MessageFilter.All)
 {
     public const int DefaultLimit = 50;
 
@@ -96,5 +110,5 @@ public sealed record MessageListQuery(string Folder, MessageCursor? After, int L
 /// <param name="UidValidity">The folder's <c>UIDVALIDITY</c> the page was read with.</param>
 /// <param name="Items">The messages, in the requested order.</param>
 /// <param name="Next">Pass as <see cref="MessageListQuery.After"/> for the next page; null on the last page.</param>
-/// <param name="Total">Messages in the whole folder.</param>
+/// <param name="Total">Messages that match the filter in the whole folder (all of them without a filter).</param>
 public sealed record MessagePage(uint UidValidity, IReadOnlyList<MessageListItem> Items, MessageCursor? Next, int Total);

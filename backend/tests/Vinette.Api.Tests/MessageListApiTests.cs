@@ -73,6 +73,22 @@ public sealed class MessageListApiTests(DovecotFixture dovecot) : IDisposable
     }
 
     [Fact]
+    public async Task The_Filter_Narrows_The_List_And_A_Wrong_Filter_Is_A_400()
+    {
+        var (client, cookie) = await SignInAsync(DovecotFixture.Bob);
+
+        var (status, unread) = await GetAsync(client, cookie, "/api/v1/folders/INBOX/messages?filter=unread&limit=100");
+        var (_, all) = await GetAsync(client, cookie, "/api/v1/folders/INBOX/messages?limit=100");
+        var (bad, _) = await GetAsync(client, cookie, "/api/v1/folders/INBOX/messages?filter=spam");
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.All(unread.GetProperty("items").EnumerateArray(), i => Assert.False(i.GetProperty("seen").GetBoolean()));
+        Assert.Equal(unread.GetProperty("items").GetArrayLength(), unread.GetProperty("total").GetInt32());
+        Assert.True(unread.GetProperty("total").GetInt32() <= all.GetProperty("total").GetInt32());
+        Assert.Equal(HttpStatusCode.BadRequest, bad);
+    }
+
+    [Fact]
     public async Task The_Oldest_Order_Starts_With_The_First_Message()
     {
         var (client, cookie) = await SignInAsync(DovecotFixture.Bob);

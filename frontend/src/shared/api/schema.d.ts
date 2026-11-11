@@ -374,6 +374,7 @@ export interface operations {
                 after?: string;
                 order?: string;
                 preview?: boolean;
+                filter?: string;
             };
             header?: never;
             path: {

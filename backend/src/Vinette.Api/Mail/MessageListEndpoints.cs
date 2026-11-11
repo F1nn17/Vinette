@@ -40,7 +40,7 @@ public sealed record MessageListItemDto(
 /// <summary>A page of messages in arrival order.</summary>
 /// <param name="Items">The messages in the requested order.</param>
 /// <param name="Next">Pass as <c>after</c> to get the next page; absent on the last page.</param>
-/// <param name="Total">Messages in the whole folder.</param>
+/// <param name="Total">Messages that match the filter in the whole folder (all of them without a filter).</param>
 public sealed record MessageListResponse(IReadOnlyList<MessageListItemDto> Items, string? Next, int Total);
 
 public static class MessageListEndpoints
@@ -63,6 +63,7 @@ public static class MessageListEndpoints
     /// <param name="limit">Messages per page, 1 to 100 (default 50).</param>
     /// <param name="after">The <c>next</c> of the previous page; omit for the first page.</param>
     /// <param name="preview">Include the text preview (default true); false is cheaper for the server.</param>
+    /// <param name="filter"><c>all</c> (default), <c>unread</c> or <c>flagged</c>; cursor and order apply to the filtered list.</param>
     /// <param name="order"><c>newest</c> (default) or <c>oldest</c>: by arrival.</param>
     private static async Task<IResult> ListAsync(
         string folder,
@@ -73,7 +74,8 @@ public static class MessageListEndpoints
         [FromQuery] int? limit = null,
         [FromQuery] string? after = null,
         [FromQuery] string? order = null,
-        [FromQuery] bool? preview = null)
+        [FromQuery] bool? preview = null,
+        [FromQuery] string? filter = null)
     {
         var pageSize = limit ?? MessageListQuery.DefaultLimit;
         if (pageSize is < 1 or > MessageListQuery.MaxLimit)
@@ -97,7 +99,19 @@ public static class MessageListEndpoints
             return Bad("order must be newest or oldest.");
         }
 
-        var query = new MessageListQuery(folder, cursor, pageSize, order != "oldest", preview ?? true);
+        var messageFilter = filter switch
+        {
+            null or "all" => MessageFilter.All,
+            "unread" => MessageFilter.Unread,
+            "flagged" => MessageFilter.Flagged,
+            _ => (MessageFilter?)null,
+        };
+        if (messageFilter is null)
+        {
+            return Bad("filter must be all, unread or flagged.");
+        }
+
+        var query = new MessageListQuery(folder, cursor, pageSize, order != "oldest", preview ?? true, messageFilter.Value);
         var page = await gateway.ExecuteAsync(
             http.GetMailCredentials(sessions),
             (session, token) => session.ListMessagesAsync(query, token),
