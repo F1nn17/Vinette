@@ -92,6 +92,7 @@
       "today": "Today",
       "yesterday": "Yesterday",
       "week": "Earlier this week"
-    }
+    },
+    "offline": "No connection. You see what was already loaded; the list will refresh when the connection is back."
   }
 }
