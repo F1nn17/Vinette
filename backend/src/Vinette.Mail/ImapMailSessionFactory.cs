@@ -10,6 +10,9 @@ namespace Vinette.Mail;
 /// <summary>Opens long-lived IMAP connections for <see cref="IMailGateway"/>: connect, identify, authenticate and keep the connection open.</summary>
 public sealed class ImapMailSessionFactory(ImapConnectionSettings settings) : IMailSessionFactory
 {
+    /// <summary>Tests only: false makes message previews come from the beginning of the body even if the server has the PREVIEW extension.</summary>
+    internal bool PreviewExtension { get; init; } = true;
+
     public async Task<IMailSession> OpenAsync(MailCredentials credentials, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(credentials);
@@ -30,7 +33,7 @@ public sealed class ImapMailSessionFactory(ImapConnectionSettings settings) : IM
             await client.ConnectAsync(settings.Host, settings.Port, ImapAuthenticator.ToSocketOptions(settings.Security), timeout.Token).ConfigureAwait(false);
             await ImapAuthenticator.IdentifyAsync(client, new ClientInfo(credentials.ClientIp, null), timeout.Token).ConfigureAwait(false);
             await client.AuthenticateAsync(credentials.Address, credentials.Password, timeout.Token).ConfigureAwait(false);
-            return new ImapMailSession(client);
+            return new ImapMailSession(client, PreviewExtension);
         }
         catch (AuthenticationException exception)
         {

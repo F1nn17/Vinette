@@ -188,6 +188,7 @@ export interface components {
             labels: string[];
             /** Format: int64 */
             size: number | string;
+            preview: string;
         };
         MessageListResponse: {
             items: components["schemas"]["MessageListItemDto"][];
@@ -372,6 +373,7 @@ export interface operations {
                 limit?: number | string;
                 after?: string;
                 order?: string;
+                preview?: boolean;
             };
             header?: never;
             path: {
