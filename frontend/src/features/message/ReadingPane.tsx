@@ -10,7 +10,7 @@ import { AttachmentList } from './AttachmentList';
 import { useSetFlags } from './flags';
 import { ImageTrust } from './ImageTrust';
 import { MessageFrame } from './MessageFrame';
-import { ReaderActionBar } from './ReaderActionBar';
+import { ReaderActionBar, type ReaderAction } from './ReaderActionBar';
 import { SenderCheckBadge } from './SenderCheckBadge';
 
 export interface ReadingPaneProps {
@@ -20,6 +20,14 @@ export interface ReadingPaneProps {
   address?: string;
   /** On a phone the message fills the screen; this is what the "back" button does. Absent where the list is beside it. */
   onBack?: () => void;
+  /** The kind of folder the message is in (inbox, archive, ...): the action that would leave it there is not offered. */
+  folderRole?: string;
+  /** Archives, marks as spam, deletes or marks as unread the open message; the screen decides where to go afterwards. */
+  onAction?: (action: ReaderAction) => void;
+  /** An action is running. */
+  actionBusy?: boolean;
+  /** What went wrong with the last action, in plain words. */
+  actionError?: string | null;
 }
 
 function EmptyState() {
@@ -166,7 +174,15 @@ function Header({ message, address, imagesAsked, imagesLoading, onShowImages }: 
  * The reading area (DESIGN.md §5): the action bar, then subject, labels, sender, the sender check, the notice about hidden
  * pictures and the body in its sandboxed frame. The attachments follow the body; the quick reply (VIN-103) comes later.
  */
-export function ReadingPane({ messageId, address, onBack }: ReadingPaneProps) {
+export function ReadingPane({
+  messageId,
+  address,
+  onBack,
+  folderRole,
+  onAction,
+  actionBusy = false,
+  actionError,
+}: ReadingPaneProps) {
   const { t } = useTranslation();
   const [fullFor, setFullFor] = useState<string | null>(null); // the message whose whole body was asked for
   const full = messageId !== undefined && fullFor === messageId;
@@ -221,6 +237,9 @@ export function ReadingPane({ messageId, address, onBack }: ReadingPaneProps) {
     <article aria-labelledby="reader-subject" className="flex h-full flex-col">
       <ReaderActionBar
         onBack={onBack}
+        folderRole={folderRole}
+        onAction={onAction}
+        busy={actionBusy}
         flagged={message.flagged}
         onToggleFlag={() =>
           flags.mutate(
@@ -235,6 +254,14 @@ export function ReadingPane({ messageId, address, onBack }: ReadingPaneProps) {
           className="shrink-0 bg-warning-bg px-7 py-2 text-secondary text-warning max-md:px-4"
         >
           {t('reader.flagFailed')}
+        </p>
+      )}
+      {actionError && (
+        <p
+          role="alert"
+          className="shrink-0 bg-warning-bg px-7 py-2 text-secondary text-warning max-md:px-4"
+        >
+          {actionError}
         </p>
       )}
       <div className="min-h-0 flex-1 overflow-y-auto">
