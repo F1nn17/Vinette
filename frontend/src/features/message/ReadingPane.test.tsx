@@ -23,6 +23,8 @@ const message = (extra: Record<string, unknown> = {}) => ({
   blockedExternalResources: 0,
   canShowImages: false,
   imagesShown: 0,
+  hasExternalImages: false,
+  imagesTrusted: false,
   truncated: false,
   sender: { verdict: 'unknown', domain: 'studio.example' },
   attachments: [],
@@ -170,6 +172,154 @@ describe('ReadingPane', () => {
 
       await screen.findByRole('heading', { name: 'Layouts, second iteration' });
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('trusting a sender with pictures', () => {
+    const verified = { verdict: 'verified', domain: 'studio.example' };
+    const withPictures = (extra: Record<string, unknown> = {}) =>
+      message({
+        hasExternalImages: true,
+        blockedExternalResources: 2,
+        canShowImages: true,
+        sender: verified,
+        ...extra,
+      });
+
+    /** Answers the message, and the settings change with what it was told to do; remembers what was sent to the settings. */
+    function stubServer(first: () => unknown, after: () => unknown = first) {
+      const patches: unknown[] = [];
+      let changed = false;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn<typeof fetch>((input, init) => {
+          if (String(input).endsWith('/api/v1/settings') && init?.method === 'PATCH') {
+            patches.push(JSON.parse(String(init.body)));
+            changed = true;
+            return Promise.resolve(
+              json({
+                density: 'comfortable',
+                language: null,
+                labelColors: {},
+                trustedImageSenders: [],
+              }),
+            );
+          }
+          return Promise.resolve(json(changed ? after() : first()));
+        }),
+      );
+      return patches;
+    }
+
+    it('offers to always show the pictures of a verified sender', async () => {
+      mockApi(() => withPictures());
+      renderPane();
+
+      expect(await screen.findByText(/Показывать его картинки сразу/u)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Всегда показывать' })).toBeEnabled();
+    });
+
+    it('trusts the sender with the address of the message, and loads the message again', async () => {
+      const patches = stubServer(
+        () => withPictures(),
+        () =>
+          withPictures({
+            imagesTrusted: true,
+            canShowImages: false,
+            imagesShown: 2,
+            blockedExternalResources: 0,
+          }),
+      );
+      const user = userEvent.setup();
+      renderPane();
+
+      await user.click(await screen.findByRole('button', { name: 'Всегда показывать' }));
+
+      expect(
+        await screen.findByText('Картинки от anna@studio.example показываются сразу.'),
+      ).toBeInTheDocument();
+      expect(patches).toEqual([{ trustImagesFrom: 'anna@studio.example' }]);
+      expect(screen.getByRole('button', { name: 'Не показывать сразу' })).toBeInTheDocument();
+    });
+
+    it('can take the trust back', async () => {
+      const patches = stubServer(
+        () =>
+          withPictures({
+            imagesTrusted: true,
+            canShowImages: false,
+            imagesShown: 2,
+            blockedExternalResources: 0,
+          }),
+        () => withPictures(),
+      );
+      const user = userEvent.setup();
+      renderPane();
+
+      await user.click(await screen.findByRole('button', { name: 'Не показывать сразу' }));
+
+      expect(await screen.findByRole('button', { name: 'Всегда показывать' })).toBeInTheDocument();
+      expect(patches).toEqual([{ untrustImagesFrom: 'anna@studio.example' }]);
+    });
+
+    it('does not offer it for a sender who is not verified, as it would have no effect', async () => {
+      mockApi(() => withPictures({ sender: { verdict: 'unknown', domain: 'studio.example' } }));
+      renderPane();
+
+      await screen.findByText(/Внешние изображения скрыты/u);
+      expect(screen.queryByRole('button', { name: 'Всегда показывать' })).not.toBeInTheDocument();
+    });
+
+    it('does not offer it for a suspicious sender', async () => {
+      mockApi(() => withPictures({ sender: { verdict: 'suspicious', domain: 'studio.example' } }));
+      renderPane();
+
+      await screen.findByText(/Внешние изображения скрыты/u);
+      expect(screen.queryByRole('button', { name: 'Всегда показывать' })).not.toBeInTheDocument();
+    });
+
+    it('still lets the reader withdraw the trust when the sender is no longer verified', async () => {
+      mockApi(() =>
+        withPictures({
+          imagesTrusted: true,
+          sender: { verdict: 'unknown', domain: 'studio.example' },
+        }),
+      );
+      renderPane();
+
+      expect(
+        await screen.findByRole('button', { name: 'Не показывать сразу' }),
+      ).toBeInTheDocument();
+    });
+
+    it('says nothing when the message has no pictures from the web', async () => {
+      mockApi(() => message({ sender: verified }));
+      renderPane();
+
+      await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+      expect(screen.queryByRole('button', { name: 'Всегда показывать' })).not.toBeInTheDocument();
+    });
+
+    it('says in plain words when the choice could not be saved', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn<typeof fetch>((_input, init) =>
+          Promise.resolve(
+            init?.method === 'PATCH'
+              ? json({ title: 'x', code: 'bad_request' }, { status: 400 })
+              : json(withPictures()),
+          ),
+        ),
+      );
+      const user = userEvent.setup();
+      renderPane();
+
+      await user.click(await screen.findByRole('button', { name: 'Всегда показывать' }));
+
+      expect(
+        await screen.findByText('Не удалось сохранить выбор. Попробуйте ещё раз.'),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Всегда показывать' })).toBeEnabled();
     });
   });
 

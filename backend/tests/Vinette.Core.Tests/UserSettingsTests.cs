@@ -61,4 +61,58 @@ public class UserSettingsTests
     {
         Assert.Equal(valid, (UserSettings.Default with { LabelColors = new Dictionary<string, string> { [name] = color } }).IsValid(out _));
     }
+
+    [Fact]
+    public void Nobody_Is_Trusted_With_Pictures_By_Default()
+    {
+        Assert.Empty(UserSettings.Default.TrustedImageSenders);
+        Assert.False(UserSettings.Default.TrustsImagesFrom("anna@example.org"));
+    }
+
+    [Fact]
+    public void A_Sender_Is_Added_Once_In_Lower_Case_And_The_List_Stays_Sorted()
+    {
+        var settings = UserSettings.Default
+            .WithImageSender("  Zed@Example.org ", trusted: true)
+            .WithImageSender("anna@example.org", trusted: true)
+            .WithImageSender("ANNA@example.org", trusted: true);
+
+        Assert.Equal(["anna@example.org", "zed@example.org"], settings.TrustedImageSenders);
+        Assert.True(settings.TrustsImagesFrom("Anna@Example.ORG"));
+        Assert.False(settings.TrustsImagesFrom("anna@example.com"));
+        Assert.False(settings.TrustsImagesFrom(null));
+        Assert.False(settings.TrustsImagesFrom("  "));
+    }
+
+    [Fact]
+    public void A_Sender_Can_Be_Removed_And_Removing_Another_Changes_Nothing()
+    {
+        var settings = UserSettings.Default.WithImageSender("anna@example.org", trusted: true);
+
+        Assert.Empty(settings.WithImageSender("ANNA@example.org", trusted: false).TrustedImageSenders);
+        Assert.Equal(["anna@example.org"], settings.WithImageSender("zed@example.org", trusted: false).TrustedImageSenders);
+    }
+
+    [Fact]
+    public void At_Most_The_Limit_Of_Senders_Can_Be_Trusted()
+    {
+        var atLimit = Enumerable.Range(0, UserSettings.MaxTrustedImageSenders).Aggregate(UserSettings.Default, (s, i) => s.WithImageSender($"u{i}@example.org", trusted: true));
+
+        Assert.True(atLimit.IsValid(out _));
+        Assert.False(atLimit.WithImageSender("one-more@example.org", trusted: true).IsValid(out _));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("a\nb@example.org")]
+    public void A_Trusted_Sender_Must_Be_A_Plain_Address(string address)
+    {
+        Assert.False((UserSettings.Default with { TrustedImageSenders = [address] }).IsValid(out _));
+    }
+
+    [Fact]
+    public void An_Address_Longer_Than_The_Limit_Is_Refused()
+    {
+        Assert.False((UserSettings.Default with { TrustedImageSenders = [new string('a', 255)] }).IsValid(out _));
+    }
 }

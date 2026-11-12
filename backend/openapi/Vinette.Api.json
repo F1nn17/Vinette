@@ -941,6 +941,8 @@
           "canShowFull",
           "canShowImages",
           "imagesShown",
+          "hasExternalImages",
+          "imagesTrusted",
           "sender",
           "attachments"
         ],
@@ -1029,6 +1031,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "hasExternalImages": {
+            "type": "boolean"
+          },
+          "imagesTrusted": {
+            "type": "boolean"
           },
           "sender": {
             "$ref": "#/components/schemas/SenderDto"
@@ -1271,7 +1279,8 @@
         "required": [
           "density",
           "language",
-          "labelColors"
+          "labelColors",
+          "trustedImageSenders"
         ],
         "type": "object",
         "properties": {
@@ -1287,6 +1296,12 @@
           "labelColors": {
             "type": "object",
             "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "trustedImageSenders": {
+            "type": "array",
+            "items": {
               "type": "string"
             }
           }
@@ -1320,6 +1335,18 @@
             "additionalProperties": {
               "type": "string"
             }
+          },
+          "trustImagesFrom": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "untrustImagesFrom": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

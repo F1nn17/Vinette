@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -6,6 +7,7 @@ using Vinette.Api.Errors;
 using Vinette.Api.Mail.Images;
 using Vinette.Api.Sessions;
 using Vinette.Core.Mail;
+using Vinette.Core.Settings;
 
 namespace Vinette.Api.Mail;
 
@@ -35,6 +37,8 @@ public sealed record AttachmentDto(string PartId, string FileName, string Conten
 /// <param name="Truncated">The body was cut because the mail is very long.</param>
 /// <param name="CanShowFull">The body was cut and asking again with <c>full=true</c> shows more of it.</param>
 /// <param name="CanShowImages">The body asks for pictures from the web, they are not loaded, and asking again with <c>images=true</c> loads them (the application fetches them itself).</param>
+/// <param name="HasExternalImages">The body takes pictures from the web (whether or not they are shown); the reader can then be offered to trust the sender.</param>
+/// <param name="ImagesTrusted">The reader chose to always show the pictures of this sender (they are loaded without asking when the sender check says "verified").</param>
 /// <param name="ImagesShown">How many of the pictures from the web were loaded into the body (only after <c>images=true</c>).</param>
 /// <param name="Sender">What our mail server's checks say about the sender.</param>
 /// <param name="Attachments">The attached files.</param>
@@ -57,6 +61,8 @@ public sealed record MessageDetailDto(
     bool CanShowFull,
     bool CanShowImages,
     int ImagesShown,
+    bool HasExternalImages,
+    bool ImagesTrusted,
     SenderDto Sender,
     IReadOnlyList<AttachmentDto> Attachments);
 
@@ -199,6 +205,8 @@ public static partial class MessageEndpoints
         IMessageHtmlSanitizer sanitizer,
         SenderVerifier senderVerifier,
         IExternalImageFetcher imageFetcher,
+        IUserSettingsStore settingsStore,
+        ClaimsPrincipal user,
         IOptions<ExternalImagesOptions> imageOptions,
         CancellationToken cancellationToken,
         [FromQuery] bool full = false,
@@ -211,7 +219,13 @@ public static partial class MessageEndpoints
 
         using var stream = new MemoryStream(source.Content, writable: false);
         var parsed = await parser.ParseAsync(stream, cancellationToken);
-        var result = await BodyOfAsync(parsed, sanitizer, full ? MessageLimits.FullBodyChars : MessageLimits.DefaultBodyChars, images, imageFetcher, imageOptions.Value.Enabled, cancellationToken);
+        var sender = senderVerifier.Check(parsed.AuthenticationResults, parsed.From?.Address);
+
+        // A sender the reader trusts has the pictures loaded without asking, but only when the checks of the mail server
+        // confirm that the mail really comes from them: the From line alone is easy to forge.
+        var trusted = (await settingsStore.GetAsync(user.Identity!.Name!, cancellationToken)).TrustsImagesFrom(parsed.From?.Address);
+        var showImages = images || (trusted && sender.Verdict == SenderVerdict.Verified);
+        var result = await BodyOfAsync(parsed, sanitizer, full ? MessageLimits.FullBodyChars : MessageLimits.DefaultBodyChars, showImages, imageFetcher, imageOptions.Value.Enabled, cancellationToken);
 
         // What is in a mail is private: nothing in between may keep a copy.
         http.Response.Headers.CacheControl = "private, no-store";
@@ -232,9 +246,11 @@ public static partial class MessageEndpoints
             result.Blocked,
             result.Truncated,
             result.Truncated && !full,
-            result.CanShowImages > 0 && !images,
+            result.CanShowImages > 0 && !showImages,
             result.ImagesShown,
-            ToDto(senderVerifier.Check(parsed.AuthenticationResults, parsed.From?.Address)),
+            result.CanShowImages > 0,
+            trusted,
+            ToDto(sender),
             [.. parsed.Attachments.Select(a => new AttachmentDto(a.PartId, a.FileName, a.ContentType, a.Size, a.IsMessage))]));
     }
 

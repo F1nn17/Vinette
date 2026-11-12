@@ -7,6 +7,7 @@ import { Avatar, Button, LabelTag } from '@/shared/ui';
 import { useMessage, verdictOf, type MessageDetail } from './api';
 import { AttachmentList } from './AttachmentList';
 import { useSetFlags } from './flags';
+import { ImageTrust } from './ImageTrust';
 import { MessageFrame } from './MessageFrame';
 import { ReaderActionBar } from './ReaderActionBar';
 import { SenderCheckBadge } from './SenderCheckBadge';
@@ -153,6 +154,8 @@ function Header({ message, address, imagesAsked, imagesLoading, onShowImages }: 
           )}
         </div>
       )}
+
+      <ImageTrust message={message} />
     </header>
   );
 }

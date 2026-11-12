@@ -8,13 +8,16 @@ namespace Vinette.Api.Settings;
 /// <param name="Density"><c>comfortable</c> (a row has the preview) or <c>compact</c> (without it).</param>
 /// <param name="Language">The interface language ("ru", "en"); absent follows the browser.</param>
 /// <param name="LabelColors">The color of each label by its name; a color is a key of the design's palette.</param>
-public sealed record SettingsDto(string Density, string? Language, IReadOnlyDictionary<string, string> LabelColors);
+/// <param name="TrustedImageSenders">The sender addresses (lower case) whose pictures from the web are shown without asking, when the sender check says "verified".</param>
+public sealed record SettingsDto(string Density, string? Language, IReadOnlyDictionary<string, string> LabelColors, IReadOnlyList<string> TrustedImageSenders);
 
 /// <summary>A change of settings: only the members that are present are changed.</summary>
 /// <param name="Density"><c>comfortable</c> or <c>compact</c>.</param>
 /// <param name="Language">A language tag; an empty string goes back to following the browser.</param>
 /// <param name="LabelColors">Replaces all label colors.</param>
-public sealed record SettingsPatch(string? Density, string? Language, Dictionary<string, string>? LabelColors);
+/// <param name="TrustImagesFrom">An address to add to the senders whose pictures are shown without asking.</param>
+/// <param name="UntrustImagesFrom">An address to remove from them.</param>
+public sealed record SettingsPatch(string? Density, string? Language, Dictionary<string, string>? LabelColors, string? TrustImagesFrom = null, string? UntrustImagesFrom = null);
 
 public static class SettingsEndpoints
 {
@@ -59,15 +62,29 @@ public static class SettingsEndpoints
             }
         }
 
+        if (string.IsNullOrWhiteSpace(patch.TrustImagesFrom ?? "x") || string.IsNullOrWhiteSpace(patch.UntrustImagesFrom ?? "x"))
+        {
+            return Bad("An address to trust or to stop trusting must not be empty.");
+        }
+
         try
         {
             var saved = await store.UpdateAsync(
                 user.Identity!.Name!,
-                current => current with
+                current =>
                 {
-                    Density = density ?? current.Density,
-                    Language = patch.Language is null ? current.Language : patch.Language.Length == 0 ? null : patch.Language,
-                    LabelColors = patch.LabelColors is null ? current.LabelColors : new Dictionary<string, string>(patch.LabelColors),
+                    var changed = current with
+                    {
+                        Density = density ?? current.Density,
+                        Language = patch.Language is null ? current.Language : patch.Language.Length == 0 ? null : patch.Language,
+                        LabelColors = patch.LabelColors is null ? current.LabelColors : new Dictionary<string, string>(patch.LabelColors),
+                    };
+                    if (patch.UntrustImagesFrom is not null)
+                    {
+                        changed = changed.WithImageSender(patch.UntrustImagesFrom, trusted: false);
+                    }
+
+                    return patch.TrustImagesFrom is null ? changed : changed.WithImageSender(patch.TrustImagesFrom, trusted: true);
                 },
                 cancellationToken);
             return Results.Ok(ToDto(saved));
@@ -81,7 +98,8 @@ public static class SettingsEndpoints
     private static SettingsDto ToDto(UserSettings settings) => new(
         settings.Density == ListDensity.Compact ? "compact" : "comfortable",
         settings.Language,
-        settings.LabelColors);
+        settings.LabelColors,
+        settings.TrustedImageSenders);
 
     private static IResult Bad(string title) =>
         Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: title, extensions: new Dictionary<string, object?> { ["code"] = ErrorCodes.BadRequest });
