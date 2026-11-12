@@ -1,5 +1,5 @@
 import { RefreshCw, Search } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
 import { dateGroupKey, dateGroupLabel, groupByDate } from '@/shared/lib';
@@ -13,6 +13,8 @@ import { ListEmpty, ListError, ListNoFolder, ListSkeleton, OfflineBanner } from 
 import { ListOptionsMenu } from './ListOptionsMenu';
 import { MessageRow } from './MessageRow';
 import { NavMenuButton } from './NavMenuButton';
+import { ShortcutsDialog } from './ShortcutsDialog';
+import { useShortcuts } from './shortcuts';
 import { SelectionBar } from './SelectionBar';
 import {
   EMPTY_SELECTION,
@@ -114,8 +116,7 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
     batch.reset();
     setSelectionState({ key: listKey, selection: EMPTY_SELECTION, capped: false });
   };
-  const runBatch = (action: BatchAction) => {
-    const ids = selectedIds;
+  const runBatch = (action: BatchAction, ids: string[] = selectedIds) => {
     const before = selection;
     // The list shows the result at once (see `useMessageBatch`), so the selection ends now; if the server refuses, the
     // rows come back and so does the selection, and a toast says what happened.
@@ -126,6 +127,46 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
     }
     batch.mutate({ ids, action }, { onError: () => apply({ selection: before, capped: false }) });
   };
+
+  // The keyboard (VIN-077): a place in the list ("current") that j and k move and Enter opens. Without one the open message is it.
+  const [cursor, setCursor] = useState<{ key: string; id: string } | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const currentId =
+    cursor?.key === listKey && order.includes(cursor.id) ? cursor.id : (messageId ?? null);
+  const openMessage = (id: string) =>
+    void navigate(`/mail/${encodeURIComponent(slug)}/${id}${search}`);
+  const moveCursor = (step: 1 | -1) => {
+    if (order.length === 0) return;
+    const at = currentId === null ? -1 : order.indexOf(currentId);
+    const target = order[at === -1 ? 0 : Math.min(order.length - 1, Math.max(0, at + step))];
+    if (target === undefined) return;
+    setCursor({ key: listKey, id: target });
+    // Reading: with a message open, the next one opens as the cursor reaches it.
+    if (messageId !== undefined && target !== messageId) openMessage(target);
+  };
+  /** What an action from the keyboard applies to: the selected messages, else the open one, else the one under the cursor. */
+  const targets = () => (selecting ? selectedIds : currentId === null ? [] : [currentId]);
+  const keyAction = (action: BatchAction, skipIn: string) => {
+    const ids = targets();
+    if (ids.length > 0 && folder?.role !== skipIn) runBatch(action, ids);
+  };
+  useShortcuts({
+    next: () => moveCursor(1),
+    previous: () => moveCursor(-1),
+    open: () => {
+      if (currentId !== null && currentId !== messageId) openMessage(currentId);
+    },
+    // The same actions as the buttons; they leave a message where it is already (no archive in the archive, no delete in the trash).
+    archive: () => keyAction('archive', 'archive'),
+    delete: () => keyAction('trash', 'trash'),
+    search: () => {
+      setSearchOpen(true);
+      requestAnimationFrame(() => searchRef.current?.focus());
+    },
+    compose: () => void navigate('/compose'),
+    help: () => setHelpOpen(true),
+  });
   const showRecipient = folder?.role === 'sent' || folder?.role === 'drafts';
   const title = folder ? folderLabel(folder, t) : slug === 'inbox' ? t('folders.inbox') : '';
   const error = folders.isError ? folders.error : messages.isError ? messages.error : null;
@@ -146,6 +187,7 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
       <header
         className={cn('flex flex-col px-5 pb-3', mobile ? 'gap-3 px-4 pt-3' : 'gap-3.5 pt-[18px]')}
       >
@@ -209,7 +251,11 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
           </div>
         )}
         {(!mobile || searchOpen) && (
-          <SearchField aria-label={t('list.search')} placeholder={t('list.search')} />
+          <SearchField
+            inputRef={searchRef}
+            aria-label={t('list.search')}
+            placeholder={t('list.search')}
+          />
         )}
         <div role="group" aria-label={t('list.filters')} className="flex flex-wrap gap-2">
           {FILTERS.map((f) => (
@@ -240,6 +286,7 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
             scrollElement={scroller}
             entries={entries}
             compact={compact}
+            scrollToKey={cursor?.key === listKey ? cursor.id : null}
             hasMore={messages.hasNextPage && !messages.isFetchNextPageError}
             loadingMore={messages.isFetchingNextPage}
             onLoadMore={() => void messages.fetchNextPage()}
@@ -254,6 +301,7 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
                 compact={compact}
                 labelColors={settings.data?.labelColors}
                 checked={selection.ids.has(m.id)}
+                current={m.id === currentId && cursor?.key === listKey}
                 selecting={selecting}
                 onSelect={(how) =>
                   apply(how === 'range' ? extend(selection, order, m.id) : toggle(selection, m.id))

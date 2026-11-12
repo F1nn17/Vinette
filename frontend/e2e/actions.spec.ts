@@ -125,6 +125,48 @@ test.describe('actions', () => {
     );
   });
 
+  test('the keyboard: j and Enter open a message, e# need something to act on, ? lists the keys', async ({
+    page,
+  }) => {
+    await page.goto('/mail/inbox');
+    await expect(page.getByRole('checkbox').first()).toBeAttached();
+    await expect(page.getByRole('dialog')).toHaveCount(0); // no hints on the screen
+
+    await page.keyboard.press('j');
+    await expect(page.locator('a[data-cursor="true"]')).toHaveCount(1);
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/mail\/inbox\/[^/]+$/);
+    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+
+    await page.keyboard.press('Shift+/');
+    const dialog = page.getByRole('dialog', { name: 'Горячие клавиши' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('Следующее письмо')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+
+    await page.keyboard.press('/');
+    await expect(page.getByRole('searchbox', { name: 'Поиск в почте' })).toBeFocused();
+    await page.keyboard.type('jjj#'); // typing in the search field is only typing
+    await expect(page).toHaveURL(/\/mail\/inbox\/[^/]+$/);
+  });
+
+  test('# deletes the message under the cursor and the undo brings it back', async ({ page }) => {
+    await page.goto('/mail/inbox');
+    const first = (await listOf(page, 'INBOX'))[0];
+    expect(first).toBeTruthy();
+    await expect(page.getByRole('link', { name: new RegExp(first?.subject ?? '') })).toBeVisible();
+
+    await page.keyboard.press('j');
+    await page.keyboard.press('Shift+3');
+
+    const toast = page.getByRole('status').filter({ hasText: 'перенесено в корзину' });
+    await expect(toast).toBeVisible();
+    await expect.poll(() => subjectsOf(page, 'Trash')).toContain(first?.subject);
+    await toast.getByRole('button', { name: 'Отменить' }).click();
+    await expect.poll(() => subjectsOf(page, 'INBOX')).toContain(first?.subject);
+  });
+
   test('a refused action puts the message back and says so', async ({ page }) => {
     // The test mailbox has no archive folder, so the server refuses: the row must come back with an explanation.
     await page.goto('/mail/inbox');
