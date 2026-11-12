@@ -149,18 +149,58 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
     }
 
     /// <summary>Opens a folder read-only (nothing is marked as read by looking); a folder that is missing or is a container is "not found".</summary>
-    private async Task<(IMailFolder Folder, uint UidValidity)> OpenAsync(string path, CancellationToken cancellationToken)
+    private async Task<(IMailFolder Folder, uint UidValidity)> OpenAsync(string path, CancellationToken cancellationToken, FolderAccess access = FolderAccess.ReadOnly)
     {
         try
         {
             var folder = IsInboxPath(path) ? client.Inbox : await client.GetFolderAsync(path, cancellationToken).ConfigureAwait(false);
-            _ = await folder.OpenAsync(FolderAccess.ReadOnly, cancellationToken).ConfigureAwait(false);
+            _ = await folder.OpenAsync(access, cancellationToken).ConfigureAwait(false);
             return (folder, (uint)folder.UidValidity);
         }
         catch (Exception exception) when (exception is FolderNotFoundException or ImapCommandException or InvalidOperationException)
         {
             // A missing folder and a folder that cannot be opened (a container) look the same to the caller.
             throw new MailFolderNotFoundException("The folder does not exist or cannot hold messages.", exception);
+        }
+    }
+
+    public async Task<MessageFlagState> UpdateFlagsAsync(MessageId id, MessageFlagChange change, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        var (folder, uidValidity) = await OpenAsync(id.Folder, cancellationToken, FolderAccess.ReadWrite).ConfigureAwait(false);
+        if (id.UidValidity != uidValidity)
+        {
+            throw new UidValidityChangedException(id.Folder, id.UidValidity, uidValidity);
+        }
+
+        var uid = new UniqueId(id.Uid);
+        var before = await FlagsOfAsync(folder, uid, cancellationToken).ConfigureAwait(false) ?? throw new MailMessageNotFoundException("The message is not in the folder.");
+        await StoreAsync(folder, uid, MessageFlags.Seen, change.Seen, cancellationToken).ConfigureAwait(false);
+        await StoreAsync(folder, uid, MessageFlags.Flagged, change.Flagged, cancellationToken).ConfigureAwait(false);
+
+        var after = change.IsEmpty ? before : await FlagsOfAsync(folder, uid, cancellationToken).ConfigureAwait(false) ?? throw new MailMessageNotFoundException("The message is not in the folder.");
+        return new MessageFlagState(
+            after.HasFlag(MessageFlags.Seen),
+            after.HasFlag(MessageFlags.Flagged),
+            after.HasFlag(MessageFlags.Answered),
+            after.HasFlag(MessageFlags.Draft));
+    }
+
+    private static async Task<MessageFlags?> FlagsOfAsync(IMailFolder folder, UniqueId uid, CancellationToken cancellationToken)
+    {
+        var found = await folder.FetchAsync([uid], MessageSummaryItems.UniqueId | MessageSummaryItems.Flags, cancellationToken).ConfigureAwait(false);
+        return found.FirstOrDefault(m => m.UniqueId == uid) is { } summary ? summary.Flags ?? MessageFlags.None : null;
+    }
+
+    private static async Task StoreAsync(IMailFolder folder, UniqueId uid, MessageFlags flag, bool? wanted, CancellationToken cancellationToken)
+    {
+        if (wanted is true)
+        {
+            await folder.AddFlagsAsync(uid, flag, silent: true, cancellationToken).ConfigureAwait(false);
+        }
+        else if (wanted is false)
+        {
+            await folder.RemoveFlagsAsync(uid, flag, silent: true, cancellationToken).ConfigureAwait(false);
         }
     }
 

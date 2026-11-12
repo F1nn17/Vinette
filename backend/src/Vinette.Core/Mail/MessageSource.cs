@@ -10,6 +10,18 @@ namespace Vinette.Core.Mail;
 /// <param name="Labels">The message's own keywords (labels), without the system ones.</param>
 public sealed record MessageSource(MessageId Id, byte[] Content, bool Seen, bool Flagged, bool Answered, bool Draft, IReadOnlyList<string> Labels);
 
+/// <summary>A change of a message's flags; only what is set changes.</summary>
+/// <param name="Seen">Read (true) or unread (false); null leaves it as it is.</param>
+/// <param name="Flagged">Marked with a flag (true) or not (false); null leaves it as it is.</param>
+public sealed record MessageFlagChange(bool? Seen, bool? Flagged)
+{
+    /// <summary>Whether the change changes anything.</summary>
+    public bool IsEmpty => Seen is null && Flagged is null;
+}
+
+/// <summary>The flags a message has.</summary>
+public sealed record MessageFlagState(bool Seen, bool Flagged, bool Answered, bool Draft);
+
 /// <summary>Limits on what is read from the mail server for the viewer.</summary>
 public static class MessageLimits
 {

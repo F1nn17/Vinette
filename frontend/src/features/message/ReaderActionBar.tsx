@@ -5,14 +5,16 @@ import { Button, IconButton } from '@/shared/ui';
 export interface ReaderActionBarProps {
   /** The message is marked with a flag. */
   flagged: boolean;
+  /** Sets or removes the flag; without it the flag button cannot be used. */
+  onToggleFlag?: () => void;
 }
 
 /**
- * The actions of an open message (DESIGN.md §5). They are in place as in the design but cannot be used yet: archiving,
- * deleting and flagging arrive with the actions (VIN-071, VIN-066) and replying with the editor (VIN-102), and each of
- * those switches its own button on.
+ * The actions of an open message (DESIGN.md §5). The flag works; the others are in place as in the design but cannot be
+ * used yet: archiving, spam and deleting arrive with the actions (VIN-071, VIN-074) and replying with the editor
+ * (VIN-102), and each of those switches its own button on.
  */
-export function ReaderActionBar({ flagged }: ReaderActionBarProps) {
+export function ReaderActionBar({ flagged, onToggleFlag }: ReaderActionBarProps) {
   const { t } = useTranslation();
   const icon = { size: 18, strokeWidth: 1.8, 'aria-hidden': true } as const;
   return (
@@ -38,7 +40,12 @@ export function ReaderActionBar({ flagged }: ReaderActionBarProps) {
         <IconButton aria-label={t('reader.delete')} disabled>
           <Trash2 {...icon} />
         </IconButton>
-        <IconButton aria-label={t('reader.flag')} pressed={flagged} disabled>
+        <IconButton
+          aria-label={t('reader.flag')}
+          pressed={flagged}
+          disabled={onToggleFlag === undefined}
+          onClick={onToggleFlag}
+        >
           <Flag {...icon} className={flagged ? 'fill-flag' : undefined} />
         </IconButton>
       </div>

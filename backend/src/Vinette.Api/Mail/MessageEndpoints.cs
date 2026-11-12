@@ -55,6 +55,18 @@ public sealed record MessageDetailDto(
 /// <param name="Domain">The domain of the From address the verdict is about; absent if the mail has none.</param>
 public sealed record SenderDto(string Verdict, string? Domain);
 
+/// <summary>A change of the marks of a message; only the members that are present change.</summary>
+/// <param name="Seen">Read (true) or unread (false).</param>
+/// <param name="Flagged">Marked with a flag (true) or not (false).</param>
+public sealed record MessageFlagsPatch(bool? Seen, bool? Flagged);
+
+/// <summary>The marks a message has.</summary>
+/// <param name="Seen">Read.</param>
+/// <param name="Flagged">Marked with a flag.</param>
+/// <param name="Answered">Replied to.</param>
+/// <param name="Draft">A draft.</param>
+public sealed record MessageFlagsDto(bool Seen, bool Flagged, bool Answered, bool Draft);
+
 public static partial class MessageEndpoints
 {
     public static IEndpointRouteBuilder MapMessages(this IEndpointRouteBuilder api)
@@ -69,6 +81,15 @@ public static partial class MessageEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+        api.MapPatch("/messages/{id}/flags", UpdateFlagsAsync)
+            .WithName("UpdateMessageFlags")
+            .WithTags("Mail")
+            .Produces<MessageFlagsDto>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         api.MapGet("/messages/{id}/attachments/{partId}", DownloadAsync)
             .WithName("DownloadAttachment")
             .WithTags("Mail")
@@ -80,6 +101,32 @@ public static partial class MessageEndpoints
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         return api;
+    }
+
+    /// <summary>Marks a message as read or unread and sets or removes its flag. Repeating a change is harmless.</summary>
+    /// <param name="id">The message's identifier from the list.</param>
+    private static async Task<IResult> UpdateFlagsAsync(
+        MessageId id,
+        MessageFlagsPatch? patch,
+        HttpContext http,
+        IMailGateway gateway,
+        SessionService sessions,
+        CancellationToken cancellationToken)
+    {
+        var change = new MessageFlagChange(patch?.Seen, patch?.Flagged);
+        if (change.IsEmpty)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "The body must say what to change: seen, flagged or both.",
+                extensions: new Dictionary<string, object?> { ["code"] = ErrorCodes.BadRequest });
+        }
+
+        var state = await gateway.ExecuteAsync(
+            http.GetMailCredentials(sessions),
+            (session, token) => session.UpdateFlagsAsync(id, change, token),
+            cancellationToken);
+        return Results.Ok(new MessageFlagsDto(state.Seen, state.Flagged, state.Answered, state.Draft));
     }
 
     /// <summary>

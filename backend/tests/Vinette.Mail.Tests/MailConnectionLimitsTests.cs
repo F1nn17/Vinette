@@ -22,6 +22,8 @@ public sealed class MailConnectionLimitsTests
 
         public Task<MessageSource> GetMessageAsync(MessageId id, CancellationToken cancellationToken) => throw new NotSupportedException();
 
+        public Task<MessageFlagState> UpdateFlagsAsync(MessageId id, MessageFlagChange change, CancellationToken cancellationToken) => throw new NotSupportedException();
+
 
 
         public Task<MessagePage> ListMessagesAsync(MessageListQuery query, CancellationToken cancellationToken) => Task.FromResult(new MessagePage(1, [], null, 0));
