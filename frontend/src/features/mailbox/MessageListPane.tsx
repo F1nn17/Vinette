@@ -186,6 +186,7 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
                 now={now}
                 avatar={mobile}
                 compact={compact}
+                labelColors={settings.data?.labelColors}
               />
             )}
             footer={

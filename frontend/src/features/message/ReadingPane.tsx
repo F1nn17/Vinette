@@ -1,6 +1,7 @@
 import { ImageOff, MailOpen } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSettings } from '@/features/settings';
 import { describeApiError } from '@/shared/api/describe-error';
 import { formatMessageDate, labelColor } from '@/shared/lib';
 import { Avatar, Button, LabelTag } from '@/shared/ui';
@@ -90,6 +91,7 @@ interface HeaderProps {
 
 function Header({ message, address, imagesAsked, imagesLoading, onShowImages }: HeaderProps) {
   const { t, i18n } = useTranslation();
+  const labelColors = useSettings().data?.labelColors; // the colors the user chose for labels
   const sender = message.from;
   const name = sender ? sender.name || sender.address : t('list.noSender');
   const when = message.date
@@ -106,7 +108,7 @@ function Header({ message, address, imagesAsked, imagesLoading, onShowImages }: 
         {message.labels.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {message.labels.map((label) => (
-              <LabelTag key={label} color={labelColor(label)}>
+              <LabelTag key={label} color={labelColor(label, labelColors)}>
                 {label}
               </LabelTag>
             ))}

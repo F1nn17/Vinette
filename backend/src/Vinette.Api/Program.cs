@@ -93,6 +93,7 @@ api.MapFolders();
 api.MapMessageList();
 api.MapMessages();
 api.MapMessageActions();
+api.MapLabels();
 api.MapSettings();
 app.MapHub<MailHub>("/hubs/mail");
 app.MapBranding();

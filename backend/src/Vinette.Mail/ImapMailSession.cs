@@ -248,6 +248,99 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         await folder.ExpungeAsync([uid], cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<string>> GetLabelsAsync(CancellationToken cancellationToken)
+    {
+        var (inbox, _) = await OpenAsync("INBOX", cancellationToken, FolderAccess.ReadWrite).ConfigureAwait(false); // read-only (EXAMINE) lists no permanent flags
+
+        // The server lists every keyword it has ever seen for the folder among its permanent flags, and never forgets one:
+        // a label that was renamed or deleted would come back. Only the keywords some message of the inbox carries now count.
+        var inUse = new List<string>();
+        foreach (var keyword in inbox.PermanentKeywords.Where(k => k.Length > 0 && k[0] is not '$' and not '\\'))
+        {
+            if ((await inbox.SearchAsync(SearchQuery.HasKeyword(keyword), cancellationToken).ConfigureAwait(false)).Count > 0)
+            {
+                inUse.Add(keyword);
+            }
+        }
+
+        return LabelsOf(inUse);
+    }
+
+    public async Task<IReadOnlyList<string>> UpdateMessageLabelsAsync(MessageId id, IReadOnlyCollection<string> add, IReadOnlyCollection<string> remove, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(add);
+        ArgumentNullException.ThrowIfNull(remove);
+        var (folder, uidValidity) = await OpenAsync(id.Folder, cancellationToken, FolderAccess.ReadWrite).ConfigureAwait(false);
+        if (id.UidValidity != uidValidity)
+        {
+            throw new UidValidityChangedException(id.Folder, id.UidValidity, uidValidity);
+        }
+
+        var uid = new UniqueId(id.Uid);
+        _ = await FlagsOfAsync(folder, uid, cancellationToken).ConfigureAwait(false) ?? throw new MailMessageNotFoundException("The message is not in the folder.");
+        if (add.Count > 0)
+        {
+            await folder.AddFlagsAsync(uid, MessageFlags.None, add.Select(LabelName.ToKeyword).ToHashSet(StringComparer.OrdinalIgnoreCase), silent: true, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (remove.Count > 0)
+        {
+            await folder.RemoveFlagsAsync(uid, MessageFlags.None, remove.Select(LabelName.ToKeyword).ToHashSet(StringComparer.OrdinalIgnoreCase), silent: true, cancellationToken).ConfigureAwait(false);
+        }
+
+        var found = await folder.FetchAsync([uid], MessageSummaryItems.UniqueId | MessageSummaryItems.Flags, cancellationToken).ConfigureAwait(false);
+        var summary = found.FirstOrDefault(m => m.UniqueId == uid) ?? throw new MailMessageNotFoundException("The message is not in the folder.");
+        return LabelsOf(summary.Keywords);
+    }
+
+    public async Task<int> RenameLabelAsync(string oldName, string? newName, CancellationToken cancellationToken)
+    {
+        var oldKeyword = LabelName.ToKeyword(oldName);
+        var newKeyword = newName is null ? null : LabelName.ToKeyword(newName);
+        if (newKeyword is not null && string.Equals(oldKeyword, newKeyword, StringComparison.OrdinalIgnoreCase))
+        {
+            return 0; // keywords do not tell capitals apart: there is nothing to change on the server
+        }
+
+        var root = client.PersonalNamespaces.Count > 0 ? client.PersonalNamespaces[0] : new FolderNamespace('/', string.Empty);
+        var listed = await client.GetFoldersAsync(root, StatusItems.None, subscribedOnly: false, cancellationToken).ConfigureAwait(false);
+        var folders = new List<IMailFolder>(listed) { client.Inbox };
+
+        var changed = 0;
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var candidate in folders)
+        {
+            if (candidate.Attributes.HasFlag(FolderAttributes.NoSelect) || candidate.Attributes.HasFlag(FolderAttributes.NonExistent) || !seen.Add(candidate.FullName))
+            {
+                continue;
+            }
+
+            try
+            {
+                _ = await candidate.OpenAsync(FolderAccess.ReadWrite, cancellationToken).ConfigureAwait(false);
+                var found = await candidate.SearchAsync(SearchQuery.HasKeyword(oldKeyword), cancellationToken).ConfigureAwait(false);
+                if (found.Count == 0)
+                {
+                    continue;
+                }
+
+                if (newKeyword is not null)
+                {
+                    await candidate.AddFlagsAsync(found, MessageFlags.None, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { newKeyword }, silent: true, cancellationToken).ConfigureAwait(false);
+                }
+
+                await candidate.RemoveFlagsAsync(found, MessageFlags.None, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { oldKeyword }, silent: true, cancellationToken).ConfigureAwait(false);
+                changed += found.Count;
+            }
+            catch (Exception exception) when (exception is ImapCommandException or FolderNotFoundException or InvalidOperationException)
+            {
+                // A folder that cannot be opened or searched has nothing of ours to rename.
+            }
+        }
+
+        return changed;
+    }
+
     private static async Task<MessageFlags?> FlagsOfAsync(IMailFolder folder, UniqueId uid, CancellationToken cancellationToken)
     {
         var found = await folder.FetchAsync([uid], MessageSummaryItems.UniqueId | MessageSummaryItems.Flags, cancellationToken).ConfigureAwait(false);
@@ -318,8 +411,11 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
             Labels(summary));
     }
 
-    private static string[] Labels(IMessageSummary message) =>
-        [.. (message.Keywords is { } keywords ? keywords : new HashSet<string>()).Where(k => k.Length > 0 && k[0] is not '$' and not '\\').Order(StringComparer.Ordinal)];
+    private static string[] Labels(IMessageSummary message) => LabelsOf(message.Keywords);
+
+    /// <summary>The labels among keywords: the system ones ($..., \\...) are not labels; a keyword of ours is shown by the name it stands for.</summary>
+    private static string[] LabelsOf(IEnumerable<string>? keywords) =>
+        [.. (keywords ?? []).Where(k => k.Length > 0 && k[0] is not '$' and not '\\').Select(LabelName.FromKeyword).Order(StringComparer.Ordinal)];
 
     private const MessageSummaryItems SummaryItems =
         MessageSummaryItems.UniqueId | MessageSummaryItems.Envelope | MessageSummaryItems.Flags | MessageSummaryItems.InternalDate

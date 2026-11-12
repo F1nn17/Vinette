@@ -67,7 +67,9 @@ describe('ReadingPane', () => {
     expect(
       await screen.findByRole('heading', { name: 'Layouts, second iteration' }),
     ).toBeInTheDocument();
-    expect(urls).toEqual(['/api/v1/messages/SU5CT1g.1.7']);
+    expect(urls.filter((url) => url.includes('/messages/'))).toEqual([
+      '/api/v1/messages/SU5CT1g.1.7',
+    ]);
     expect(screen.getByText('Anna Smirnova')).toBeInTheDocument();
     expect(screen.getByText('anna@studio.example')).toBeInTheDocument();
     expect(screen.getByText('Кому: вы <user@example.com>')).toBeInTheDocument();
@@ -711,6 +713,30 @@ describe('ReadingPane', () => {
       await waitFor(() => expect(urls).toContain('/api/v1/messages/SU5CT1g.1.8'));
       expect(urls).not.toContain('/api/v1/messages/SU5CT1g.1.8?full=true');
     });
+  });
+
+  it('shows a label in the color the user chose for it', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>((input) =>
+        Promise.resolve(
+          json(
+            String(input).endsWith('/api/v1/settings')
+              ? {
+                  density: 'comfortable',
+                  language: null,
+                  labelColors: { Работа: 'bills' },
+                  trustedImageSenders: [],
+                }
+              : message({ labels: ['Работа'] }),
+          ),
+        ),
+      ),
+    );
+    renderPane();
+
+    const label = await screen.findByText('Работа');
+    await waitFor(() => expect(label.className).toContain('label-bills'));
   });
 
   it('says in plain words when the mail has no text', async () => {
