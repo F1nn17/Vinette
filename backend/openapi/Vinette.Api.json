@@ -297,6 +297,14 @@
               "type": "boolean",
               "default": false
             }
+          },
+          {
+            "name": "images",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "responses": {
@@ -931,6 +939,8 @@
           "blockedExternalResources",
           "truncated",
           "canShowFull",
+          "canShowImages",
+          "imagesShown",
           "sender",
           "attachments"
         ],
@@ -1008,6 +1018,17 @@
           },
           "canShowFull": {
             "type": "boolean"
+          },
+          "canShowImages": {
+            "type": "boolean"
+          },
+          "imagesShown": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           },
           "sender": {
             "$ref": "#/components/schemas/SenderDto"

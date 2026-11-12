@@ -21,6 +21,8 @@ const message = (id: string, extra: Record<string, unknown> = {}) => ({
   bodyFormat: 'text',
   body: '<div>hello</div>',
   blockedExternalResources: 0,
+  canShowImages: false,
+  imagesShown: 0,
   truncated: false,
   sender: { verdict: 'unknown', domain: null },
   attachments: [],

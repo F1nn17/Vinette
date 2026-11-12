@@ -1,6 +1,9 @@
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Vinette.Api.Configuration;
 using Vinette.Api.Errors;
+using Vinette.Api.Mail.Images;
 using Vinette.Api.Sessions;
 using Vinette.Core.Mail;
 
@@ -31,6 +34,8 @@ public sealed record AttachmentDto(string PartId, string FileName, string Conten
 /// <param name="BlockedExternalResources">How many external loads (pictures, backgrounds) were taken out of the body; more than zero means "show images" has something to show.</param>
 /// <param name="Truncated">The body was cut because the mail is very long.</param>
 /// <param name="CanShowFull">The body was cut and asking again with <c>full=true</c> shows more of it.</param>
+/// <param name="CanShowImages">The body asks for pictures from the web, they are not loaded, and asking again with <c>images=true</c> loads them (the application fetches them itself).</param>
+/// <param name="ImagesShown">How many of the pictures from the web were loaded into the body (only after <c>images=true</c>).</param>
 /// <param name="Sender">What our mail server's checks say about the sender.</param>
 /// <param name="Attachments">The attached files.</param>
 public sealed record MessageDetailDto(
@@ -50,6 +55,8 @@ public sealed record MessageDetailDto(
     int BlockedExternalResources,
     bool Truncated,
     bool CanShowFull,
+    bool CanShowImages,
+    int ImagesShown,
     SenderDto Sender,
     IReadOnlyList<AttachmentDto> Attachments);
 
@@ -182,6 +189,7 @@ public static partial class MessageEndpoints
 
     /// <param name="id">The message's identifier from the list (opaque text, use it as it is).</param>
     /// <param name="full">Show a very long body in full (up to a limit) instead of its beginning.</param>
+    /// <param name="images">Load the pictures the body takes from the web (the application fetches them itself and embeds them). Off by default.</param>
     private static async Task<IResult> GetAsync(
         MessageId id,
         HttpContext http,
@@ -190,8 +198,11 @@ public static partial class MessageEndpoints
         IMessageParser parser,
         IMessageHtmlSanitizer sanitizer,
         SenderVerifier senderVerifier,
+        IExternalImageFetcher imageFetcher,
+        IOptions<ExternalImagesOptions> imageOptions,
         CancellationToken cancellationToken,
-        [FromQuery] bool full = false)
+        [FromQuery] bool full = false,
+        [FromQuery] bool images = false)
     {
         var source = await gateway.ExecuteAsync(
             http.GetMailCredentials(sessions),
@@ -200,7 +211,7 @@ public static partial class MessageEndpoints
 
         using var stream = new MemoryStream(source.Content, writable: false);
         var parsed = await parser.ParseAsync(stream, cancellationToken);
-        var (format, body, blocked, truncated) = await BodyOfAsync(parsed, sanitizer, full ? MessageLimits.FullBodyChars : MessageLimits.DefaultBodyChars, cancellationToken);
+        var result = await BodyOfAsync(parsed, sanitizer, full ? MessageLimits.FullBodyChars : MessageLimits.DefaultBodyChars, images, imageFetcher, imageOptions.Value.Enabled, cancellationToken);
 
         // What is in a mail is private: nothing in between may keep a copy.
         http.Response.Headers.CacheControl = "private, no-store";
@@ -216,11 +227,13 @@ public static partial class MessageEndpoints
             source.Answered,
             source.Draft,
             source.Labels,
-            format,
-            body,
-            blocked,
-            truncated,
-            truncated && !full,
+            result.Format,
+            result.Body,
+            result.Blocked,
+            result.Truncated,
+            result.Truncated && !full,
+            result.CanShowImages > 0 && !images,
+            result.ImagesShown,
             ToDto(senderVerifier.Check(parsed.AuthenticationResults, parsed.From?.Address)),
             [.. parsed.Attachments.Select(a => new AttachmentDto(a.PartId, a.FileName, a.ContentType, a.Size, a.IsMessage))]));
     }
@@ -243,11 +256,11 @@ public static partial class MessageEndpoints
     /// <see cref="MessageLimits.SanitizeTimeout"/> is given up on and treated as refused, so a hostile mail cannot tie up the
     /// request (its worker ends by itself, the input being of bounded length).
     /// </summary>
-    private static async Task<SanitizedHtml> SanitizeWithinTimeAsync(IMessageHtmlSanitizer sanitizer, string html, Func<string, string?>? resolver, int limit, CancellationToken cancellationToken)
+    private static async Task<SanitizedHtml> SanitizeWithinTimeAsync(IMessageHtmlSanitizer sanitizer, string html, Func<string, string?>? resolver, int limit, CancellationToken cancellationToken, Func<string, string?>? externalImage = null)
     {
         try
         {
-            return await Task.Run(() => sanitizer.Sanitize(html, resolver, limit), CancellationToken.None).WaitAsync(MessageLimits.SanitizeTimeout, cancellationToken);
+            return await Task.Run(() => sanitizer.Sanitize(html, resolver, limit, externalImage), CancellationToken.None).WaitAsync(MessageLimits.SanitizeTimeout, cancellationToken);
         }
         catch (TimeoutException)
         {
@@ -255,16 +268,37 @@ public static partial class MessageEndpoints
         }
     }
 
-    private static async Task<(string Format, string Body, int Blocked, bool Truncated)> BodyOfAsync(ParsedMessage parsed, IMessageHtmlSanitizer sanitizer, int limit, CancellationToken cancellationToken)
+    private sealed record BodyResult(string Format, string Body, int Blocked, bool Truncated, int CanShowImages, int ImagesShown);
+
+    private static async Task<BodyResult> BodyOfAsync(
+        ParsedMessage parsed,
+        IMessageHtmlSanitizer sanitizer,
+        int limit,
+        bool showImages,
+        IExternalImageFetcher fetcher,
+        bool imagesEnabled,
+        CancellationToken cancellationToken)
     {
         if (parsed.Html is not null)
         {
-            var clean = await SanitizeWithinTimeAsync(sanitizer, parsed.Html, new InlineImageResolver(parsed.InlineParts).Resolve, limit, cancellationToken);
+            var inline = new InlineImageResolver(parsed.InlineParts).Resolve;
+            var clean = await SanitizeWithinTimeAsync(sanitizer, parsed.Html, inline, limit, cancellationToken);
+            var asked = imagesEnabled ? clean.ExternalImageList.Count : 0;
+            var shown = 0;
+            if (showImages && imagesEnabled && asked > 0 && !clean.Rejected)
+            {
+                // The application fetches the pictures itself (the sender learns nothing about the reader) and puts them
+                // into the body as data; what could not be fetched stays blocked.
+                var fetched = await fetcher.FetchAsync(clean.ExternalImageList, cancellationToken);
+                clean = await SanitizeWithinTimeAsync(sanitizer, parsed.Html, inline, limit, cancellationToken, fetched.GetValueOrDefault);
+                shown = fetched.Count;
+            }
+
             if (!clean.Rejected && (!string.IsNullOrWhiteSpace(clean.Html) || parsed.Text is null))
             {
                 return string.IsNullOrWhiteSpace(clean.Html)
-                    ? ("empty", string.Empty, clean.BlockedExternalResources, clean.Truncated)
-                    : ("html", clean.Html, clean.BlockedExternalResources, clean.Truncated);
+                    ? new BodyResult("empty", string.Empty, clean.BlockedExternalResources, clean.Truncated, 0, 0)
+                    : new BodyResult("html", clean.Html, clean.BlockedExternalResources, clean.Truncated, asked, shown);
             }
         }
 
@@ -272,9 +306,9 @@ public static partial class MessageEndpoints
         {
             var linked = PlainTextHtml.ToHtml(parsed.Text, out var cut, limit);
             var clean = await SanitizeWithinTimeAsync(sanitizer, linked, null, IMessageHtmlSanitizer.MaxInputLength, cancellationToken);
-            return ("text", clean.Html, clean.BlockedExternalResources, cut || clean.Truncated);
+            return new BodyResult("text", clean.Html, clean.BlockedExternalResources, cut || clean.Truncated, 0, 0);
         }
 
-        return ("empty", string.Empty, 0, false);
+        return new BodyResult("empty", string.Empty, 0, false, 0, 0);
     }
 }

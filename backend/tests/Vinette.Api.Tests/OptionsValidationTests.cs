@@ -22,6 +22,35 @@ public class OptionsValidationTests
         StartupFailure.AssertOptionsInvalid(b => b.UseSetting("Imap:MaxViewableMessageBytes", bytes));
     }
 
+    [Theory]
+    [InlineData("ExternalImages:AllowedPorts:0", "0")]
+    [InlineData("ExternalImages:AllowedPorts:0", "70000")]
+    [InlineData("ExternalImages:MaxImageBytes", "5")]
+    [InlineData("ExternalImages:MaxImages", "0")]
+    [InlineData("ExternalImages:RequestTimeout", "00:00:00")]
+    [InlineData("ExternalImages:RequestTimeout", "00:10:00")]
+    [InlineData("ExternalImages:MaxTotalBytes", "2000")]
+    public void External_Image_Limits_Outside_Their_Range_Fail_Startup(string key, string value)
+    {
+        StartupFailure.AssertOptionsInvalid(b => b.UseSetting(key, value));
+    }
+
+    [Fact]
+    public void External_Images_Are_Fetched_From_Public_Addresses_On_Web_Ports_By_Default()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+
+        var options = factory.Services.GetRequiredService<IOptions<ExternalImagesOptions>>().Value;
+
+        Assert.True(options.Enabled);
+        Assert.False(options.AllowPrivateAddresses);
+        Assert.Equal([80, 443], options.AllowedPorts);
+        Assert.Equal(2_000_000, options.MaxImageBytes);
+        Assert.Equal(10_000_000, options.MaxTotalBytes);
+        Assert.Equal(30, options.MaxImages);
+        Assert.Equal(TimeSpan.FromSeconds(5), options.RequestTimeout);
+    }
+
     [Fact]
     public void An_Unknown_Settings_Store_Fails_Startup()
     {

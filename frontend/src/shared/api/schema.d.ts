@@ -264,6 +264,9 @@ export interface components {
             blockedExternalResources: number | string;
             truncated: boolean;
             canShowFull: boolean;
+            canShowImages: boolean;
+            /** Format: int32 */
+            imagesShown: number | string;
             sender: components["schemas"]["SenderDto"];
             attachments: components["schemas"]["AttachmentDto"][];
         };
@@ -566,6 +569,7 @@ export interface operations {
         parameters: {
             query?: {
                 full?: boolean;
+                images?: boolean;
             };
             header?: never;
             path: {
