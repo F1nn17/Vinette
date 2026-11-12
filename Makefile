@@ -69,6 +69,7 @@ test-integration: ## Run backend integration tests against a real Dovecot in Doc
 e2e: ## Run Playwright e2e tests against the running app (starts backend + frontend; E2E_MAIL=0 skips the dev mail server)
 ifneq ($(E2E_MAIL),0)
 	$(MAKE) dev-mail
+	$(MAKE) seed
 endif
 	$(PNPM) e2e
 

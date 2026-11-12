@@ -21,13 +21,13 @@ test.describe('sign-in', () => {
     await submitLogin(page, accounts.alice.address, accounts.alice.password);
 
     await expect(page).toHaveURL(/\/mail\/inbox$/); // back to the page that was asked for
-    await expect(page.getByRole('heading', { level: 1, name: 'Почта' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /Входящие/ })).toBeVisible();
 
     await page.reload();
     await waitForAppReady(page);
 
     await expect(page).toHaveURL(/\/mail\/inbox$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Почта' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /Входящие/ })).toBeVisible();
   });
 
   test('the session cookie is not readable by scripts', async ({ page }) => {
