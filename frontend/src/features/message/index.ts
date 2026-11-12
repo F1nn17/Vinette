@@ -8,3 +8,5 @@ export {
 } from './frame-document';
 export { ReadingPane, type ReadingPaneProps } from './ReadingPane';
 export { useMessage, type MessageDetail } from './api';
+export { AttachmentList, type AttachmentListProps } from './AttachmentList';
+export { attachmentHref, extensionOf } from './attachment-helpers';

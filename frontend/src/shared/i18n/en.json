@@ -119,6 +119,8 @@
     "to": "To: {{names}}",
     "toMany": "To: {{names}} and {{count}} more",
     "noRecipients": "No recipients",
-    "emptyBody": "This message has no text."
+    "emptyBody": "This message has no text.",
+    "attachments": "Attachments · {{count}}",
+    "download": "Download {{name}}, {{size}}"
   }
 }
