@@ -13,6 +13,9 @@ public sealed class ImapMailSessionFactory(ImapConnectionSettings settings) : IM
     /// <summary>Tests only: false makes message previews come from the beginning of the body even if the server has the PREVIEW extension.</summary>
     internal bool PreviewExtension { get; init; } = true;
 
+    /// <summary>Tests only: false makes messages move by COPY, mark and expunge even if the server has the MOVE extension.</summary>
+    internal bool MoveExtension { get; init; } = true;
+
     public async Task<IMailSession> OpenAsync(MailCredentials credentials, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(credentials);
@@ -33,7 +36,7 @@ public sealed class ImapMailSessionFactory(ImapConnectionSettings settings) : IM
             await client.ConnectAsync(settings.Host, settings.Port, ImapAuthenticator.ToSocketOptions(settings.Security), timeout.Token).ConfigureAwait(false);
             await ImapAuthenticator.IdentifyAsync(client, new ClientInfo(credentials.ClientIp, null), timeout.Token).ConfigureAwait(false);
             await client.AuthenticateAsync(credentials.Address, credentials.Password, timeout.Token).ConfigureAwait(false);
-            return new ImapMailSession(client, PreviewExtension, settings.MaxViewableMessageBytes);
+            return new ImapMailSession(client, PreviewExtension, settings.MaxViewableMessageBytes) { MoveExtension = MoveExtension };
         }
         catch (AuthenticationException exception)
         {

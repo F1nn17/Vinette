@@ -19,6 +19,8 @@ public static class ErrorCodes
     public const string OriginNotAllowed = "origin_not_allowed";
     public const string NotFound = "not_found";
     public const string Conflict = "conflict";
+    public const string NoTargetFolder = "no_target_folder";
+    public const string NotInTrash = "not_in_trash";
     public const string PayloadTooLarge = "payload_too_large";
     public const string TooManyRequests = "too_many_requests";
     public const string InternalError = "internal_error";

@@ -46,6 +46,25 @@ public interface IMailSession : IAsyncDisposable
     Task<MessageFlagState> UpdateFlagsAsync(MessageId id, MessageFlagChange change, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Moves one message to another folder (IMAP MOVE; on a server without it COPY, then the original is marked deleted and
+    /// removed from the folder, for that message alone) and returns the message's id in the new folder, or null if the
+    /// server does not say what it is (no UIDPLUS). The message is never in neither folder: a failed copy leaves it where it was.
+    /// </summary>
+    /// <exception cref="MailFolderNotFoundException">There is no such folder (the source or the target), or it cannot hold messages.</exception>
+    /// <exception cref="UidValidityChangedException">The id belongs to an earlier incarnation of the folder.</exception>
+    /// <exception cref="MailMessageNotFoundException">The message is not in the folder (any more).</exception>
+    Task<MessageId?> MoveMessageAsync(MessageId id, string targetFolder, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes one message for good (marks it deleted and removes it from its folder, that message alone). There is no way back:
+    /// callers allow it only for the trash.
+    /// </summary>
+    /// <exception cref="MailFolderNotFoundException">There is no such folder, or it cannot hold messages.</exception>
+    /// <exception cref="UidValidityChangedException">The id belongs to an earlier incarnation of the folder.</exception>
+    /// <exception cref="MailMessageNotFoundException">The message is not in the folder (any more).</exception>
+    Task DeleteMessagePermanentlyAsync(MessageId id, CancellationToken cancellationToken);
+
+    /// <summary>
     /// How much of the mailbox's storage is used (IMAP GETQUOTAROOT). Null when the server has no quota extension or
     /// sets no storage limit for this mailbox: then there is nothing to show.
     /// </summary>
