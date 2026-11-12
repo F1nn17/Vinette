@@ -56,6 +56,24 @@ public interface IMailSession : IAsyncDisposable
     Task<MessageId?> MoveMessageAsync(MessageId id, string targetFolder, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Moves several messages of one folder to another with one command (see <see cref="MoveMessageAsync"/> for the two ways).
+    /// Returns the messages that were moved; one that was no longer in the folder is simply not among them.
+    /// </summary>
+    /// <exception cref="ArgumentException">The messages are not one batch (<see cref="MessageBatch.IsValid"/>).</exception>
+    /// <exception cref="MailFolderNotFoundException">There is no such folder (the source or the target), or it cannot hold messages.</exception>
+    /// <exception cref="UidValidityChangedException">The ids belong to an earlier incarnation of the folder.</exception>
+    Task<IReadOnlyList<MovedMessage>> MoveMessagesAsync(IReadOnlyList<MessageId> ids, string targetFolder, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Changes the read and flag marks of several messages of one folder with one command per mark. Returns the messages that
+    /// were changed; one that was no longer in the folder is not among them.
+    /// </summary>
+    /// <exception cref="ArgumentException">The messages are not one batch (<see cref="MessageBatch.IsValid"/>).</exception>
+    /// <exception cref="MailFolderNotFoundException">There is no such folder, or it cannot hold messages.</exception>
+    /// <exception cref="UidValidityChangedException">The ids belong to an earlier incarnation of the folder.</exception>
+    Task<IReadOnlyList<MessageId>> UpdateFlagsOfManyAsync(IReadOnlyList<MessageId> ids, MessageFlagChange change, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Deletes one message for good (marks it deleted and removes it from its folder, that message alone). There is no way back:
     /// callers allow it only for the trash.
     /// </summary>

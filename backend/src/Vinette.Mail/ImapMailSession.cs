@@ -234,6 +234,97 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         return moved is { Validity: > 0 } where ? new MessageId(targetFolder, where.Validity, where.Id) : null;
     }
 
+    public async Task<IReadOnlyList<MovedMessage>> MoveMessagesAsync(IReadOnlyList<MessageId> ids, string targetFolder, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(targetFolder);
+        var (source, present) = await OpenBatchAsync(ids, cancellationToken).ConfigureAwait(false);
+        if (present.Count == 0)
+        {
+            return [];
+        }
+
+        IMailFolder destination;
+        try
+        {
+            destination = IsInboxPath(targetFolder) ? client.Inbox : await client.GetFolderAsync(targetFolder, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is FolderNotFoundException or ImapCommandException or InvalidOperationException)
+        {
+            throw new MailFolderNotFoundException("The folder does not exist or cannot hold messages.", exception);
+        }
+
+        UniqueIdMap map;
+        try
+        {
+            if (MoveExtension && client.Capabilities.HasFlag(ImapCapabilities.Move))
+            {
+                map = await source.MoveToAsync(present, destination, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                // As for one message: the copy first, then only these messages are marked and removed.
+                map = await source.CopyToAsync(present, destination, cancellationToken).ConfigureAwait(false);
+                await source.AddFlagsAsync(present, MessageFlags.Deleted, silent: true, cancellationToken).ConfigureAwait(false);
+                await source.ExpungeAsync(present, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (FolderNotFoundException exception)
+        {
+            throw new MailFolderNotFoundException("The folder does not exist or cannot hold messages.", exception);
+        }
+
+        var folder = ids[0].Folder;
+        var validity = ids[0].UidValidity;
+        return [.. present.Select(uid => new MovedMessage(
+            new MessageId(folder, validity, uid.Id),
+            map.TryGetValue(uid, out var moved) && moved.Validity > 0 ? new MessageId(targetFolder, moved.Validity, moved.Id) : null))];
+    }
+
+    public async Task<IReadOnlyList<MessageId>> UpdateFlagsOfManyAsync(IReadOnlyList<MessageId> ids, MessageFlagChange change, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        var (folder, present) = await OpenBatchAsync(ids, cancellationToken).ConfigureAwait(false);
+        if (present.Count > 0)
+        {
+            await StoreManyAsync(folder, present, MessageFlags.Seen, change.Seen, cancellationToken).ConfigureAwait(false);
+            await StoreManyAsync(folder, present, MessageFlags.Flagged, change.Flagged, cancellationToken).ConfigureAwait(false);
+        }
+
+        return [.. present.Select(uid => new MessageId(ids[0].Folder, ids[0].UidValidity, uid.Id))];
+    }
+
+    /// <summary>Opens the folder of a batch for writing and finds which of its messages are still there (one search).</summary>
+    private async Task<(IMailFolder Folder, IList<UniqueId> Present)> OpenBatchAsync(IReadOnlyList<MessageId> ids, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        if (!MessageBatch.IsValid(ids, out var problem))
+        {
+            throw new ArgumentException(problem, nameof(ids));
+        }
+
+        var (folder, uidValidity) = await OpenAsync(ids[0].Folder, cancellationToken, FolderAccess.ReadWrite).ConfigureAwait(false);
+        if (ids[0].UidValidity != uidValidity)
+        {
+            throw new UidValidityChangedException(ids[0].Folder, ids[0].UidValidity, uidValidity);
+        }
+
+        var wanted = ids.Select(i => new UniqueId(i.Uid)).ToList();
+        var present = await folder.SearchAsync(SearchQuery.Uids(wanted), cancellationToken).ConfigureAwait(false);
+        return (folder, present);
+    }
+
+    private static async Task StoreManyAsync(IMailFolder folder, IList<UniqueId> uids, MessageFlags flag, bool? wanted, CancellationToken cancellationToken)
+    {
+        if (wanted is true)
+        {
+            await folder.AddFlagsAsync(uids, flag, silent: true, cancellationToken).ConfigureAwait(false);
+        }
+        else if (wanted is false)
+        {
+            await folder.RemoveFlagsAsync(uids, flag, silent: true, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     public async Task DeleteMessagePermanentlyAsync(MessageId id, CancellationToken cancellationToken)
     {
         var (folder, uidValidity) = await OpenAsync(id.Folder, cancellationToken, FolderAccess.ReadWrite).ConfigureAwait(false);

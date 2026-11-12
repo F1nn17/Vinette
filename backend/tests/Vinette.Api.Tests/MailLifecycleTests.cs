@@ -36,6 +36,10 @@ public sealed class MailLifecycleTests
 
         public Task DeleteMessagePermanentlyAsync(MessageId id, CancellationToken cancellationToken) => throw new NotSupportedException();
 
+        public Task<IReadOnlyList<MovedMessage>> MoveMessagesAsync(IReadOnlyList<MessageId> ids, string targetFolder, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<MessageId>> UpdateFlagsOfManyAsync(IReadOnlyList<MessageId> ids, MessageFlagChange change, CancellationToken cancellationToken) => throw new NotSupportedException();
+
         public Task<IReadOnlyList<string>> GetLabelsAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<IReadOnlyList<string>> UpdateMessageLabelsAsync(MessageId id, IReadOnlyCollection<string> add, IReadOnlyCollection<string> remove, CancellationToken cancellationToken) => throw new NotSupportedException();

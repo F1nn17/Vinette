@@ -170,4 +170,78 @@ public sealed class MessageMoveIntegrationTests(DovecotFixture dovecot)
 
         Assert.IsType<MailMessageNotFoundException>(error);
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Several_Messages_Move_With_One_Command_And_Each_Is_Found_By_Its_New_Id(bool move)
+    {
+        var account = await MailboxAsync(4, "Work");
+
+        var (moved, inbox, work) = await WithSessionAsync(account, move, async s =>
+        {
+            var ids = (await ListAsync(s, "INBOX")).Select(m => m.Id).ToList();
+            var result = await s.MoveMessagesAsync([ids[0], ids[2], ids[3]], "Work", Token);
+            return (result, await ListAsync(s, "INBOX"), await ListAsync(s, "Work"));
+        });
+
+        Assert.Equal(3, moved.Count);
+        Assert.Single(inbox);
+        Assert.Equal(3, work.Count);
+        Assert.Equal(work.Select(m => m.Id.Uid).Order(), moved.Select(m => m.To!.Value.Uid).Order());
+        Assert.All(moved, m => Assert.Equal("Work", m.To!.Value.Folder));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_Message_Of_The_Batch_That_Is_Gone_Is_Left_Out_And_The_Rest_Moves(bool move)
+    {
+        var account = await MailboxAsync(2, "Work");
+
+        var (moved, work) = await WithSessionAsync(account, move, async s =>
+        {
+            var ids = (await ListAsync(s, "INBOX")).Select(m => m.Id).ToList();
+            var gone = new MessageId(ids[0].Folder, ids[0].UidValidity, ids[1].Uid + 1000);
+            return (await s.MoveMessagesAsync([ids[0], gone], "Work", Token), await ListAsync(s, "Work"));
+        });
+
+        Assert.Single(moved);
+        Assert.Single(work);
+    }
+
+    [Fact]
+    public async Task Marks_Of_Several_Messages_Change_At_Once_And_The_Others_Stay()
+    {
+        var account = await MailboxAsync(3);
+
+        var (changed, listed) = await WithSessionAsync(account, true, async s =>
+        {
+            var ids = (await ListAsync(s, "INBOX")).Select(m => m.Id).ToList();
+            var result = await s.UpdateFlagsOfManyAsync([ids[0], ids[1]], new MessageFlagChange(true, true), Token);
+            return (result, await ListAsync(s, "INBOX"));
+        });
+
+        Assert.Equal(2, changed.Count);
+        Assert.True(listed[0].Seen && listed[0].Flagged);
+        Assert.True(listed[1].Seen && listed[1].Flagged);
+        Assert.False(listed[2].Seen || listed[2].Flagged);
+    }
+
+    [Fact]
+    public async Task A_Batch_Of_Two_Folders_Or_Of_An_Old_Folder_Is_Refused()
+    {
+        var account = await MailboxAsync(2, "Work");
+
+        var (mixed, stale) = await WithSessionAsync(account, true, async s =>
+        {
+            var ids = (await ListAsync(s, "INBOX")).Select(m => m.Id).ToList();
+            return (
+                await Record.ExceptionAsync(() => s.MoveMessagesAsync([ids[0], new MessageId("Work", 1, 1)], "Work", Token)),
+                await Record.ExceptionAsync(() => s.UpdateFlagsOfManyAsync([new MessageId(ids[0].Folder, ids[0].UidValidity + 1, ids[0].Uid)], new MessageFlagChange(true, null), Token)));
+        });
+
+        Assert.IsType<ArgumentException>(mixed);
+        Assert.IsType<UidValidityChangedException>(stale);
+    }
 }

@@ -69,6 +69,18 @@
     "storage": "{{used}} of {{limit}} used",
     "storageBar": "Mailbox storage used"
   },
+  "selection": {
+    "select": "Select the message \"{{subject}}\"",
+    "count": "Selected: {{count}}",
+    "selectAll": "Select all",
+    "clear": "Clear the selection",
+    "actions": "Actions on the selected messages",
+    "archive": "Archive",
+    "spam": "Mark as spam",
+    "trash": "Delete",
+    "read": "Mark as read",
+    "limit": "You can select at most {{max}} messages at a time."
+  },
   "list": {
     "noSender": "No sender",
     "noSubject": "(no subject)",

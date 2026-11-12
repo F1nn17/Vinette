@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { AppShell } from './AppShell';
@@ -53,10 +53,14 @@ interface Server {
   patches: unknown[];
   /** Makes the next change of settings fail. */
   failPatch?: boolean;
+  /** Bodies of the batch actions that were sent. */
+  batches: { ids: string[]; action: string }[];
+  /** Makes the batch actions fail. */
+  failBatch?: boolean;
 }
 
 function mockServer(pages: (url: URL) => unknown): Server {
-  const server: Server = { urls: [], pages, patches: [] };
+  const server: Server = { urls: [], pages, patches: [], batches: [] };
   vi.stubGlobal(
     'fetch',
     vi.fn<typeof fetch>((input, init) => {
@@ -73,6 +77,15 @@ function mockServer(pages: (url: URL) => unknown): Server {
           server.settings = { ...server.settings, density: density ?? server.settings.density };
         }
         return Promise.resolve(json(server.settings));
+      }
+      if (url.pathname === '/api/v1/messages/batch') {
+        const body = JSON.parse(String(init?.body)) as { ids: string[]; action: string };
+        server.batches.push(body);
+        return Promise.resolve(
+          server.failBatch
+            ? json({ code: 'mail_unavailable', title: 'x' }, { status: 503 })
+            : json({ changed: body.ids.length, folder: 'Trash', moved: [] }),
+        );
       }
       if (url.pathname === '/api/v1/folders') return Promise.resolve(json({ folders: FOLDERS }));
       if (url.pathname.endsWith('/messages')) {
@@ -533,5 +546,206 @@ describe('labelColor', () => {
   it('gives a label the same color every time, one of the three of the design', () => {
     expect(labelColor('Work')).toBe(labelColor('Work'));
     expect(['work', 'bills', 'personal']).toContain(labelColor('Anything'));
+  });
+});
+
+describe('selecting messages', () => {
+  const page = (count: number) => ({
+    items: Array.from({ length: count }, (_, i) => message(i + 1)),
+    next: null,
+  });
+  const box = (n: number) =>
+    screen.getByRole('checkbox', { name: `Выбрать письмо «Subject ${n}»` });
+
+  it('shows the list as before while nothing is selected', async () => {
+    mockServer(() => page(3));
+    renderPane();
+    await screen.findByText('Subject 1');
+
+    expect(
+      screen.queryByRole('toolbar', { name: 'Действия с выбранными письмами' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /Входящие/ })).toBeVisible();
+  });
+
+  it('a box selects a message, and the heading gives way to the actions', async () => {
+    mockServer(() => page(3));
+    const user = userEvent.setup();
+    renderPane();
+    await screen.findByText('Subject 1');
+
+    await user.click(box(2));
+
+    const bar = screen.getByRole('toolbar', { name: 'Действия с выбранными письмами' });
+    expect(within(bar).getByText('Выбрано: 1')).toBeInTheDocument();
+    expect(box(2)).toBeChecked();
+    expect(within(bar).getByRole('button', { name: 'В архив' })).toBeInTheDocument();
+    expect(within(bar).getByRole('button', { name: 'В спам' })).toBeInTheDocument();
+    expect(within(bar).getByRole('button', { name: 'Удалить' })).toBeInTheDocument();
+    expect(within(bar).getByRole('button', { name: 'Отметить прочитанными' })).toBeInTheDocument();
+  });
+
+  it('Ctrl and a click select a row instead of opening it; Shift and a click select the range', async () => {
+    mockServer(() => page(5));
+    const user = userEvent.setup();
+    const router = renderPane();
+    await screen.findByText('Subject 1');
+
+    await user.keyboard('{Control>}');
+    await user.click(screen.getByText('Subject 2'));
+    await user.keyboard('{/Control}');
+    await user.keyboard('{Shift>}');
+    await user.click(screen.getByText('Subject 4'));
+    await user.keyboard('{/Shift}');
+
+    expect(router.state.location.pathname).toBe('/mail/inbox'); // nothing was opened
+    expect([1, 2, 3, 4, 5].map((n) => (box(n) as HTMLInputElement).checked)).toEqual([
+      false,
+      true,
+      true,
+      true,
+      false,
+    ]);
+    expect(screen.getByText('Выбрано: 3')).toBeInTheDocument();
+  });
+
+  it('a plain click still opens the message', async () => {
+    mockServer(() => page(2));
+    const user = userEvent.setup();
+    const router = renderPane();
+
+    await user.click(await screen.findByText('Subject 2'));
+
+    expect(router.state.location.pathname).toBe('/mail/inbox/m2');
+  });
+
+  it('selects all the loaded messages and clears the selection', async () => {
+    mockServer(() => page(4));
+    const user = userEvent.setup();
+    renderPane();
+    await screen.findByText('Subject 1');
+
+    await user.click(box(1));
+    await user.click(screen.getByRole('button', { name: 'Выбрать все' }));
+    expect(screen.getByText('Выбрано: 4')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Выбрать все' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Снять выбор' }));
+    expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();
+    expect(box(1)).not.toBeChecked();
+  });
+
+  it('selects at most 100 messages and says so', async () => {
+    mockServer(() => page(120));
+    const user = userEvent.setup();
+    renderPane();
+    await screen.findByText('Subject 1');
+
+    await user.click(box(1));
+    await user.click(screen.getByRole('button', { name: 'Выбрать все' }));
+
+    expect(screen.getByText('Выбрано: 100')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Можно выбрать не больше 100 писем за раз.',
+    );
+  });
+
+  it('applies an action to the selected messages in the order of the list, and the selection ends', async () => {
+    const server = mockServer(() => page(4));
+    const user = userEvent.setup();
+    renderPane();
+    await screen.findByText('Subject 1');
+
+    await user.click(box(3));
+    await user.click(box(1));
+    await user.click(screen.getByRole('button', { name: 'Удалить' }));
+
+    await waitFor(() =>
+      expect(server.batches).toEqual([{ ids: ['m1', 'm3'], action: 'trash', to: null }]),
+    );
+    await waitFor(() => expect(screen.queryByRole('toolbar')).not.toBeInTheDocument());
+    expect(server.urls.filter((u) => u.endsWith('/messages?limit=50')).length).toBeGreaterThan(1); // the list is loaded again
+  });
+
+  it('leaves the open message when it was moved away', async () => {
+    mockServer(() => page(2));
+    const user = userEvent.setup();
+    const router = renderPane('/mail/inbox/m1', 'inbox', 'm1');
+    await screen.findByText('Subject 1');
+
+    await user.click(box(1));
+    await user.click(screen.getByRole('button', { name: 'В архив' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/mail/inbox'));
+  });
+
+  it('says in plain words when the action failed, and keeps the selection', async () => {
+    const server = mockServer(() => page(2));
+    server.failBatch = true;
+    const user = userEvent.setup();
+    renderPane();
+    await screen.findByText('Subject 1');
+
+    await user.click(box(1));
+    await user.click(screen.getByRole('button', { name: 'В спам' }));
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(box(1)).toBeChecked();
+  });
+
+  it('does not offer to move messages to the folder they are in', async () => {
+    mockServer(() => page(2));
+    const user = userEvent.setup();
+    renderPane('/mail/sent', 'sent');
+    await screen.findByText('Subject 1');
+    await user.click(box(1));
+
+    expect(screen.getByRole('button', { name: 'В архив' })).toBeInTheDocument();
+  });
+
+  it('on a phone a long press selects a row, and then a tap selects instead of opening', async () => {
+    setWidth(500);
+    mockServer(() => page(3));
+    const router = renderPane();
+    const row = (await screen.findByText('Subject 1')).closest('a')!;
+
+    fireEvent.pointerDown(row, { pointerType: 'touch' });
+    await act(() => new Promise((resolve) => setTimeout(resolve, 600)));
+    fireEvent.pointerUp(row, { pointerType: 'touch' });
+    fireEvent.click(row); // the click that ends the long press does not open the message
+
+    expect(screen.getByText('Выбрано: 1')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/mail/inbox');
+
+    fireEvent.click(screen.getByText('Subject 2').closest('a')!);
+
+    expect(screen.getByText('Выбрано: 2')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/mail/inbox');
+  });
+
+  it('on a phone a short tap opens the message', async () => {
+    setWidth(500);
+    mockServer(() => page(2));
+    const router = renderPane();
+    const row = (await screen.findByText('Subject 1')).closest('a')!;
+
+    fireEvent.pointerDown(row, { pointerType: 'touch' });
+    fireEvent.pointerUp(row, { pointerType: 'touch' });
+    fireEvent.click(row);
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/mail/inbox/m1'));
+    expect(screen.queryByText(/Выбрано/)).not.toBeInTheDocument();
+  });
+
+  it('starts with nothing selected in another folder', async () => {
+    mockServer(() => page(2));
+    const user = userEvent.setup();
+    const router = renderPane();
+    await screen.findByText('Subject 1');
+    await user.click(box(1));
+
+    await act(() => router.navigate('/mail/inbox?filter=unread'));
+
+    await waitFor(() => expect(screen.queryByRole('toolbar')).not.toBeInTheDocument());
   });
 });
