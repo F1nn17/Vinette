@@ -275,6 +275,26 @@ describe('the buttons of the open message', () => {
     expect(router.state.location.pathname).toBe('/mail/inbox'); // the reader went to the list; the message is in it again
   });
 
+  it('after deleting offers "Undo", which brings the message back to the folder it was in', async () => {
+    const server = mockServer();
+    server.batchAnswer = () =>
+      json({ changed: 1, folder: 'Trash', moved: [{ from: ID, id: 'VHJhc2g.5.3' }] });
+    const user = userEvent.setup();
+    renderPage(`/mail/inbox/${ID}`);
+    await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+    await waitFor(() =>
+      expect(within(reader()).getByRole('button', { name: 'Удалить' })).toBeEnabled(),
+    );
+
+    await user.click(within(reader()).getByRole('button', { name: 'Удалить' }));
+    const toast = await screen.findByRole('status');
+    expect(toast).toHaveTextContent('Письмо перенесено в корзину');
+    await user.click(within(toast).getByRole('button', { name: 'Отменить' }));
+
+    await waitFor(() => expect(server.batches).toHaveLength(2));
+    expect(server.batches[1]).toEqual({ ids: ['VHJhc2g.5.3'], action: 'move', to: 'INBOX' });
+  });
+
   it('says what to do when the mailbox has no such folder', async () => {
     const server = mockServer();
     server.batchAnswer = () => json({ code: 'no_target_folder', title: 'x' }, { status: 409 });

@@ -36,6 +36,18 @@
   "compose": {
     "title": "New message"
   },
+  "toast": {
+    "undo": "Undo",
+    "undoFailed": "Could not put the message back. Look for it in the folder it went to.",
+    "moved": {
+      "archive_one": "Message moved to the archive",
+      "archive_other": "{{count}} messages moved to the archive",
+      "spam_one": "Message moved to spam",
+      "spam_other": "{{count}} messages moved to spam",
+      "trash_one": "Message moved to the trash",
+      "trash_other": "{{count}} messages moved to the trash"
+    }
+  },
   "common": {
     "close": "Close",
     "loading": "Loading…",
