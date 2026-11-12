@@ -36,6 +36,18 @@
   "compose": {
     "title": "New message"
   },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "note": "Actions apply to the selected messages, or to the open one if nothing is selected.",
+    "next": "Next message",
+    "previous": "Previous message",
+    "open": "Open the message",
+    "archive": "Archive",
+    "delete": "Delete",
+    "search": "Search",
+    "compose": "Compose",
+    "help": "This window"
+  },
   "toast": {
     "undo": "Undo",
     "undoFailed": "Could not put the message back. Look for it in the folder it went to.",

@@ -22,6 +22,8 @@ export interface MessageRowProps {
   labelColors?: Readonly<Record<string, string>>;
   /** The row is among the selected ones (VIN-073). */
   checked?: boolean;
+  /** The keyboard is on this row (j and k move it, Enter opens it). */
+  current?: boolean;
   /** Some messages are selected: every row shows its box (and on a phone a tap selects instead of opening). */
   selecting?: boolean;
   /** Selects or unselects the row (`toggle`), or selects the range from the last clicked row (`range`); absent: no selection. */
@@ -42,6 +44,7 @@ export function MessageRow({
   compact = false,
   labelColors,
   checked = false,
+  current = false,
   selecting = false,
   onSelect,
 }: MessageRowProps) {
@@ -104,6 +107,7 @@ export function MessageRow({
     'block border-b border-subtle transition-colors',
     compact && !avatar ? 'py-[9px]' : 'py-3.5',
     selected || checked ? 'bg-accent-soft' : 'hover:bg-bg',
+    current && 'ring-2 ring-accent ring-inset',
   );
 
   // Ctrl/⌘ and Shift with a click select instead of opening; on a phone, while selecting, so does a tap (and a long press starts).
@@ -181,6 +185,7 @@ export function MessageRow({
         <Link
           to={to}
           aria-current={selected ? 'true' : undefined}
+          data-cursor={current ? 'true' : undefined}
           className={cn(linkClass, 'flex min-w-0 flex-1 items-start gap-3 px-4')}
           onClick={onRowClick}
           {...touch}
@@ -224,6 +229,7 @@ export function MessageRow({
       <Link
         to={to}
         aria-current={selected ? 'true' : undefined}
+        data-cursor={current ? 'true' : undefined}
         className={cn(linkClass, 'px-5')}
         onClick={onRowClick}
       >

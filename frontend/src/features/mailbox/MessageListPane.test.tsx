@@ -25,6 +25,8 @@ const folder = (path: string, role: string, extra: Record<string, unknown> = {})
 const FOLDERS = [
   folder('INBOX', 'inbox', { unread: 4 }),
   folder('Sent', 'sent'),
+  folder('Archive', 'archive'),
+  folder('Trash', 'trash'),
   folder('Работа/Отчёты', 'other', { name: 'Отчёты' }),
 ];
 
@@ -928,5 +930,222 @@ describe('selecting messages', () => {
     await act(() => router.navigate('/mail/inbox?filter=unread'));
 
     await waitFor(() => expect(screen.queryByRole('toolbar')).not.toBeInTheDocument());
+  });
+});
+
+describe('keyboard shortcuts', () => {
+  const page = (count: number) => ({
+    items: Array.from({ length: count }, (_, i) => message(i + 1, { id: `SU5CT1g.1.${i + 1}` })),
+    next: null,
+  });
+  const row = (n: number) => screen.getByText(`Subject ${n}`).closest('a') as HTMLElement;
+  const cursorOn = () =>
+    [...document.querySelectorAll('a[data-cursor="true"]')].map(
+      (a) => /Subject \d+/.exec(a.textContent)?.[0],
+    );
+
+  async function ready(count = 4, url = '/mail/inbox', slug = 'inbox', open?: string) {
+    const server = mockServer(() => page(count));
+    const user = userEvent.setup();
+    const router = renderPane(url, slug, open);
+    await screen.findByText('Subject 1');
+    return { server, user, router };
+  }
+
+  it('j puts the cursor on the first message, then moves it down; k moves it up; neither goes past the ends', async () => {
+    const { user } = await ready(3);
+
+    await user.keyboard('j');
+    expect(cursorOn()).toEqual(['Subject 1']);
+    await user.keyboard('jj');
+    expect(cursorOn()).toEqual(['Subject 3']);
+    await user.keyboard('j');
+    expect(cursorOn()).toEqual(['Subject 3']);
+    await user.keyboard('kk');
+    expect(cursorOn()).toEqual(['Subject 1']);
+    await user.keyboard('k');
+    expect(cursorOn()).toEqual(['Subject 1']);
+  });
+
+  it('works in the Russian layout (the keys of j and k print о and л there)', async () => {
+    await ready(3);
+
+    fireEvent.keyDown(document.body, { key: 'о', code: 'KeyJ' });
+    fireEvent.keyDown(document.body, { key: 'о', code: 'KeyJ' });
+    expect(cursorOn()).toEqual(['Subject 2']);
+    fireEvent.keyDown(document.body, { key: 'л', code: 'KeyK' });
+    expect(cursorOn()).toEqual(['Subject 1']);
+  });
+
+  it('Enter opens the message under the cursor', async () => {
+    const { user, router } = await ready(3);
+
+    await user.keyboard('jj{Enter}');
+
+    expect(router.state.location.pathname).toBe('/mail/inbox/SU5CT1g.1.2');
+  });
+
+  it('Enter does nothing without a cursor, and is left to a focused link', async () => {
+    const { user, router } = await ready(3);
+
+    await user.keyboard('{Enter}');
+    expect(router.state.location.pathname).toBe('/mail/inbox');
+
+    await user.keyboard('j');
+    row(3).focus();
+    await user.keyboard('{Enter}'); // the link opens its own message, not the one under the cursor
+    expect(router.state.location.pathname).toBe('/mail/inbox/SU5CT1g.1.3');
+  });
+
+  it('with a message open, j opens the next one', async () => {
+    const { user, router } = await ready(3, '/mail/inbox/SU5CT1g.1.2', 'inbox', 'SU5CT1g.1.2');
+
+    await user.keyboard('j');
+
+    expect(router.state.location.pathname).toBe('/mail/inbox/SU5CT1g.1.3');
+  });
+
+  it('e and # apply to the message under the cursor when nothing is open or selected', async () => {
+    const { user, server } = await ready(3);
+
+    await user.keyboard('jj');
+    await user.keyboard('e');
+    await waitFor(() => expect(server.batches).toHaveLength(1));
+    await user.keyboard('#');
+    await waitFor(() => expect(server.batches).toHaveLength(2));
+
+    expect(server.batches[0]).toMatchObject({ ids: ['SU5CT1g.1.2'], action: 'archive' });
+    expect(server.batches[1]).toMatchObject({ ids: ['SU5CT1g.1.2'], action: 'trash' });
+  });
+
+  it('e applies to the open message', async () => {
+    const { user, server } = await ready(3, '/mail/inbox/SU5CT1g.1.1', 'inbox', 'SU5CT1g.1.1');
+
+    await user.keyboard('e');
+
+    await waitFor(() => expect(server.batches).toHaveLength(1));
+    expect(server.batches[0]).toMatchObject({ ids: ['SU5CT1g.1.1'], action: 'archive' });
+  });
+
+  it('e and # apply to the selected messages first', async () => {
+    const { user, server } = await ready(4);
+    await user.click(screen.getByRole('checkbox', { name: 'Выбрать письмо «Subject 2»' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Выбрать письмо «Subject 4»' }));
+    await user.keyboard('j'); // the cursor is elsewhere: the selection wins
+
+    await user.keyboard('#');
+
+    await waitFor(() => expect(server.batches).toHaveLength(1));
+    expect(server.batches[0]).toMatchObject({
+      ids: ['SU5CT1g.1.2', 'SU5CT1g.1.4'],
+      action: 'trash',
+    });
+  });
+
+  it('e and # do nothing when there is nothing to apply them to', async () => {
+    const { user, server } = await ready(2);
+
+    await user.keyboard('e#');
+
+    expect(server.batches).toEqual([]);
+  });
+
+  it('does not archive in the archive, but can delete from there', async () => {
+    const { user, server } = await ready(2, '/mail/archive', 'archive');
+
+    await user.keyboard('je');
+    expect(server.batches).toEqual([]);
+
+    await user.keyboard('#');
+    await waitFor(() => expect(server.batches).toHaveLength(1));
+  });
+
+  it('does not delete in the trash (the message would stay where it is)', async () => {
+    const { user, server } = await ready(2, '/mail/trash', 'trash');
+
+    await user.keyboard('j#');
+
+    expect(server.batches).toEqual([]);
+  });
+
+  it('/ moves the focus to the search field', async () => {
+    const { user } = await ready(2);
+
+    await user.keyboard('/');
+
+    await waitFor(() =>
+      expect(screen.getByRole('searchbox', { name: 'Поиск в почте' })).toHaveFocus(),
+    );
+  });
+
+  it('on a phone / opens the search field and focuses it', async () => {
+    setWidth(500);
+    const { user } = await ready(2);
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+
+    await user.keyboard('/');
+
+    await waitFor(() =>
+      expect(screen.getByRole('searchbox', { name: 'Поиск в почте' })).toHaveFocus(),
+    );
+  });
+
+  it('c goes to composing', async () => {
+    const { user, router } = await ready(2);
+
+    await user.keyboard('c');
+
+    expect(router.state.location.pathname).toBe('/compose');
+  });
+
+  it('keys are silent while the user types in the search field', async () => {
+    const { user, server, router } = await ready(3);
+    await user.click(screen.getByRole('searchbox', { name: 'Поиск в почте' }));
+
+    await user.keyboard('jjc#e/');
+
+    expect(cursorOn()).toEqual([]);
+    expect(router.state.location.pathname).toBe('/mail/inbox');
+    expect(server.batches).toEqual([]);
+    expect(screen.getByRole('searchbox', { name: 'Поиск в почте' })).toHaveValue('jjc#e/');
+  });
+
+  it('? opens the window of keys, the only place they are explained; Escape closes it, and the keys wait while it is open', async () => {
+    const { user } = await ready(3);
+    expect(screen.queryByText('Горячие клавиши')).not.toBeInTheDocument(); // no hints on the screen
+
+    await user.keyboard('?');
+    const dialog = screen.getByRole('dialog', { name: 'Горячие клавиши' });
+    for (const text of [
+      'Следующее письмо',
+      'Предыдущее письмо',
+      'Открыть письмо',
+      'В архив',
+      'Удалить',
+      'Поиск',
+      'Написать',
+    ]) {
+      expect(within(dialog).getByText(text)).toBeInTheDocument();
+    }
+    for (const key of ['j', 'k', 'Enter', 'e', '#', '/', 'c']) {
+      expect(within(dialog).getByText(key)).toBeInTheDocument();
+    }
+
+    await user.keyboard('j');
+    expect(cursorOn()).toEqual([]);
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await user.keyboard('j');
+    expect(cursorOn()).toEqual(['Subject 1']);
+  });
+
+  it('starts again in another folder', async () => {
+    const { user, router } = await ready(3);
+    await user.keyboard('jj');
+
+    await act(() => router.navigate('/mail/inbox?filter=unread'));
+
+    await waitFor(() => expect(cursorOn()).toEqual([]));
   });
 });

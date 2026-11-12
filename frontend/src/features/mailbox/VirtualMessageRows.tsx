@@ -24,6 +24,8 @@ export interface VirtualMessageRowsProps<T> {
   onLoadMore: () => void;
   /** What stands under the last row: a spinner, or "try again" after a failed page. */
   footer?: ReactNode;
+  /** The key of an entry to bring into view when it changes (the row the keyboard moved to). */
+  scrollToKey?: string | null;
 }
 
 /**
@@ -40,6 +42,7 @@ export function VirtualMessageRows<T>({
   loadingMore,
   onLoadMore,
   footer,
+  scrollToKey,
 }: VirtualMessageRowsProps<T>) {
   // The virtualizer's functions cannot be memoized by the React compiler; nothing here depends on that.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -55,6 +58,14 @@ export function VirtualMessageRows<T>({
     getItemKey: (index) => entries[index]?.key ?? index,
     overscan: 6,
   });
+
+  useEffect(() => {
+    if (!scrollToKey) return;
+    const index = entries.findIndex((entry) => entry.key === scrollToKey);
+    if (index >= 0) virtualizer.scrollToIndex(index, { align: 'auto' });
+    // Only when the target changes: a new page or a new heading must not pull the list back.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrollToKey]);
 
   const virtualItems = virtualizer.getVirtualItems();
   const lastVisible = virtualItems.at(-1)?.index ?? -1;

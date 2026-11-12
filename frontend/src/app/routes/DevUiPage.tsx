@@ -6,6 +6,7 @@ import {
   Button,
   Checkbox,
   Chip,
+  Dialog,
   IconButton,
   LabelDot,
   LabelTag,
@@ -32,6 +33,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 export function DevUiPage() {
   const [flagged, setFlagged] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
     <main className="mx-auto max-w-5xl bg-surface px-8 py-6">
@@ -146,6 +148,20 @@ export function DevUiPage() {
         <div className="w-72">
           <ProgressBar aria-label="Storage" value={21} tone="ink" />
         </div>
+      </Section>
+
+      <Section title="Dialog">
+        <Button variant="secondary" onClick={() => setDialogOpen(true)}>
+          Open the dialog
+        </Button>
+        <Dialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          title="Keyboard shortcuts"
+          closeLabel="Close"
+        >
+          <p className="text-base text-text-2">Escape, the cross and a click outside close it.</p>
+        </Dialog>
       </Section>
 
       <Section title="Toast">
