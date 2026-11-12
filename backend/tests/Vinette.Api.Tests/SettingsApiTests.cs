@@ -111,6 +111,56 @@ public sealed class SettingsApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Nobody_Is_Trusted_With_Pictures_At_First()
+    {
+        var (client, session) = await SignInAsync("alice@vinette.test");
+
+        var (_, body) = await GetAsync(client, session);
+
+        Assert.Empty(body.GetProperty("trustedImageSenders").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task A_Sender_Can_Be_Trusted_And_Then_Not_Trusted_And_Other_Settings_Stay()
+    {
+        var (client, session) = await SignInAsync("alice@vinette.test");
+        await PatchAsync(client, session, new { density = "compact" });
+
+        var (_, trusted) = await PatchAsync(client, session, new { trustImagesFrom = "Anna@Example.org" });
+        var (_, again) = await GetAsync(client, session);
+        var (_, revoked) = await PatchAsync(client, session, new { untrustImagesFrom = "anna@example.org" });
+
+        Assert.Equal("anna@example.org", Assert.Single(trusted.GetProperty("trustedImageSenders").EnumerateArray()).GetString());
+        Assert.Equal("compact", trusted.GetProperty("density").GetString());
+        Assert.Single(again.GetProperty("trustedImageSenders").EnumerateArray());
+        Assert.Empty(revoked.GetProperty("trustedImageSenders").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task The_List_Of_Trusted_Senders_Is_Kept_Apart_Per_User()
+    {
+        var (alice, aliceSession) = await SignInAsync("alice@vinette.test");
+        var (bob, bobSession) = await SignInAsync("bob@vinette.test");
+        await PatchAsync(alice, aliceSession, new { trustImagesFrom = "anna@example.org" });
+
+        var (_, body) = await GetAsync(bob, bobSession);
+
+        Assert.Empty(body.GetProperty("trustedImageSenders").EnumerateArray());
+    }
+
+    [Theory]
+    [InlineData("trustImagesFrom")]
+    [InlineData("untrustImagesFrom")]
+    public async Task An_Empty_Address_Is_Refused(string member)
+    {
+        var (client, session) = await SignInAsync("alice@vinette.test");
+
+        var response = await CsrfClient.SendAsync(client, HttpMethod.Patch, "/api/v1/settings", Token, JsonContent.Create(new Dictionary<string, string> { [member] = "  " }), session);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task An_Empty_Language_Goes_Back_To_Following_The_Browser()
     {
         var (client, session) = await SignInAsync("alice@vinette.test");

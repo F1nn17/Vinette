@@ -185,6 +185,20 @@ public sealed class DovecotFixture : IAsyncLifetime
         }
     }
 
+    /// <summary>Puts a mail written out in the test (lines separated by LF; they are sent with CRLF) into a folder of a mailbox.</summary>
+    public async Task SaveRawMessageAsync(MailAccount account, string folder, string message, CancellationToken cancellationToken)
+    {
+        var crlf = message.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\n", "\r\n", StringComparison.Ordinal);
+        var encoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(crlf));
+        var result = await Container.ExecAsync(
+            ["sh", "-c", $"echo {encoded} | base64 -d | doveadm save -u {account.Address} -m '{folder}'"],
+            cancellationToken);
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"Saving a message into {folder} failed (exit {result.ExitCode}): {result.Stderr}");
+        }
+    }
+
     /// <summary>
     /// Puts a mail into a folder that is generated inside the container, so that a mail of tens of megabytes never travels
     /// through the test: one text part and one attachment of <paramref name="attachmentBytes"/> bytes (zeros, as base64), or a

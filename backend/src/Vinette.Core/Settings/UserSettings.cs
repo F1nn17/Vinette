@@ -20,6 +20,9 @@ public sealed record UserSettings
     /// <summary>The most labels with a color a user can have.</summary>
     public const int MaxLabelColors = 200;
 
+    /// <summary>The most senders whose pictures are shown without asking.</summary>
+    public const int MaxTrustedImageSenders = 500;
+
     /// <summary>The longest label name or color, in UTF-16 units.</summary>
     public const int MaxTextLength = 64;
 
@@ -36,6 +39,24 @@ public sealed record UserSettings
     public IReadOnlyDictionary<string, string> LabelColors { get; init; } = new Dictionary<string, string>();
 
     /// <summary>
+    /// The addresses (lower case, exactly as written in From) whose pictures from the web are shown without asking, when
+    /// the sender check of the message is "verified". Sorted, without repeats.
+    /// </summary>
+    public IReadOnlyList<string> TrustedImageSenders { get; init; } = [];
+
+    /// <summary>Whether pictures of the sender with this address are shown without asking (the address is compared without regard to case).</summary>
+    public bool TrustsImagesFrom(string? address) =>
+        !string.IsNullOrWhiteSpace(address) && TrustedImageSenders.Contains(address.Trim().ToLowerInvariant(), StringComparer.Ordinal);
+
+    /// <summary>These settings with the sender added to (<paramref name="trusted"/>) or removed from the senders whose pictures are shown.</summary>
+    public UserSettings WithImageSender(string address, bool trusted)
+    {
+        var key = address.Trim().ToLowerInvariant();
+        var senders = TrustedImageSenders.Where(a => a != key);
+        return this with { TrustedImageSenders = [.. (trusted ? senders.Append(key) : senders).Order(StringComparer.Ordinal)] };
+    }
+
+    /// <summary>
     /// Whether the settings are within the limits the store accepts (sizes and counts, no empty or control-character
     /// names): the store refuses what is not, so a client cannot fill the disk.
     /// </summary>
@@ -49,6 +70,14 @@ public sealed record UserSettings
         else if (Language is { } language && (language.Length is 0 or > 16 || language.Any(c => !char.IsAsciiLetterOrDigit(c) && c != '-')))
         {
             problem = "Language must be a short language tag such as ru or en-GB.";
+        }
+        else if (TrustedImageSenders.Count > MaxTrustedImageSenders)
+        {
+            problem = $"At most {MaxTrustedImageSenders} senders can be trusted with pictures.";
+        }
+        else if (TrustedImageSenders.Any(a => a.Length is 0 or > 254 || a.Any(char.IsControl) || a.Trim().Length == 0))
+        {
+            problem = "A trusted sender must be an address of 1 to 254 characters without control characters.";
         }
         else if (LabelColors.Count > MaxLabelColors)
         {

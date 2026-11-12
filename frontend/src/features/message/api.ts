@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '@/shared/api/client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiRequest } from '@/shared/api/client';
+import { SETTINGS_KEY, type Settings } from '@/features/settings';
 import type { components } from '@/shared/api/schema';
 
 export type MessageDetail = components['schemas']['MessageDetailDto'];
@@ -32,6 +33,24 @@ export function useMessage(
     placeholderData: (previous) => (previous?.id === id ? previous : undefined),
     // A message does not change; its flags do, and they are updated by the actions that change them.
     staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Chooses whether the pictures of a sender are shown without asking (kept in the settings). The open messages are loaded
+ * again, as what they show depends on it; the list of settings follows the answer of the server.
+ */
+export function useTrustImageSender() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ address, trusted }: { address: string; trusted: boolean }) =>
+      apiRequest<Settings>('PATCH', '/api/v1/settings', {
+        body: trusted ? { trustImagesFrom: address } : { untrustImagesFrom: address },
+      }),
+    onSuccess: async (saved) => {
+      queryClient.setQueryData(SETTINGS_KEY, saved);
+      await queryClient.invalidateQueries({ queryKey: ['message'] });
+    },
   });
 }
 

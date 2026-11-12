@@ -267,6 +267,8 @@ export interface components {
             canShowImages: boolean;
             /** Format: int32 */
             imagesShown: number | string;
+            hasExternalImages: boolean;
+            imagesTrusted: boolean;
             sender: components["schemas"]["SenderDto"];
             attachments: components["schemas"]["AttachmentDto"][];
         };
@@ -324,6 +326,7 @@ export interface components {
             labelColors: {
                 [key: string]: string;
             };
+            trustedImageSenders: string[];
         };
         SettingsPatch: {
             density: null | string;
@@ -331,6 +334,8 @@ export interface components {
             labelColors: null | {
                 [key: string]: string;
             };
+            trustImagesFrom?: null | string;
+            untrustImagesFrom?: null | string;
         };
         StorageDto: {
             /** Format: int64 */
