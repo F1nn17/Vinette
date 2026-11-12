@@ -13,6 +13,8 @@ export function describeApiError(error: unknown, t: Translate): string {
       case 'mail_busy':
       case 'session_revoked':
       case 'uid_validity_changed':
+      case 'not_found':
+      case 'payload_too_large':
         return t(`errors.${error.code}`);
       case 'too_many_requests': {
         const minutes = Math.max(1, Math.ceil((error.retryAfterSeconds ?? 60) / 60));

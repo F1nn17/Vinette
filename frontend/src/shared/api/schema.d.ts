@@ -100,6 +100,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/messages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMessage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings": {
         parameters: {
             query?: never;
@@ -156,6 +172,14 @@ export interface components {
             name: string;
             address: string;
         };
+        AttachmentDto: {
+            partId: string;
+            fileName: string;
+            contentType: string;
+            /** Format: int64 */
+            size: number | string;
+            isMessage: boolean;
+        };
         CsrfResponse: {
             token: string;
         };
@@ -188,6 +212,26 @@ export interface components {
         };
         MeResponse: {
             address: string;
+        };
+        MessageDetailDto: {
+            id: string;
+            subject: string;
+            from: null | components["schemas"]["AddressDto"];
+            to: components["schemas"]["AddressDto"][];
+            cc: components["schemas"]["AddressDto"][];
+            /** Format: date-time */
+            date: null | string;
+            seen: boolean;
+            flagged: boolean;
+            answered: boolean;
+            draft: boolean;
+            labels: string[];
+            bodyFormat: string;
+            body: string;
+            /** Format: int32 */
+            blockedExternalResources: number | string;
+            truncated: boolean;
+            attachments: components["schemas"]["AttachmentDto"][];
         };
         MessageListItemDto: {
             id: string;
@@ -452,6 +496,82 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageDetailDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };

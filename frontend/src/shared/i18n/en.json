@@ -48,7 +48,9 @@
     "uid_validity_changed": "The folder changed on the mail side. The list was refreshed; open the message again.",
     "too_many_requests": "Too many attempts. Try again in {{minutes}} min.",
     "network": "No connection. Check your internet connection and try again.",
-    "unknown": "Something went wrong. Try again."
+    "unknown": "Something went wrong. Try again.",
+    "not_found": "This message or folder is gone: it may have been deleted or moved. Refresh the list.",
+    "payload_too_large": "This message is too large to be shown here."
   },
   "folders": {
     "inbox": "Inbox",
