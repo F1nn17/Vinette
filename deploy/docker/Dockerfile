@@ -11,7 +11,7 @@ COPY frontend/ ./
 RUN pnpm build
 
 # ---- Backend: dotnet sdk; cross-compiles for the target architecture ----
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS backend
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:11.0 AS backend
 ARG TARGETARCH
 WORKDIR /src
 COPY backend/global.json backend/Directory.Build.props backend/Directory.Packages.props backend/Vinette.sln backend/
