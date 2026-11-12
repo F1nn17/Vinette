@@ -15,13 +15,13 @@ public static class MailServices
         {
             var imap = provider.GetRequiredService<IOptions<ImapOptions>>().Value;
             return new ImapAuthenticator(
-                new ImapConnectionSettings(imap.Host, imap.Port, imap.Security, imap.Timeout, imap.AllowInvalidCertificate));
+                new ImapConnectionSettings(imap.Host, imap.Port, imap.Security, imap.Timeout, imap.AllowInvalidCertificate, imap.MaxViewableMessageBytes));
         });
         services.AddSingleton<IMailSessionFactory>(provider =>
         {
             var imap = provider.GetRequiredService<IOptions<ImapOptions>>().Value;
             return new ImapMailSessionFactory(
-                new ImapConnectionSettings(imap.Host, imap.Port, imap.Security, imap.Timeout, imap.AllowInvalidCertificate));
+                new ImapConnectionSettings(imap.Host, imap.Port, imap.Security, imap.Timeout, imap.AllowInvalidCertificate, imap.MaxViewableMessageBytes));
         });
         services.AddSingleton(provider =>
         {

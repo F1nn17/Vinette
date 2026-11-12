@@ -13,6 +13,15 @@ public class OptionsValidationTests
         StartupFailure.AssertOptionsInvalid(b => b.UseSetting("Branding:Accent", "red"));
     }
 
+    [Theory]
+    [InlineData("10")]
+    [InlineData("999999")]
+    [InlineData("9000000000")]
+    public void A_Mail_Size_Limit_Outside_Its_Range_Fails_Startup(string bytes)
+    {
+        StartupFailure.AssertOptionsInvalid(b => b.UseSetting("Imap:MaxViewableMessageBytes", bytes));
+    }
+
     [Fact]
     public void An_Unknown_Settings_Store_Fails_Startup()
     {

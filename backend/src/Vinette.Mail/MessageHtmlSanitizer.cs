@@ -58,17 +58,21 @@ public sealed partial class MessageHtmlSanitizer : IMessageHtmlSanitizer
     [GeneratedRegex(@"[^;{}]*(url\s*\(|image-set\s*\(|expression\s*\(|javascript\s*:|vbscript\s*:|behavior\s*:|-moz-binding|@import|\\)[^;{}]*;?", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ActiveCssDeclaration();
 
-    public SanitizedHtml Sanitize(string? html) => Sanitize(html, null);
+    public SanitizedHtml Sanitize(string? html) => Sanitize(html, null, IMessageHtmlSanitizer.MaxInputLength);
 
-    public SanitizedHtml Sanitize(string? html, Func<string, string?>? resolveContentId)
+    public SanitizedHtml Sanitize(string? html, Func<string, string?>? resolveContentId) =>
+        Sanitize(html, resolveContentId, IMessageHtmlSanitizer.MaxInputLength);
+
+    public SanitizedHtml Sanitize(string? html, Func<string, string?>? resolveContentId, int maxInputLength)
     {
         if (string.IsNullOrWhiteSpace(html))
         {
             return SanitizedHtml.Empty;
         }
 
-        var truncated = html.Length > IMessageHtmlSanitizer.MaxInputLength;
-        var input = truncated ? html[..IMessageHtmlSanitizer.MaxInputLength] : html;
+        var limit = Math.Clamp(maxInputLength, 1, IMessageHtmlSanitizer.MaxInputLength);
+        var truncated = html.Length > limit;
+        var input = truncated ? html[..limit] : html;
         if (TooDeep(input))
         {
             return new SanitizedHtml(string.Empty, 0, truncated, true);

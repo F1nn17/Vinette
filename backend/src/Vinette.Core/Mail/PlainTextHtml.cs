@@ -17,7 +17,10 @@ public static class PlainTextHtml
     private const int MaxUrlLength = 2048;
 
     /// <summary>The HTML for <paramref name="text"/>; sets <paramref name="truncated"/> if the text was cut.</summary>
-    public static string ToHtml(string? text, out bool truncated)
+    public static string ToHtml(string? text, out bool truncated) => ToHtml(text, out truncated, MaxLength);
+
+    /// <summary>The HTML for <paramref name="text"/>, at most <paramref name="maxLength"/> characters of it; sets <paramref name="truncated"/> if the text was cut.</summary>
+    public static string ToHtml(string? text, out bool truncated, int maxLength)
     {
         truncated = false;
         if (string.IsNullOrEmpty(text))
@@ -25,9 +28,10 @@ public static class PlainTextHtml
             return string.Empty;
         }
 
-        if (text.Length > MaxLength)
+        var limit = Math.Clamp(maxLength, 1, MaxLength);
+        if (text.Length > limit)
         {
-            text = text[..MaxLength];
+            text = text[..limit];
             truncated = true;
         }
 

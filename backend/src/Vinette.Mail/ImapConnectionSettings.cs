@@ -10,9 +10,11 @@ namespace Vinette.Mail;
 /// <param name="AllowInvalidCertificate">
 /// Accept any server certificate. Off by default; for a dev server with a self-signed certificate only.
 /// </param>
+/// <param name="MaxViewableMessageBytes">The biggest mail that is loaded to be shown; a bigger one is refused without being downloaded.</param>
 public sealed record ImapConnectionSettings(
     string Host,
     int Port,
     ConnectionSecurity Security,
     TimeSpan Timeout,
-    bool AllowInvalidCertificate = false);
+    bool AllowInvalidCertificate = false,
+    long MaxViewableMessageBytes = Vinette.Core.Mail.MessageLimits.MaxViewableBytes);

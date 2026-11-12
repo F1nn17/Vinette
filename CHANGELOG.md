@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A very long message is shown cut: only the first 250 000 characters of its text are cleaned and shown, with the notice "This message is very long: only the beginning is shown." and a "Show all" button that loads up to 1 000 000 characters. Markup built to keep the server busy is cleaned or refused within seconds (5 seconds at most, then the plain text is shown instead).
+- `Imap:MaxViewableMessageBytes` (default 33554432, 32 MB) limits the size of a message that is loaded to be shown or to have an attachment downloaded; a bigger one is refused without being downloaded.
 - On a phone a message opens full screen with a "Back" button first in its action bar (and the browser's own Back works too). The list keeps what it had loaded and where it was scrolled to, and the focus goes back to the message that was open. The buttons of the action bar are at least 44 px high.
 - Opening a message marks it as read (the dot in the list and the unread counter of the folder follow at once), and the flag button works: it sets and removes the flag, and goes back with a clear message if it cannot be saved. `PATCH /api/v1/messages/{id}/flags` changes the read and flag marks.
 - Attachments of an open message are listed under its text, two cards per row with the file type, name and size, and are downloaded with one click or with Tab and Enter. Files are always saved, never opened in the browser.

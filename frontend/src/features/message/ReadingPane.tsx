@@ -141,7 +141,9 @@ function Header({ message, address }: { message: MessageDetail; address?: string
  */
 export function ReadingPane({ messageId, address, onBack }: ReadingPaneProps) {
   const { t } = useTranslation();
-  const query = useMessage(messageId);
+  const [fullFor, setFullFor] = useState<string | null>(null); // the message whose whole body was asked for
+  const full = messageId !== undefined && fullFor === messageId;
+  const query = useMessage(messageId, full);
   const flags = useSetFlags(messageId);
   const markedRead = useRef<string | null>(null);
   const [failedFor, setFailedFor] = useState<string | null>(null); // the message whose flag could not be saved
@@ -209,6 +211,22 @@ export function ReadingPane({ messageId, address, onBack }: ReadingPaneProps) {
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col gap-5 px-10 py-7 max-md:px-4">
           <Header message={message} address={address} />
+          {message.truncated && (
+            <div className="flex flex-wrap items-center gap-3 rounded-md bg-bg px-4 py-3 text-secondary text-text-2">
+              <p className="min-w-0 flex-1">{t('reader.truncated')}</p>
+              {message.canShowFull && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="max-md:h-11"
+                  disabled={query.isFetching}
+                  onClick={() => setFullFor(messageId)}
+                >
+                  {query.isFetching ? t('common.loading') : t('reader.showFull')}
+                </Button>
+              )}
+            </div>
+          )}
           <div className="flex min-h-80 flex-1 flex-col">
             {message.bodyFormat === 'empty' ? (
               <p className="text-muted">{t('reader.emptyBody')}</p>

@@ -8,7 +8,7 @@ namespace Vinette.Mail;
 /// <summary>
 /// One authenticated IMAP connection. Not thread-safe by design: the connection manager lets only one command run at a time.
 /// </summary>
-internal sealed class ImapMailSession(ImapClient client, bool previewExtension = true) : IMailSession
+internal sealed class ImapMailSession(ImapClient client, bool previewExtension = true, long maxViewableBytes = MessageLimits.MaxViewableBytes) : IMailSession
 {
     static ImapMailSession() => LegacyCharsets.Ensure();
 
@@ -215,7 +215,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         var uid = new UniqueId(id.Uid);
         var summaries = await folder.FetchAsync([uid], MessageSummaryItems.UniqueId | MessageSummaryItems.Size | MessageSummaryItems.Flags, cancellationToken).ConfigureAwait(false);
         var summary = summaries.FirstOrDefault(m => m.UniqueId.Id == id.Uid) ?? throw new MailMessageNotFoundException("The message is not in the folder.");
-        if (summary.Size is { } size && size > MessageLimits.MaxViewableBytes)
+        if (summary.Size is { } size && size > maxViewableBytes)
         {
             throw new MailMessageTooLargeException(size);
         }
@@ -225,12 +225,12 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         {
             // BODY.PEEK[]: the mail without the side effect of marking it as read.
             using var stream = await folder.GetStreamAsync(uid, cancellationToken: cancellationToken).ConfigureAwait(false);
-            using var buffer = new MemoryStream(checked((int)Math.Min(summary.Size ?? 64 * 1024, MessageLimits.MaxViewableBytes)));
+            using var buffer = new MemoryStream(checked((int)Math.Min(summary.Size ?? 64 * 1024, maxViewableBytes)));
             var chunk = new byte[81920];
             int read;
             while ((read = await stream.ReadAsync(chunk, cancellationToken).ConfigureAwait(false)) > 0)
             {
-                if (buffer.Length + read > MessageLimits.MaxViewableBytes)
+                if (buffer.Length + read > maxViewableBytes)
                 {
                     throw new MailMessageTooLargeException(summary.Size ?? 0);
                 }
