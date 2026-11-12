@@ -174,7 +174,8 @@ public sealed class MimeMessageParser : IMessageParser
                 var isAttachment = leaf.ContentDisposition?.Disposition == ContentDisposition.Attachment;
                 if (contentId is not null && !isAttachment)
                 {
-                    inline.Add(new InlinePart(id, contentId, type, size));
+                    var content = size <= MessageLimits.MaxInlineImageBytes ? await DecodedBytesAsync(leaf, cancellationToken).ConfigureAwait(false) : [];
+                    inline.Add(new InlinePart(id, contentId, type, size, content));
                 }
                 else
                 {
@@ -220,6 +221,18 @@ public sealed class MimeMessageParser : IMessageParser
         await using var counting = new CountingStream();
         await part.Content.DecodeToAsync(counting, cancellationToken).ConfigureAwait(false);
         return counting.Length;
+    }
+
+    private static async Task<byte[]> DecodedBytesAsync(MimePart part, CancellationToken cancellationToken)
+    {
+        if (part.Content is null)
+        {
+            return [];
+        }
+
+        using var buffer = new MemoryStream();
+        await part.Content.DecodeToAsync(buffer, cancellationToken).ConfigureAwait(false);
+        return buffer.ToArray();
     }
 
     private static async Task<long> MessageSizeAsync(MessagePart part, CancellationToken cancellationToken)

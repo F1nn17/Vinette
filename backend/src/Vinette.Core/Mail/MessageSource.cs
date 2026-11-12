@@ -18,6 +18,12 @@ public static class MessageLimits
     /// without being downloaded: the viewer keeps the whole mail in memory to take it apart.
     /// </summary>
     public const long MaxViewableBytes = 32L * 1024 * 1024;
+
+    /// <summary>The biggest picture of a mail that is embedded into its body, in bytes; a bigger one is not shown.</summary>
+    public const int MaxInlineImageBytes = 1024 * 1024;
+
+    /// <summary>The most picture bytes that are embedded into one body; the pictures after that are not shown.</summary>
+    public const int MaxInlineImagesTotalBytes = 8 * 1024 * 1024;
 }
 
 /// <summary>The message is not (or no longer) in the folder: deleted or moved meanwhile, or the id never existed.</summary>

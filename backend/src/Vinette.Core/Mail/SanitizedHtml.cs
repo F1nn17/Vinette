@@ -31,6 +31,13 @@ public interface IMessageHtmlSanitizer
     /// <summary>The biggest <c>data:</c> image that is kept, in decoded bytes.</summary>
     const int MaxDataImageBytes = 1024 * 1024;
 
-    /// <summary>Cleans <paramref name="html"/>. Never throws for any input.</summary>
-    SanitizedHtml Sanitize(string? html);
+    /// <summary>Cleans <paramref name="html"/>; <c>cid:</c> pictures are left as they are. Never throws for any input.</summary>
+    SanitizedHtml Sanitize(string? html) => Sanitize(html, null);
+
+    /// <summary>
+    /// Cleans <paramref name="html"/>. A <c>cid:</c> picture is replaced by what <paramref name="resolveContentId"/> returns
+    /// for its Content-ID (text of a <c>data:image</c> address built by the application); when it returns null, or there is
+    /// no resolver, the picture's address is taken out (with a resolver) or kept as it is (without). Never throws for any input.
+    /// </summary>
+    SanitizedHtml Sanitize(string? html, Func<string, string?>? resolveContentId);
 }

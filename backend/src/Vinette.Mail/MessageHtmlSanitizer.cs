@@ -58,7 +58,9 @@ public sealed partial class MessageHtmlSanitizer : IMessageHtmlSanitizer
     [GeneratedRegex(@"[^;{}]*(url\s*\(|image-set\s*\(|expression\s*\(|javascript\s*:|vbscript\s*:|behavior\s*:|-moz-binding|@import|\\)[^;{}]*;?", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ActiveCssDeclaration();
 
-    public SanitizedHtml Sanitize(string? html)
+    public SanitizedHtml Sanitize(string? html) => Sanitize(html, null);
+
+    public SanitizedHtml Sanitize(string? html, Func<string, string?>? resolveContentId)
     {
         if (string.IsNullOrWhiteSpace(html))
         {
@@ -73,13 +75,13 @@ public sealed partial class MessageHtmlSanitizer : IMessageHtmlSanitizer
         }
 
         var blocked = 0;
-        var sanitizer = Build(() => blocked++);
+        var sanitizer = Build(() => blocked++, resolveContentId);
         var clean = sanitizer.Sanitize(input);
         clean = DropActiveStyleParts(clean, () => blocked++);
         return new SanitizedHtml(clean, blocked, truncated, false);
     }
 
-    private static HtmlSanitizer Build(Action blockedExternal)
+    private static HtmlSanitizer Build(Action blockedExternal, Func<string, string?>? resolveContentId)
     {
         var sanitizer = new HtmlSanitizer(new HtmlSanitizerOptions
         {
@@ -111,7 +113,8 @@ public sealed partial class MessageHtmlSanitizer : IMessageHtmlSanitizer
             {
                 if (url.StartsWith("cid:", StringComparison.OrdinalIgnoreCase) && url.Length > 4)
                 {
-                    e.SanitizedUrl = url; // an inline picture of the mail itself (resolved by the application)
+                    // An inline picture of the mail itself: the application turns it into an embedded picture, or it goes.
+                    e.SanitizedUrl = resolveContentId is null ? url : resolveContentId(url[4..]);
                     return;
                 }
 

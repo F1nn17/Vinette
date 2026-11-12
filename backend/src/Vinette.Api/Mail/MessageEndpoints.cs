@@ -112,7 +112,7 @@ public static class MessageEndpoints
     {
         if (parsed.Html is not null)
         {
-            var clean = sanitizer.Sanitize(parsed.Html);
+            var clean = sanitizer.Sanitize(parsed.Html, new InlineImageResolver(parsed.InlineParts).Resolve);
             if (!clean.Rejected && (!string.IsNullOrWhiteSpace(clean.Html) || parsed.Text is null))
             {
                 return string.IsNullOrWhiteSpace(clean.Html)

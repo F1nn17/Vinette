@@ -13,7 +13,17 @@ public sealed record MessageAttachment(string PartId, string FileName, string Co
 /// <param name="ContentId">The Content-ID without angle brackets.</param>
 /// <param name="ContentType">The declared type, lower case.</param>
 /// <param name="Size">The size after decoding, in bytes.</param>
-public sealed record InlinePart(string PartId, string ContentId, string ContentType, long Size);
+/// <param name="Content">
+/// The decoded bytes, only for parts up to <see cref="MessageLimits.MaxInlineImageBytes"/> (the ones that can be shown);
+/// empty for bigger ones, which are never embedded.
+/// </param>
+public sealed record InlinePart(string PartId, string ContentId, string ContentType, long Size, byte[] Content)
+{
+    public InlinePart(string partId, string contentId, string contentType, long size)
+        : this(partId, contentId, contentType, size, [])
+    {
+    }
+}
 
 /// <summary>
 /// A mail taken apart: headers, the bodies and the lists of attachments and inline parts. Everything here comes from the

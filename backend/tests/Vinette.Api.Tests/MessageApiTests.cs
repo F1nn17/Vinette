@@ -101,7 +101,21 @@ public sealed partial class MessageApiTests(DovecotFixture dovecot) : IDisposabl
         Assert.Equal(["notes.txt", "report.pdf"], files.Select(f => f.GetProperty("fileName").GetString()!).Order());
         Assert.All(files, f => Assert.True(f.GetProperty("size").GetInt64() > 0));
         Assert.All(files, f => Assert.Matches(@"^\d+(\.\d+)*$", f.GetProperty("partId").GetString()!));
-        Assert.Contains("cid:logo@example.org", message.GetProperty("body").GetString(), StringComparison.Ordinal);
+        var body = message.GetProperty("body").GetString()!;
+        Assert.DoesNotContain("cid:", body, StringComparison.Ordinal); // the inline picture is in the body itself
+        Assert.Contains("src=\"data:image/png;base64,", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_Mail_With_Only_An_Inline_Picture_Shows_It()
+    {
+        var message = await OpenAsync("Inline image only");
+
+        var body = message.GetProperty("body").GetString()!;
+        Assert.Contains("src=\"data:image/png;base64,", body, StringComparison.Ordinal);
+        Assert.Contains("Only an inline image.", body, StringComparison.Ordinal);
+        Assert.Equal(0, message.GetProperty("blockedExternalResources").GetInt32());
+        Assert.Empty(message.GetProperty("attachments").EnumerateArray());
     }
 
     [Fact]

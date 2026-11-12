@@ -101,7 +101,38 @@ public class MimeMessageParserTests
         Assert.Equal("logo@example.org", logo.ContentId);
         Assert.Equal("image/png", logo.ContentType);
         Assert.True(logo.Size > 0);
+        Assert.Equal(logo.Size, logo.Content.Length);
+        Assert.Equal("image/png", InlineImage.Sniff(logo.Content));
         Assert.All(parsed.Attachments, a => Assert.True(a.Size > 0));
+    }
+
+    [Fact]
+    public async Task An_Inline_Picture_Over_The_Embedding_Limit_Is_Listed_But_Its_Bytes_Are_Not_Kept()
+    {
+        var big = Convert.ToBase64String(new byte[MessageLimits.MaxInlineImageBytes + 10], Base64FormattingOptions.InsertLineBreaks);
+
+        var parsed = await ParseTextAsync($"""
+            From: a@example.org
+            Subject: x
+            MIME-Version: 1.0
+            Content-Type: multipart/related; boundary="b"
+
+            --b
+            Content-Type: text/html
+
+            <img src="cid:big@x">
+            --b
+            Content-Type: image/png
+            Content-ID: <big@x>
+            Content-Transfer-Encoding: base64
+
+            {big}
+            --b--
+            """);
+
+        var part = Assert.Single(parsed.InlineParts);
+        Assert.Equal(MessageLimits.MaxInlineImageBytes + 10, part.Size);
+        Assert.Empty(part.Content);
     }
 
     [Fact]
