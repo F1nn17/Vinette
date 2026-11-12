@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ReadingPane } from './ReadingPane';
+import { ReadingPane, type ReadingPaneProps } from './ReadingPane';
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' }, ...init });
@@ -474,16 +474,147 @@ describe('ReadingPane', () => {
       }
     });
 
-    it('cannot be used yet: each action is switched on by the task that makes it work', async () => {
+    it('keeps replying and forwarding off until the editor exists', async () => {
       mockApi(() => message());
       renderPane();
 
       const bar = await screen.findByRole('toolbar', { name: 'Действия с письмом' });
-      for (const button of within(bar).getAllByRole('button')) {
-        expect(button).toBeDisabled();
+      expect(within(bar).getByRole('button', { name: 'Ответить' })).toBeDisabled();
+      expect(within(bar).getByRole('button', { name: 'Переслать' })).toBeDisabled();
+    });
+
+    it('cannot archive, mark as spam or delete where the screen gives no way to', async () => {
+      mockApi(() => message());
+      renderPane();
+
+      const bar = await screen.findByRole('toolbar', { name: 'Действия с письмом' });
+      for (const name of ['В архив', 'В спам', 'Удалить']) {
+        expect(within(bar).getByRole('button', { name })).toBeDisabled();
+      }
+    });
+  });
+
+  describe('actions on the open message', () => {
+    const mount = (props: Partial<ReadingPaneProps> = {}) =>
+      render(
+        <QueryClientProvider
+          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        >
+          <ReadingPane messageId="SU5CT1g.1.7" address="user@example.com" {...props} />
+        </QueryClientProvider>,
+      );
+    const bar = () => screen.getByRole('toolbar', { name: 'Действия с письмом' });
+
+    it.each([
+      ['В архив', 'archive'],
+      ['В спам', 'spam'],
+      ['Удалить', 'trash'],
+    ])('the button "%s" asks for "%s"', async (name, action) => {
+      mockApi(() => message());
+      const onAction = vi.fn();
+      const user = userEvent.setup();
+      mount({ onAction });
+      await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+
+      await user.click(within(bar()).getByRole('button', { name }));
+
+      expect(onAction).toHaveBeenCalledExactlyOnceWith(action);
+    });
+
+    it('does not offer the action that would leave the message where it is', async () => {
+      mockApi(() => message());
+      mount({ onAction: vi.fn(), folderRole: 'archive' });
+      await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+      expect(within(bar()).queryByRole('button', { name: 'В архив' })).not.toBeInTheDocument();
+      expect(within(bar()).getByRole('button', { name: 'В спам' })).toBeInTheDocument();
+    });
+
+    it('does not offer to delete from the trash, nor spam from the spam folder', async () => {
+      mockApi(() => message());
+      const { unmount } = mount({ onAction: vi.fn(), folderRole: 'trash' });
+      await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+      expect(within(bar()).queryByRole('button', { name: 'Удалить' })).not.toBeInTheDocument();
+      unmount();
+
+      mount({ onAction: vi.fn(), folderRole: 'junk' });
+      await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+      expect(within(bar()).queryByRole('button', { name: 'В спам' })).not.toBeInTheDocument();
+    });
+
+    it('waits while an action is running', async () => {
+      mockApi(() => message());
+      mount({ onAction: vi.fn(), actionBusy: true });
+      await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+
+      for (const name of ['В архив', 'В спам', 'Удалить']) {
+        expect(within(bar()).getByRole('button', { name })).toBeDisabled();
       }
     });
 
+    it('says in plain words what went wrong', async () => {
+      mockApi(() => message());
+      mount({
+        onAction: vi.fn(),
+        actionError: 'Почта временно недоступна. Попробуйте через несколько минут.',
+      });
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Почта временно недоступна');
+    });
+
+    it('"More" opens a panel with "Mark as unread", and chosen it asks for it and closes', async () => {
+      mockApi(() => message());
+      const onAction = vi.fn();
+      const user = userEvent.setup();
+      mount({ onAction });
+      await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+
+      const more = within(bar()).getByRole('button', { name: 'Ещё' });
+      expect(more).toHaveAttribute('aria-expanded', 'false');
+      await user.click(more);
+      expect(more).toHaveAttribute('aria-expanded', 'true');
+      await user.click(
+        within(screen.getByRole('group', { name: 'Ещё' })).getByRole('button', {
+          name: 'Отметить непрочитанным',
+        }),
+      );
+
+      expect(onAction).toHaveBeenCalledExactlyOnceWith('unread');
+      expect(screen.queryByRole('group', { name: 'Ещё' })).not.toBeInTheDocument();
+    });
+
+    it('"More" closes on Escape and on a click outside', async () => {
+      mockApi(() => message());
+      const user = userEvent.setup();
+      mount({ onAction: vi.fn() });
+      await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+
+      await user.click(within(bar()).getByRole('button', { name: 'Ещё' }));
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('group', { name: 'Ещё' })).not.toBeInTheDocument();
+
+      await user.click(within(bar()).getByRole('button', { name: 'Ещё' }));
+      await user.click(screen.getByRole('heading', { name: 'Layouts, second iteration' }));
+      expect(screen.queryByRole('group', { name: 'Ещё' })).not.toBeInTheDocument();
+    });
+
+    it('"More" carries the actions of the phone too: archive, spam, delete and the flag', async () => {
+      mockApi(() => message());
+      const onAction = vi.fn();
+      const user = userEvent.setup();
+      mount({ onAction });
+      await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+
+      await user.click(within(bar()).getByRole('button', { name: 'Ещё' }));
+      const panel = screen.getByRole('group', { name: 'Ещё' });
+      for (const name of ['В архив', 'В спам', 'Удалить', 'Флажок', 'Отметить непрочитанным']) {
+        expect(within(panel).getByRole('button', { name })).toBeInTheDocument();
+      }
+      await user.click(within(panel).getByRole('button', { name: 'В спам' }));
+      expect(onAction).toHaveBeenCalledExactlyOnceWith('spam');
+    });
+  });
+
+  describe('the flag', () => {
     it('shows the flag as pressed for a flagged message', async () => {
       mockApi(() => message({ flagged: true }));
       renderPane();

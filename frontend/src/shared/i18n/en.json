@@ -50,7 +50,8 @@
     "network": "No connection. Check your internet connection and try again.",
     "unknown": "Something went wrong. Try again.",
     "not_found": "This message or folder is gone: it may have been deleted or moved. Refresh the list.",
-    "payload_too_large": "This message is too large to be shown here."
+    "payload_too_large": "This message is too large to be shown here.",
+    "no_target_folder": "This mailbox has no suitable folder (archive, spam or trash). Create one and try again."
   },
   "folders": {
     "inbox": "Inbox",
@@ -124,6 +125,7 @@
     "delete": "Delete",
     "flag": "Flag",
     "more": "More",
+    "markUnread": "Mark as unread",
     "verified": "Sender verified",
     "suspicious": "This looks like fraud: the sender pretends to be a different organization. Do not follow links and do not enter a password.",
     "imagesBlocked": "External images are hidden so that the sender cannot tell when you opened the message.",
