@@ -58,19 +58,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
     public async Task<MessagePage> ListMessagesAsync(MessageListQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
-        IMailFolder folder;
-        try
-        {
-            folder = IsInboxPath(query.Folder) ? client.Inbox : await client.GetFolderAsync(query.Folder, cancellationToken).ConfigureAwait(false);
-            _ = await folder.OpenAsync(FolderAccess.ReadOnly, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception exception) when (exception is FolderNotFoundException or ImapCommandException or InvalidOperationException)
-        {
-            // A missing folder and a folder that cannot be opened (a container) look the same to the caller.
-            throw new MailFolderNotFoundException("The folder does not exist or cannot hold messages.", exception);
-        }
-
-        var uidValidity = (uint)folder.UidValidity;
+        var (folder, uidValidity) = await OpenAsync(query.Folder, cancellationToken).ConfigureAwait(false);
         if (query.After is { } after && after.UidValidity != uidValidity)
         {
             throw new UidValidityChangedException(query.Folder, after.UidValidity, uidValidity);
@@ -160,6 +148,77 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         return new MessagePage(uidValidity, items, next, matching.Count);
     }
 
+    /// <summary>Opens a folder read-only (nothing is marked as read by looking); a folder that is missing or is a container is "not found".</summary>
+    private async Task<(IMailFolder Folder, uint UidValidity)> OpenAsync(string path, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var folder = IsInboxPath(path) ? client.Inbox : await client.GetFolderAsync(path, cancellationToken).ConfigureAwait(false);
+            _ = await folder.OpenAsync(FolderAccess.ReadOnly, cancellationToken).ConfigureAwait(false);
+            return (folder, (uint)folder.UidValidity);
+        }
+        catch (Exception exception) when (exception is FolderNotFoundException or ImapCommandException or InvalidOperationException)
+        {
+            // A missing folder and a folder that cannot be opened (a container) look the same to the caller.
+            throw new MailFolderNotFoundException("The folder does not exist or cannot hold messages.", exception);
+        }
+    }
+
+    public async Task<MessageSource> GetMessageAsync(MessageId id, CancellationToken cancellationToken)
+    {
+        var (folder, uidValidity) = await OpenAsync(id.Folder, cancellationToken).ConfigureAwait(false);
+        if (id.UidValidity != uidValidity)
+        {
+            throw new UidValidityChangedException(id.Folder, id.UidValidity, uidValidity);
+        }
+
+        var uid = new UniqueId(id.Uid);
+        var summaries = await folder.FetchAsync([uid], MessageSummaryItems.UniqueId | MessageSummaryItems.Size | MessageSummaryItems.Flags, cancellationToken).ConfigureAwait(false);
+        var summary = summaries.FirstOrDefault(m => m.UniqueId.Id == id.Uid) ?? throw new MailMessageNotFoundException("The message is not in the folder.");
+        if (summary.Size is { } size && size > MessageLimits.MaxViewableBytes)
+        {
+            throw new MailMessageTooLargeException(size);
+        }
+
+        byte[] content;
+        try
+        {
+            // BODY.PEEK[]: the mail without the side effect of marking it as read.
+            using var stream = await folder.GetStreamAsync(uid, cancellationToken: cancellationToken).ConfigureAwait(false);
+            using var buffer = new MemoryStream(checked((int)Math.Min(summary.Size ?? 64 * 1024, MessageLimits.MaxViewableBytes)));
+            var chunk = new byte[81920];
+            int read;
+            while ((read = await stream.ReadAsync(chunk, cancellationToken).ConfigureAwait(false)) > 0)
+            {
+                if (buffer.Length + read > MessageLimits.MaxViewableBytes)
+                {
+                    throw new MailMessageTooLargeException(summary.Size ?? 0);
+                }
+
+                buffer.Write(chunk, 0, read);
+            }
+
+            content = buffer.ToArray();
+        }
+        catch (MessageNotFoundException exception)
+        {
+            throw new MailMessageNotFoundException("The message is not in the folder.", exception);
+        }
+
+        var flags = summary.Flags ?? MessageFlags.None;
+        return new MessageSource(
+            id,
+            content,
+            flags.HasFlag(MessageFlags.Seen),
+            flags.HasFlag(MessageFlags.Flagged),
+            flags.HasFlag(MessageFlags.Answered),
+            flags.HasFlag(MessageFlags.Draft),
+            Labels(summary));
+    }
+
+    private static string[] Labels(IMessageSummary message) =>
+        [.. (message.Keywords is { } keywords ? keywords : new HashSet<string>()).Where(k => k.Length > 0 && k[0] is not '$' and not '\\').Order(StringComparer.Ordinal)];
+
     private const MessageSummaryItems SummaryItems =
         MessageSummaryItems.UniqueId | MessageSummaryItems.Envelope | MessageSummaryItems.Flags | MessageSummaryItems.InternalDate
         | MessageSummaryItems.BodyStructure | MessageSummaryItems.Size;
@@ -201,7 +260,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
             flags.HasFlag(MessageFlags.Answered),
             flags.HasFlag(MessageFlags.Draft),
             message.Attachments.Any(),
-            [.. (message.Keywords is { } keywords ? keywords : new HashSet<string>()).Where(k => k.Length > 0 && k[0] is not '$' and not '\\').Order(StringComparer.Ordinal)],
+            Labels(message),
             message.Size ?? 0,
             PreviewText.Normalize(message.PreviewText));
     }

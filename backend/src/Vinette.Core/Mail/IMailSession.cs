@@ -27,6 +27,16 @@ public interface IMailSession : IAsyncDisposable
     Task<MessagePage> ListMessagesAsync(MessageListQuery query, CancellationToken cancellationToken);
 
     /// <summary>
+    /// The raw mail and the flags of one message. Reading does not mark the message as read. A mail larger than
+    /// <see cref="MessageLimits.MaxViewableBytes"/> is not downloaded.
+    /// </summary>
+    /// <exception cref="MailFolderNotFoundException">There is no such folder, or it cannot hold messages.</exception>
+    /// <exception cref="UidValidityChangedException">The id belongs to an earlier incarnation of the folder.</exception>
+    /// <exception cref="MailMessageNotFoundException">The message is not in the folder (any more).</exception>
+    /// <exception cref="MailMessageTooLargeException">The mail is larger than the limit.</exception>
+    Task<MessageSource> GetMessageAsync(MessageId id, CancellationToken cancellationToken);
+
+    /// <summary>
     /// How much of the mailbox's storage is used (IMAP GETQUOTAROOT). Null when the server has no quota extension or
     /// sets no storage limit for this mailbox: then there is nothing to show.
     /// </summary>

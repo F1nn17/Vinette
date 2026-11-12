@@ -50,6 +50,16 @@ public sealed partial class MailExceptionHandler(
                 // The folder name is the user's data: not in the answer, not in the log.
                 return await WriteAsync(httpContext, StatusCodes.Status404NotFound, "There is no such folder.", ErrorCodes.NotFound);
 
+            case MailMessageNotFoundException:
+                return await WriteAsync(httpContext, StatusCodes.Status404NotFound, "There is no such message.", ErrorCodes.NotFound);
+
+            case MailMessageTooLargeException:
+                return await WriteAsync(
+                    httpContext,
+                    StatusCodes.Status413PayloadTooLarge,
+                    "The message is too large to be shown.",
+                    ErrorCodes.PayloadTooLarge);
+
             case UidValidityChangedException:
                 // The folder name is the user's data: it stays out of the log and the answer.
                 LogUidValidityChanged(httpContext.User.Identity?.Name);

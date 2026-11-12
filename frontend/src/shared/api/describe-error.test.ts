@@ -5,12 +5,16 @@ const t = (key: string, options?: Record<string, unknown>) =>
   options ? `${key}:${JSON.stringify(options)}` : key;
 
 describe('describeApiError', () => {
-  it.each(['mail_unavailable', 'mail_busy', 'session_revoked', 'uid_validity_changed'])(
-    'explains %s',
-    (code) => {
-      expect(describeApiError(new ApiError(503, code, undefined, 'x'), t)).toBe(`errors.${code}`);
-    },
-  );
+  it.each([
+    'mail_unavailable',
+    'mail_busy',
+    'session_revoked',
+    'uid_validity_changed',
+    'not_found',
+    'payload_too_large',
+  ])('explains %s', (code) => {
+    expect(describeApiError(new ApiError(503, code, undefined, 'x'), t)).toBe(`errors.${code}`);
+  });
 
   it('turns the wait of a "too many requests" answer into whole minutes, at least one', () => {
     expect(describeApiError(new ApiError(429, 'too_many_requests', undefined, 'x', 90), t)).toBe(

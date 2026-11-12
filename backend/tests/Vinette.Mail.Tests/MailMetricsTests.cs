@@ -19,6 +19,8 @@ public sealed class MailMetricsTests
 
         public Task<MailQuota?> GetQuotaAsync(CancellationToken cancellationToken) => Task.FromResult<MailQuota?>(null);
 
+        public Task<MessageSource> GetMessageAsync(MessageId id, CancellationToken cancellationToken) => throw new NotSupportedException();
+
 
 
         public Task<MessagePage> ListMessagesAsync(MessageListQuery query, CancellationToken cancellationToken) => Task.FromResult(new MessagePage(1, [], null, 0));

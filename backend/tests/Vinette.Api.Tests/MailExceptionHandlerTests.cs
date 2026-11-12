@@ -57,6 +57,8 @@ public sealed class MailExceptionHandlerTests
         app.MapGet("/busy", (Func<IResult>)(() => throw new MailBusyException("full", TimeSpan.FromSeconds(7))));
         app.MapGet("/down", (Func<IResult>)(() => throw new MailUnavailableException("IOException: reset")));
         app.MapGet("/message/{id}", (MessageId id) => id.ToString());
+        app.MapGet("/message-gone", (Func<IResult>)(() => throw new MailMessageNotFoundException("uid 5 of Секретная папка")));
+        app.MapGet("/message-large", (Func<IResult>)(() => throw new MailMessageTooLargeException(99_000_000)));
         app.MapGet("/folder-recreated", (Func<IResult>)(() =>
         {
             new MessageId("Секретная папка", 5, 1).EnsureCurrent(6);
@@ -155,5 +157,33 @@ public sealed class MailExceptionHandlerTests
 
         Assert.Equal(id, await good.Content.ReadAsStringAsync(Token));
         Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_Message_That_Is_Gone_Gives_404_Without_Details()
+    {
+        var (app, client, _, _) = await StartAsync();
+        await using var _ = app;
+
+        var response = await client.GetAsync("/message-gone", Token);
+        var body = await response.Content.ReadAsStringAsync(Token);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("not_found", JsonDocument.Parse(body).RootElement.GetProperty("code").GetString());
+        Assert.DoesNotContain("Секретная", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_Message_That_Is_Too_Large_Gives_413_With_Its_Own_Code()
+    {
+        var (app, client, _, _) = await StartAsync();
+        await using var _ = app;
+
+        var response = await client.GetAsync("/message-large", Token);
+        var body = await response.Content.ReadAsStringAsync(Token);
+
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+        Assert.Equal("payload_too_large", JsonDocument.Parse(body).RootElement.GetProperty("code").GetString());
+        Assert.DoesNotContain("99000000", body, StringComparison.Ordinal);
     }
 }
