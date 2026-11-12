@@ -65,6 +65,27 @@ public interface IMailSession : IAsyncDisposable
     Task DeleteMessagePermanentlyAsync(MessageId id, CancellationToken cancellationToken);
 
     /// <summary>
+    /// The labels that messages of the inbox carry now (by the names the keywords stand for), without the system ones; the labels of messages in
+    /// other folders are not found this way (the user's own list, kept in the settings, has those that were put on in Vinette).
+    /// </summary>
+    Task<IReadOnlyList<string>> GetLabelsAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Puts labels on a message and takes labels off it (IMAP STORE of keywords) and returns the labels it has afterwards. Adding what is
+    /// there and removing what is not is not an error. The names must be valid (<see cref="LabelName"/>).
+    /// </summary>
+    /// <exception cref="MailFolderNotFoundException">There is no such folder, or it cannot hold messages.</exception>
+    /// <exception cref="UidValidityChangedException">The id belongs to an earlier incarnation of the folder.</exception>
+    /// <exception cref="MailMessageNotFoundException">The message is not in the folder (any more).</exception>
+    Task<IReadOnlyList<string>> UpdateMessageLabelsAsync(MessageId id, IReadOnlyCollection<string> add, IReadOnlyCollection<string> remove, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Renames a label on every message of every folder, or, with <paramref name="newName"/> null, takes it off every message. Returns how many
+    /// messages changed. A folder that cannot be searched is skipped.
+    /// </summary>
+    Task<int> RenameLabelAsync(string oldName, string? newName, CancellationToken cancellationToken);
+
+    /// <summary>
     /// How much of the mailbox's storage is used (IMAP GETQUOTAROOT). Null when the server has no quota extension or
     /// sets no storage limit for this mailbox: then there is nothing to show.
     /// </summary>

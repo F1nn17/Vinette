@@ -17,6 +17,8 @@ export interface MessageRowProps {
   avatar?: boolean;
   /** The compact density: lower rows and no preview (DESIGN.md §5). */
   compact?: boolean;
+  /** The colors the user chose for labels (by name); the others get one by their name. */
+  labelColors?: Readonly<Record<string, string>>;
 }
 
 /** One line of the list (DESIGN.md §5): sender, subject, preview, labels; unread, flag and attachment marks. */
@@ -28,6 +30,7 @@ export function MessageRow({
   now,
   avatar = false,
   compact = false,
+  labelColors,
 }: MessageRowProps) {
   const { t, i18n } = useTranslation();
   const person = showRecipient ? message.to[0] : message.from;
@@ -74,7 +77,7 @@ export function MessageRow({
   const labels = message.labels.length > 0 && (
     <span className="mt-1.5 flex flex-wrap gap-1.5">
       {message.labels.map((label) => (
-        <LabelTag key={label} color={labelColor(label)}>
+        <LabelTag key={label} color={labelColor(label, labelColors)}>
           {label}
         </LabelTag>
       ))}

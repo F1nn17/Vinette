@@ -20,8 +20,14 @@ public sealed record UserSettings
     /// <summary>The most labels with a color a user can have.</summary>
     public const int MaxLabelColors = 200;
 
+    /// <summary>The most labels a user can create.</summary>
+    public const int MaxLabels = 200;
+
     /// <summary>The most senders whose pictures are shown without asking.</summary>
     public const int MaxTrustedImageSenders = 500;
+
+    /// <summary>The colors of the design's palette a label can have (DESIGN.md, "Метки").</summary>
+    public static IReadOnlyList<string> LabelPalette { get; } = ["work", "bills", "personal"];
 
     /// <summary>The longest label name or color, in UTF-16 units.</summary>
     public const int MaxTextLength = 64;
@@ -37,6 +43,50 @@ public sealed record UserSettings
 
     /// <summary>The color of each label by the label's name; the color is a key from the palette of the design, not CSS.</summary>
     public IReadOnlyDictionary<string, string> LabelColors { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// The labels the user created, by name, so that a label lives before any message has it (the server only knows a label
+    /// through the messages that carry it). Sorted, without repeats (names are compared without regard to case).
+    /// </summary>
+    public IReadOnlyList<string> Labels { get; init; } = [];
+
+    /// <summary>The chosen color of a label (a key of <see cref="LabelPalette"/>), or null if it has none; the name is compared without regard to case.</summary>
+    public string? ColorOf(string label) =>
+        LabelColors.FirstOrDefault(p => string.Equals(p.Key, label, StringComparison.OrdinalIgnoreCase)).Value;
+
+    /// <summary>These settings with the label in the list of labels (once) and, if <paramref name="color"/> is given, with its color; null leaves the color as it is, an empty text removes it.</summary>
+    public UserSettings WithLabel(string label, string? color = null)
+    {
+        var labels = Labels.Where(l => !Mail.LabelName.Same(l, label)).Append(label).Order(StringComparer.CurrentCultureIgnoreCase);
+        return (this with { Labels = [.. labels] }).WithColor(label, color);
+    }
+
+    /// <summary>These settings without the label: not in the list of labels and without a color.</summary>
+    public UserSettings WithoutLabel(string label) =>
+        (this with { Labels = [.. Labels.Where(l => !Mail.LabelName.Same(l, label))] }).WithColor(label, string.Empty);
+
+    /// <summary>These settings with the label renamed (its color goes with it).</summary>
+    public UserSettings WithRenamedLabel(string from, string to)
+    {
+        var color = ColorOf(from);
+        return WithoutLabel(from).WithLabel(to, color);
+    }
+
+    private UserSettings WithColor(string label, string? color)
+    {
+        if (color is null)
+        {
+            return this;
+        }
+
+        var colors = LabelColors.Where(p => !string.Equals(p.Key, label, StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key, p => p.Value);
+        if (color.Length > 0)
+        {
+            colors[label] = color;
+        }
+
+        return this with { LabelColors = colors };
+    }
 
     /// <summary>
     /// The addresses (lower case, exactly as written in From) whose pictures from the web are shown without asking, when
@@ -78,6 +128,14 @@ public sealed record UserSettings
         else if (TrustedImageSenders.Any(a => a.Length is 0 or > 254 || a.Any(char.IsControl) || a.Trim().Length == 0))
         {
             problem = "A trusted sender must be an address of 1 to 254 characters without control characters.";
+        }
+        else if (Labels.Count > MaxLabels)
+        {
+            problem = $"At most {MaxLabels} labels can be created.";
+        }
+        else if (Labels.Any(l => !IsText(l)))
+        {
+            problem = $"Label names must be text of 1 to {MaxTextLength} characters without control characters.";
         }
         else if (LabelColors.Count > MaxLabelColors)
         {

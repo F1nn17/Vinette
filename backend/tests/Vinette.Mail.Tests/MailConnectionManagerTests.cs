@@ -49,6 +49,12 @@ public sealed class MailConnectionManagerTests
 
         public Task DeleteMessagePermanentlyAsync(MessageId id, CancellationToken cancellationToken) => throw new NotSupportedException();
 
+        public Task<IReadOnlyList<string>> GetLabelsAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<string>> UpdateMessageLabelsAsync(MessageId id, IReadOnlyCollection<string> add, IReadOnlyCollection<string> remove, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<int> RenameLabelAsync(string oldName, string? newName, CancellationToken cancellationToken) => throw new NotSupportedException();
+
 
 
         public Task<MessagePage> ListMessagesAsync(MessageListQuery query, CancellationToken cancellationToken) => Task.FromResult(new MessagePage(1, [], null, 0));
