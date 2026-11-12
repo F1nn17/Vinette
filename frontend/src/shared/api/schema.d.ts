@@ -247,6 +247,7 @@ export interface components {
             /** Format: int32 */
             blockedExternalResources: number | string;
             truncated: boolean;
+            sender: components["schemas"]["SenderDto"];
             attachments: components["schemas"]["AttachmentDto"][];
         };
         MessageListItemDto: {
@@ -282,6 +283,10 @@ export interface components {
         };
         QuotaResponse: {
             storage: null | components["schemas"]["StorageDto"];
+        };
+        SenderDto: {
+            verdict: string;
+            domain: null | string;
         };
         SettingsDto: {
             density: string;

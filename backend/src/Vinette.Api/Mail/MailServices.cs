@@ -31,6 +31,12 @@ public static class MailServices
                 connectionLimits: new MailConnectionLimits(imap.MaxConnectionsPerUser, imap.MaxConnections, imap.ConnectionWaitTimeout));
         });
         services.AddSingleton<IMailGateway>(provider => provider.GetRequiredService<MailConnectionManager>());
+        services.AddSingleton(provider =>
+        {
+            var configured = provider.GetRequiredService<IOptions<SenderCheckOptions>>().Value.TrustedAuthservIds;
+            var imap = provider.GetRequiredService<IOptions<ImapOptions>>().Value;
+            return new SenderVerifier(configured.Length > 0 ? configured : [imap.Host]);
+        });
         services.AddSingleton<IMessageParser, MimeMessageParser>();
         services.AddSingleton<IMessageHtmlSanitizer, MessageHtmlSanitizer>();
         services.AddHostedService<MailConnectionCleanupService>();
