@@ -260,6 +260,22 @@ export interface paths {
         patch: operations["UpdateMessageLabels"];
         trace?: never;
     };
+    "/api/v1/messages/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ChangeMessages"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings": {
         parameters: {
             query?: never;
@@ -324,6 +340,10 @@ export interface components {
             size: number | string;
             isMessage: boolean;
         };
+        BatchMovedDto: {
+            from: string;
+            id: null | string;
+        };
         CreateLabelRequest: {
             name: null | string;
             color: null | string;
@@ -367,6 +387,17 @@ export interface components {
         };
         MeResponse: {
             address: string;
+        };
+        MessageBatchRequest: {
+            ids: null | string[];
+            action: null | string;
+            to: null | string;
+        };
+        MessageBatchResultDto: {
+            /** Format: int32 */
+            changed: number | string;
+            folder: null | string;
+            moved: components["schemas"]["BatchMovedDto"][];
         };
         MessageDetailDto: {
             id: string;
@@ -1502,6 +1533,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MessageLabelsDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ChangeMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["MessageBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageBatchResultDto"];
                 };
             };
             /** @description Bad Request */

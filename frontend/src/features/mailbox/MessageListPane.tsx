@@ -1,17 +1,37 @@
 import { RefreshCw, Search } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
+import { describeApiError } from '@/shared/api/describe-error';
 import { dateGroupKey, dateGroupLabel, groupByDate } from '@/shared/lib';
 import { cn } from '@/shared/lib';
 import { Avatar, Chip, IconButton, SearchField } from '@/shared/ui';
 import { useListDensity, useSettings, useUpdateSettings } from '@/features/settings';
-import { useFolders, useMessages, type ListFilter, type MessageItem } from './api';
+import {
+  useFolders,
+  useMessageBatch,
+  useMessages,
+  type BatchAction,
+  type ListFilter,
+  type MessageItem,
+} from './api';
 import { folderLabel, folderSlug } from './folder-label';
 import { ListEmpty, ListError, ListNoFolder, ListSkeleton, OfflineBanner } from './list-states';
 import { ListOptionsMenu } from './ListOptionsMenu';
 import { MessageRow } from './MessageRow';
 import { NavMenuButton } from './NavMenuButton';
+import { SelectionBar } from './SelectionBar';
+import {
+  EMPTY_SELECTION,
+  extend,
+  MAX_SELECTED,
+  keepListed,
+  selectAll,
+  selectedInOrder,
+  toggle,
+  type Selection,
+  type SelectionChange,
+} from './selection';
 import { useShell } from './shell-context';
 import { ComposeFab } from './ComposeFab';
 import { useOnline } from './use-online';
@@ -46,6 +66,15 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
   const mobile = layout === 'mobile';
   const [searchOpen, setSearchOpen] = useState(false);
   const [scroller, setScroller] = useState<HTMLElement | null>(null);
+  const navigate = useNavigate();
+  const batch = useMessageBatch();
+  // The selection belongs to one folder and filter: another list starts with nothing selected.
+  const listKey = `${slug}|${params.get('filter') ?? ''}`;
+  const [selectionState, setSelectionState] = useState<{
+    key: string;
+    selection: Selection;
+    capped: boolean;
+  }>({ key: listKey, selection: EMPTY_SELECTION, capped: false });
 
   const folders = useFolders();
   const folder = folders.data?.find((f) => folderSlug(f) === slug);
@@ -77,6 +106,33 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
     },
     ...rows.map((item) => ({ type: 'row' as const, key: item.id, item })),
   ]);
+  const order = items.map((m) => m.id);
+  const current = selectionState.key === listKey ? selectionState : null;
+  const selection = keepListed(current?.selection ?? EMPTY_SELECTION, order);
+  const capped = current?.capped ?? false;
+  const selectedIds = selectedInOrder(selection, order);
+  const selecting = selectedIds.length > 0;
+  const apply = (change: SelectionChange) =>
+    setSelectionState({ key: listKey, selection: change.selection, capped: change.capped });
+  const clearSelection = () => {
+    batch.reset();
+    setSelectionState({ key: listKey, selection: EMPTY_SELECTION, capped: false });
+  };
+  const runBatch = (action: BatchAction) => {
+    const ids = selectedIds;
+    batch.mutate(
+      { ids, action },
+      {
+        onSuccess: () => {
+          clearSelection();
+          // The open message went to another folder: the reading pane would show a message that is no longer here.
+          if (messageId && ids.includes(messageId) && action !== 'read') {
+            void navigate(`/mail/${encodeURIComponent(slug)}${search}`);
+          }
+        },
+      },
+    );
+  };
   const showRecipient = folder?.role === 'sent' || folder?.role === 'drafts';
   const title = folder ? folderLabel(folder, t) : slug === 'inbox' ? t('folders.inbox') : '';
   const error = folders.isError ? folders.error : messages.isError ? messages.error : null;
@@ -100,48 +156,67 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
       <header
         className={cn('flex flex-col px-5 pb-3', mobile ? 'gap-3 px-4 pt-3' : 'gap-3.5 pt-[18px]')}
       >
-        <div className="flex items-center gap-2">
-          {mobile && <NavMenuButton />}
-          <h1 className="flex min-w-0 flex-1 items-baseline gap-2">
-            <span
-              className={cn('truncate font-bold text-ink', mobile ? 'text-lead' : 'text-heading')}
-              style={mobile ? { fontSize: 20 } : undefined}
-            >
-              {title}
-            </span>
-            {unread > 0 && !mobile && (
-              <span className="shrink-0 text-secondary text-muted">
-                {t('list.unreadCount', { count: unread })}
-              </span>
-            )}
-          </h1>
-          {mobile ? (
-            <>
-              <IconButton
-                aria-label={t('list.search')}
-                aria-expanded={searchOpen}
-                onClick={() => setSearchOpen((open) => !open)}
+        {selecting ? (
+          <>
+            {/* the heading stays for screen readers and the page outline */}
+            <h1 className="sr-only">{title}</h1>
+            <SelectionBar
+              count={selectedIds.length}
+              allSelected={selectedIds.length === Math.min(order.length, MAX_SELECTED)}
+              folderRole={folder?.role}
+              busy={batch.isPending}
+              capped={capped}
+              error={batch.isError ? describeApiError(batch.error, t) : null}
+              onSelectAll={() => apply(selectAll(order))}
+              onClear={clearSelection}
+              onAction={runBatch}
+              narrow={mobile}
+            />
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            {mobile && <NavMenuButton />}
+            <h1 className="flex min-w-0 flex-1 items-baseline gap-2">
+              <span
+                className={cn('truncate font-bold text-ink', mobile ? 'text-lead' : 'text-heading')}
+                style={mobile ? { fontSize: 20 } : undefined}
               >
-                <Search size={20} strokeWidth={1.8} aria-hidden />
-              </IconButton>
-              {address && (
-                <span aria-hidden="true">
-                  <Avatar name={address} size={36} />
+                {title}
+              </span>
+              {unread > 0 && !mobile && (
+                <span className="shrink-0 text-secondary text-muted">
+                  {t('list.unreadCount', { count: unread })}
                 </span>
               )}
-            </>
-          ) : (
-            <>
-              <IconButton aria-label={t('list.refresh')} onClick={refresh}>
-                <RefreshCw size={18} strokeWidth={1.8} aria-hidden />
-              </IconButton>
-              <ListOptionsMenu
-                density={density}
-                onDensityChange={(next) => updateSettings.mutate({ density: next })}
-              />
-            </>
-          )}
-        </div>
+            </h1>
+            {mobile ? (
+              <>
+                <IconButton
+                  aria-label={t('list.search')}
+                  aria-expanded={searchOpen}
+                  onClick={() => setSearchOpen((open) => !open)}
+                >
+                  <Search size={20} strokeWidth={1.8} aria-hidden />
+                </IconButton>
+                {address && (
+                  <span aria-hidden="true">
+                    <Avatar name={address} size={36} />
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <IconButton aria-label={t('list.refresh')} onClick={refresh}>
+                  <RefreshCw size={18} strokeWidth={1.8} aria-hidden />
+                </IconButton>
+                <ListOptionsMenu
+                  density={density}
+                  onDensityChange={(next) => updateSettings.mutate({ density: next })}
+                />
+              </>
+            )}
+          </div>
+        )}
         {(!mobile || searchOpen) && (
           <SearchField aria-label={t('list.search')} placeholder={t('list.search')} />
         )}
@@ -187,6 +262,11 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
                 avatar={mobile}
                 compact={compact}
                 labelColors={settings.data?.labelColors}
+                checked={selection.ids.has(m.id)}
+                selecting={selecting}
+                onSelect={(how) =>
+                  apply(how === 'range' ? extend(selection, order, m.id) : toggle(selection, m.id))
+                }
               />
             )}
             footer={

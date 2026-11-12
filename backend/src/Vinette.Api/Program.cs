@@ -94,6 +94,7 @@ api.MapMessageList();
 api.MapMessages();
 api.MapMessageActions();
 api.MapLabels();
+api.MapMessageBatch();
 api.MapSettings();
 app.MapHub<MailHub>("/hubs/mail");
 app.MapBranding();
