@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Vinette.Api.Errors;
 using Vinette.Api.Sessions;
 using Vinette.Core.Mail;
@@ -47,7 +48,7 @@ public sealed record MessageDetailDto(
     bool Truncated,
     IReadOnlyList<AttachmentDto> Attachments);
 
-public static class MessageEndpoints
+public static partial class MessageEndpoints
 {
     public static IEndpointRouteBuilder MapMessages(this IEndpointRouteBuilder api)
     {
@@ -61,8 +62,66 @@ public static class MessageEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+        api.MapGet("/messages/{id}/attachments/{partId}", DownloadAsync)
+            .WithName("DownloadAttachment")
+            .WithTags("Mail")
+            .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         return api;
     }
+
+    /// <summary>
+    /// An attached file, always as a download: <c>Content-Disposition: attachment</c> with the safe name, a type from a short
+    /// list of harmless ones (anything else is plain bytes), <c>nosniff</c> so that the browser does not guess a more
+    /// dangerous type, and a CSP that forbids everything in case the file is ever opened as a page. HTML and SVG are never
+    /// shown from here.
+    /// </summary>
+    /// <param name="id">The message's identifier from the list.</param>
+    /// <param name="partId">The attachment's <c>partId</c> from the message (<c>1.2.1</c>).</param>
+    private static async Task<IResult> DownloadAsync(
+        MessageId id,
+        string partId,
+        HttpContext http,
+        IMailGateway gateway,
+        SessionService sessions,
+        IMessageParser parser,
+        CancellationToken cancellationToken)
+    {
+        if (!PartIdPattern().IsMatch(partId))
+        {
+            return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "partId is not a part address.", extensions: new Dictionary<string, object?> { ["code"] = ErrorCodes.BadRequest });
+        }
+
+        var source = await gateway.ExecuteAsync(
+            http.GetMailCredentials(sessions),
+            (session, token) => session.GetMessageAsync(id, token),
+            cancellationToken);
+
+        using var stream = new MemoryStream(source.Content, writable: false);
+        var attachment = await parser.ExtractAttachmentAsync(stream, partId, cancellationToken);
+        if (attachment is null)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "There is no such attachment.", extensions: new Dictionary<string, object?> { ["code"] = ErrorCodes.NotFound });
+        }
+
+        var headers = http.Response.Headers;
+        headers.XContentTypeOptions = "nosniff";
+        headers.CacheControl = "private, no-store";
+        headers.ContentSecurityPolicy = "default-src 'none'; sandbox";
+        headers["Referrer-Policy"] = "no-referrer";
+        return Results.File(
+            attachment.Content,
+            AttachmentContentType.ForDownload(attachment.Attachment.ContentType),
+            fileDownloadName: attachment.Attachment.FileName);
+    }
+
+    [GeneratedRegex(@"^[0-9]{1,4}(\.[0-9]{1,4}){0,31}$", RegexOptions.CultureInvariant)]
+    private static partial Regex PartIdPattern();
 
     /// <param name="id">The message's identifier from the list (opaque text, use it as it is).</param>
     private static async Task<IResult> GetAsync(

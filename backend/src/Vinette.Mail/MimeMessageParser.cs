@@ -36,7 +36,44 @@ public sealed class MimeMessageParser : IMessageParser
         return await ParseAsync(message, cancellationToken).ConfigureAwait(false);
     }
 
-    internal static async Task<ParsedMessage> ParseAsync(MimeMessage message, CancellationToken cancellationToken)
+    public async Task<AttachmentContent?> ExtractAttachmentAsync(Stream source, string partId, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentException.ThrowIfNullOrEmpty(partId);
+        MimeMessage message;
+        try
+        {
+            message = await MimeMessage.LoadAsync(source, cancellationToken).ConfigureAwait(false);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+
+        // The same walk that lists the attachments, so that only what is listed can be taken, under the same names.
+        var entities = new Dictionary<string, MimeEntity>(StringComparer.Ordinal);
+        var parsed = await ParseAsync(message, cancellationToken, entities).ConfigureAwait(false);
+        var attachment = parsed.Attachments.FirstOrDefault(a => a.PartId == partId);
+        if (attachment is null || !entities.TryGetValue(partId, out var entity))
+        {
+            return null;
+        }
+
+        using var buffer = new MemoryStream();
+        switch (entity)
+        {
+            case MessagePart part when part.Message is not null:
+                await part.Message.WriteToAsync(buffer, cancellationToken).ConfigureAwait(false);
+                break;
+            case MimePart { Content: not null } leaf:
+                await leaf.Content.DecodeToAsync(buffer, cancellationToken).ConfigureAwait(false);
+                break;
+        }
+
+        return new AttachmentContent(attachment, buffer.ToArray());
+    }
+
+    internal static async Task<ParsedMessage> ParseAsync(MimeMessage message, CancellationToken cancellationToken, Dictionary<string, MimeEntity>? entities = null)
     {
         var text = message.TextBody;
         var html = message.HtmlBody;
@@ -74,7 +111,7 @@ public sealed class MimeMessageParser : IMessageParser
         var counter = new Counter();
         if (message.Body is { } body)
         {
-            await WalkAsync(body, "1", 1, bodies, attachments, inline, counter, cancellationToken).ConfigureAwait(false);
+            await WalkAsync(body, "1", 1, bodies, attachments, inline, entities, counter, cancellationToken).ConfigureAwait(false);
         }
 
         return new ParsedMessage(
@@ -135,6 +172,7 @@ public sealed class MimeMessageParser : IMessageParser
         List<TextPart> bodies,
         List<MessageAttachment> attachments,
         List<InlinePart> inline,
+        Dictionary<string, MimeEntity>? entities,
         Counter counter,
         CancellationToken cancellationToken)
     {
@@ -149,7 +187,7 @@ public sealed class MimeMessageParser : IMessageParser
                 for (var i = 0; i < multipart.Count; i++)
                 {
                     var childId = $"{id}.{(i + 1).ToString(CultureInfo.InvariantCulture)}";
-                    await WalkAsync(multipart[i], childId, depth + 1, bodies, attachments, inline, counter, cancellationToken).ConfigureAwait(false);
+                    await WalkAsync(multipart[i], childId, depth + 1, bodies, attachments, inline, entities, counter, cancellationToken).ConfigureAwait(false);
                 }
 
                 break;
@@ -162,6 +200,7 @@ public sealed class MimeMessageParser : IMessageParser
                     $"message-{id}.eml");
                 var messageSize = await MessageSizeAsync(part, cancellationToken).ConfigureAwait(false);
                 attachments.Add(new MessageAttachment(id, name, part.ContentType.MimeType.ToLowerInvariant(), messageSize, true));
+                entities?.Add(id, part);
                 break;
 
             case TextPart text when bodies.Contains(text):
@@ -181,6 +220,7 @@ public sealed class MimeMessageParser : IMessageParser
                 {
                     var fallback = $"attachment-{id}{ExtensionOf(type)}";
                     attachments.Add(new MessageAttachment(id, AttachmentFileName.Sanitize(FileNameOf(leaf), fallback), type, size, false));
+                    entities?.Add(id, leaf);
                 }
 
                 break;

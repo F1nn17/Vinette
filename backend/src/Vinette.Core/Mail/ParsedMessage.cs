@@ -53,9 +53,20 @@ public sealed record ParsedMessage(
     IReadOnlyList<InlinePart> InlineParts,
     IReadOnlyList<string> AuthenticationResults);
 
+/// <summary>An attached file with its bytes.</summary>
+/// <param name="Attachment">What the message lists about it: safe name, declared type, size.</param>
+/// <param name="Content">The decoded bytes (for an attached mail, the mail itself).</param>
+public sealed record AttachmentContent(MessageAttachment Attachment, byte[] Content);
+
 /// <summary>Takes a raw mail (RFC 5322 with MIME) apart. Never throws on a broken mail: it returns what it could read.</summary>
 public interface IMessageParser
 {
     /// <summary>Parses the mail in <paramref name="source"/>, which is read to its end.</summary>
     Task<ParsedMessage> ParseAsync(Stream source, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The bytes of one attachment of the mail in <paramref name="source"/>, found by the <see cref="MessageAttachment.PartId"/>
+    /// that <see cref="ParseAsync"/> lists; null if the mail has no such attachment (a body or an inline picture is not one).
+    /// </summary>
+    Task<AttachmentContent?> ExtractAttachmentAsync(Stream source, string partId, CancellationToken cancellationToken);
 }

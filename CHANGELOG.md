@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `GET /api/v1/messages/{id}/attachments/{partId}` downloads an attached file: always as a download (never shown in the browser), with a safe file name, `nosniff` and a type from a short list of harmless ones (HTML, SVG and anything unusual are sent as plain bytes). An attached mail is downloaded as an `.eml` file.
 - Pictures that belong to a mail (inline images sent with it) are shown in its body: they are embedded into the page (PNG, JPEG, GIF, WebP up to 1 MB each and 8 MB per message, recognized by their content, never SVG), so opening a message needs no further request for them.
 - `GET /api/v1/messages/{id}` opens a message for reading: headers, all recipients, flags, the body as cleaned HTML (the sender's HTML with active content removed, or the plain text with links and quotations; external pictures are taken out and counted) and the list of attachments. Opening does not mark the message as read; a message larger than 32 MB is refused with `payload_too_large`.
 - The list options button (next to refresh) switches the message list between the comfortable and the compact density; the compact one has lower rows without the preview and does not ask the mail server for previews. The choice is saved per mailbox (`GET` and `PATCH /api/v1/settings`) and kept after a reload and on other devices. On a phone the list always shows the preview.
