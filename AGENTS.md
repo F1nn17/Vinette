@@ -192,7 +192,7 @@ GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRE
 - Санитайзер покрыт отдельным набором XSS-векторов; новый вектор добавляется данными, а не кодом теста.
 - Интеграционные тесты — против реального почтового сервера в Testcontainers: класс помечается `[Integration]` (trait `Category=Integration`) и `[Collection(DovecotFixture.CollectionName)]`, в сборке теста объявляется `[CollectionDefinition(DovecotFixture.CollectionName)] ... : ICollectionFixture<DovecotFixture>`. Общая инфраструктура — проект `backend/tests/Vinette.TestSupport` (контейнер Dovecot, ящики alice и bob, фикстуры писем загружены в INBOX). `make test` Docker не требует и интеграционные тесты пропускает; запускаются `make test-integration`.
 - Фронтенд: Vitest + Testing Library для логики и компонентов; каждый примитив `shared/ui` имеет тест.
-- e2e: Playwright — сценарии «вход» (готов: `frontend/e2e/auth.spec.ts`), «чтение» (готов: `frontend/e2e/reading.spec.ts`), «отправка». Работают против настоящего Dovecot, который замедляет неверные входы (до ~15 с), поэтому воркер один и таймауты щедрые; бэкенд для e2e запускается с мягкими лимитами (`playwright.config.ts`).
+- e2e: Playwright — сценарии «вход» (готов: `frontend/e2e/auth.spec.ts`), «чтение» (готов: `frontend/e2e/reading.spec.ts`), «действия» (готов: `frontend/e2e/actions.spec.ts`: удалить → отменить, пакет, отказ сервера), «отправка». Работают против настоящего Dovecot, который замедляет неверные входы (до ~15 с), поэтому воркер один и таймауты щедрые; бэкенд для e2e запускается с мягкими лимитами (`playwright.config.ts`).
 - Баг-фикс начинается с теста, который падает. Тесты не зависят от порядка и от внешней сети.
 
 ## 13. Definition of Done

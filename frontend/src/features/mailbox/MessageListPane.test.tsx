@@ -60,6 +60,8 @@ interface Server {
   failBatch?: boolean;
   /** Holds the answer to the batch actions back until it is released. */
   hold?: Promise<void>;
+  /** What a successful batch answers (the default moves nothing that can be found again). */
+  batchResult?: (body: { ids: string[]; action: string }) => unknown;
 }
 
 function mockServer(pages: (url: URL) => unknown): Server {
@@ -84,11 +86,14 @@ function mockServer(pages: (url: URL) => unknown): Server {
       if (url.pathname === '/api/v1/messages/batch') {
         const body = JSON.parse(String(init?.body)) as { ids: string[]; action: string };
         server.batches.push(body);
-        return (server.hold ?? Promise.resolve()).then(() =>
-          server.failBatch
-            ? json({ code: 'mail_unavailable', title: 'x' }, { status: 503 })
-            : json({ changed: body.ids.length, folder: 'Trash', moved: [] }),
-        );
+        return (server.hold ?? Promise.resolve()).then(() => {
+          if (server.failBatch) {
+            return json({ code: 'mail_unavailable', title: 'x' }, { status: 503 });
+          }
+          const answer = server.batchResult?.(body);
+          if (answer instanceof Response) return answer;
+          return json(answer ?? { changed: body.ids.length, folder: 'Trash', moved: [] });
+        });
       }
       if (url.pathname === '/api/v1/folders') return Promise.resolve(json({ folders: FOLDERS }));
       if (url.pathname.endsWith('/messages')) {
@@ -750,6 +755,123 @@ describe('selecting messages', () => {
     );
     expect(screen.getByText('3 непрочитанных')).toBeInTheDocument(); // 4 unread in the folder, minus the one
     release();
+  });
+
+  describe('undoing a move', () => {
+    const real = (count: number) => ({
+      items: Array.from({ length: count }, (_, i) => message(i + 1, { id: `SU5CT1g.1.${i + 1}` })),
+      next: null,
+    });
+    /** The server moved the messages to "Trash": their new ids are `VHJhc2g.5.<uid>`. */
+    const moved = (body: { ids: string[]; action: string }) => ({
+      changed: body.ids.length,
+      folder: 'Trash',
+      moved: body.ids.map((from, i) => ({ from, id: `VHJhc2g.5.${i + 10}` })),
+    });
+
+    it('offers "Undo" after a move, and undoing moves the messages back where they were', async () => {
+      const server = mockServer(() => real(3));
+      server.batchResult = moved;
+      const user = userEvent.setup();
+      renderPane();
+      await screen.findByText('Subject 1');
+
+      await user.click(box(1));
+      await user.click(box(2));
+      await user.click(screen.getByRole('button', { name: 'Удалить' }));
+
+      const toast = await screen.findByRole('status');
+      expect(toast).toHaveTextContent('2 письма перенесены в корзину');
+      await user.click(within(toast).getByRole('button', { name: 'Отменить' }));
+
+      await waitFor(() => expect(server.batches).toHaveLength(2));
+      expect(server.batches[1]).toEqual({
+        ids: ['VHJhc2g.5.10', 'VHJhc2g.5.11'],
+        action: 'move',
+        to: 'INBOX',
+      });
+      await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
+    });
+
+    it('asks for the list again after undoing, so the messages are back on screen', async () => {
+      const server = mockServer(() => real(2));
+      server.batchResult = moved;
+      const user = userEvent.setup();
+      renderPane();
+      await screen.findByText('Subject 1');
+      await user.click(box(1));
+      await user.click(screen.getByRole('button', { name: 'В архив' }));
+      const before = server.urls.filter((u) => u.includes('/messages?')).length;
+
+      await user.click(await screen.findByRole('button', { name: 'Отменить' }));
+
+      await waitFor(() =>
+        expect(server.urls.filter((u) => u.includes('/messages?')).length).toBeGreaterThan(before),
+      );
+    });
+
+    it.each([
+      ['В архив', 'Письмо перенесено в архив'],
+      ['В спам', 'Письмо перенесено в спам'],
+      ['Удалить', 'Письмо перенесено в корзину'],
+    ])('after "%s" the toast says "%s"', async (name, text) => {
+      const server = mockServer(() => real(2));
+      server.batchResult = moved;
+      const user = userEvent.setup();
+      renderPane();
+      await screen.findByText('Subject 1');
+
+      await user.click(box(1));
+      await user.click(screen.getByRole('button', { name }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent(text);
+    });
+
+    it('says what happened but has no "Undo" when the server does not tell where the messages went', async () => {
+      mockServer(() => real(2)); // the default answer has no new ids
+      const user = userEvent.setup();
+      renderPane();
+      await screen.findByText('Subject 1');
+
+      await user.click(box(1));
+      await user.click(screen.getByRole('button', { name: 'Удалить' }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Письмо перенесено в корзину');
+      expect(screen.queryByRole('button', { name: 'Отменить' })).not.toBeInTheDocument();
+    });
+
+    it('offers nothing to undo after marking as read', async () => {
+      mockServer(() => real(2));
+      const user = userEvent.setup();
+      renderPane();
+      await screen.findByText('Subject 1');
+
+      await user.click(box(1));
+      await user.click(screen.getByRole('button', { name: 'Отметить прочитанными' }));
+
+      await waitFor(() => expect(screen.queryByRole('toolbar')).not.toBeInTheDocument());
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('says in plain words when putting the messages back did not work', async () => {
+      const server = mockServer(() => real(2));
+      server.batchResult = (body) =>
+        body.action === 'move'
+          ? new Response(JSON.stringify({ code: 'mail_unavailable', title: 'x' }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' },
+            })
+          : moved(body);
+      const user = userEvent.setup();
+      renderPane();
+      await screen.findByText('Subject 1');
+      await user.click(box(1));
+      await user.click(screen.getByRole('button', { name: 'Удалить' }));
+
+      await user.click(await screen.findByRole('button', { name: 'Отменить' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось вернуть письмо');
+    });
   });
 
   it('does not offer to move messages to the folder they are in', async () => {

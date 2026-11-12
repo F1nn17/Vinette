@@ -171,6 +171,36 @@ export function useMessageBatch() {
       applyBatch(queryClient, ids, action);
       return snapshot;
     },
+    onSuccess: (result, { ids, action }) => {
+      if (!(action in TARGET_ROLE)) return;
+      // Where the messages are now (from the answer) and where they came from (from their ids): putting them back is
+      // one more move. A server that does not say the new ids (no UIDPLUS) leaves no way to find them: no button then.
+      const back = folderOfId(ids[0] ?? '');
+      const now = result.moved.map((m) => m.id);
+      const undoable = back !== null && now.length > 0 && now.every((id): id is string => !!id);
+      toast.show({
+        message: t(`toast.moved.${action}`, { count: result.changed }),
+        action: undoable
+          ? {
+              label: t('toast.undo'),
+              onSelect: () => {
+                apiPost<BatchResult>('/api/v1/messages/batch', {
+                  ids: now,
+                  action: 'move',
+                  to: back,
+                })
+                  .catch(() => toast.show({ tone: 'error', message: t('toast.undoFailed') }))
+                  .finally(() =>
+                    Promise.all([
+                      queryClient.invalidateQueries({ queryKey: ['messages'] }),
+                      queryClient.invalidateQueries({ queryKey: FOLDERS_KEY }),
+                    ]),
+                  );
+              },
+            }
+          : undefined,
+      });
+    },
     onError: (error, _variables, snapshot) => {
       if (snapshot) restore(queryClient, snapshot);
       toast.show({ tone: 'error', message: describeApiError(error, t) });
