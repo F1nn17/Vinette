@@ -63,7 +63,10 @@ public sealed partial class MessageHtmlSanitizer : IMessageHtmlSanitizer
     public SanitizedHtml Sanitize(string? html, Func<string, string?>? resolveContentId) =>
         Sanitize(html, resolveContentId, IMessageHtmlSanitizer.MaxInputLength);
 
-    public SanitizedHtml Sanitize(string? html, Func<string, string?>? resolveContentId, int maxInputLength)
+    public SanitizedHtml Sanitize(string? html, Func<string, string?>? resolveContentId, int maxInputLength) =>
+        Sanitize(html, resolveContentId, maxInputLength, null);
+
+    public SanitizedHtml Sanitize(string? html, Func<string, string?>? resolveContentId, int maxInputLength, Func<string, string?>? resolveExternalImage)
     {
         if (string.IsNullOrWhiteSpace(html))
         {
@@ -79,13 +82,14 @@ public sealed partial class MessageHtmlSanitizer : IMessageHtmlSanitizer
         }
 
         var blocked = 0;
-        var sanitizer = Build(() => blocked++, resolveContentId);
+        var external = new List<string>();
+        var sanitizer = Build(() => blocked++, resolveContentId, resolveExternalImage, external);
         var clean = sanitizer.Sanitize(input);
         clean = DropActiveStyleParts(clean, () => blocked++);
-        return new SanitizedHtml(clean, blocked, truncated, false);
+        return new SanitizedHtml(clean, blocked, truncated, false, external);
     }
 
-    private static HtmlSanitizer Build(Action blockedExternal, Func<string, string?>? resolveContentId)
+    private static HtmlSanitizer Build(Action blockedExternal, Func<string, string?>? resolveContentId, Func<string, string?>? resolveExternalImage, List<string> externalImages)
     {
         var sanitizer = new HtmlSanitizer(new HtmlSanitizerOptions
         {
@@ -130,7 +134,28 @@ public sealed partial class MessageHtmlSanitizer : IMessageHtmlSanitizer
 
                 if (IsExternal(url))
                 {
-                    blockedExternal();
+                    // A picture on the web: asked for here, and shown only if the application fetched it itself.
+                    var address = url.StartsWith("//", StringComparison.Ordinal) ? "https:" + url : url;
+                    if (IsWebAddress(address) && !externalImages.Contains(address, StringComparer.Ordinal) && externalImages.Count < IMessageHtmlSanitizer.MaxExternalImages)
+                    {
+                        externalImages.Add(address);
+                    }
+
+                    // What the caller hands back is not trusted either: only a picture as data, of the allowed kinds, goes in
+                    // (its size was bounded by whoever fetched it, so it is not held to the smaller limit of pictures in the mail).
+                    var embedded = IsWebAddress(address) ? resolveExternalImage?.Invoke(address) : null;
+                    if (embedded is not null && !DataImage().IsMatch(embedded))
+                    {
+                        embedded = null;
+                    }
+
+                    if (embedded is null)
+                    {
+                        blockedExternal();
+                    }
+
+                    e.SanitizedUrl = embedded;
+                    return;
                 }
 
                 e.SanitizedUrl = null;
@@ -268,6 +293,9 @@ public sealed partial class MessageHtmlSanitizer : IMessageHtmlSanitizer
         || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
         || url.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase)
         || url.StartsWith("tel:", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsWebAddress(string url) =>
+        url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsExternal(string url) =>
         url.StartsWith("http:", StringComparison.OrdinalIgnoreCase)

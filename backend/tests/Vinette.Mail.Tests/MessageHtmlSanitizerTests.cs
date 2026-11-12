@@ -65,6 +65,82 @@ public partial class MessageHtmlSanitizerTests
         Assert.False(string.IsNullOrWhiteSpace(result.Html));
     }
 
+    private const string Fetched = "data:image/png;base64,iVBORw0KGgo=";
+
+    [Fact]
+    public void External_Pictures_Are_Reported_Once_Each_And_Blocked_Without_A_Resolver()
+    {
+        var result = Sanitizer.Sanitize(
+            "<img src=\"https://cdn.example.org/a.png\"><img src=\"https://cdn.example.org/a.png\"><img src=\"//cdn.example.org/b.png\"><img src=\"http://x.example/c.gif\">",
+            null,
+            IMessageHtmlSanitizer.MaxInputLength);
+
+        Assert.Equal(["https://cdn.example.org/a.png", "https://cdn.example.org/b.png", "http://x.example/c.gif"], result.ExternalImageList);
+        Assert.Equal(4, result.BlockedExternalResources);
+        Assert.DoesNotContain("example", result.Html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_Picture_The_Application_Fetched_Is_Put_In_As_Data_And_The_Rest_Stays_Out()
+    {
+        var result = Sanitizer.Sanitize(
+            "<img src=\"https://cdn.example.org/a.png\"><img src=\"https://cdn.example.org/missing.png\">",
+            null,
+            IMessageHtmlSanitizer.MaxInputLength,
+            url => url == "https://cdn.example.org/a.png" ? Fetched : null);
+
+        Assert.Contains($"src=\"{Fetched}\"", result.Html, StringComparison.Ordinal);
+        Assert.DoesNotContain("example.org", result.Html, StringComparison.Ordinal);
+        Assert.Equal(1, result.BlockedExternalResources); // only the one that was not fetched
+        Assert.Equal(2, result.ExternalImageList.Count);
+    }
+
+    [Fact]
+    public void Only_Pictures_Are_Resolved_Not_Other_Loads()
+    {
+        var asked = new List<string>();
+
+        var result = Sanitizer.Sanitize(
+            "<body style=\"background:url('http://t.example/bg.png')\"><table background=\"http://t.example/t.png\"><tr><td>x</td></tr></table><a href=\"http://t.example/page\">go</a><img src=\"https://cdn.example.org/a.png\"></body>",
+            null,
+            IMessageHtmlSanitizer.MaxInputLength,
+            url =>
+            {
+                asked.Add(url);
+                return Fetched;
+            });
+
+        Assert.Equal(["https://cdn.example.org/a.png"], asked);
+        Assert.Equal(["https://cdn.example.org/a.png"], result.ExternalImageList);
+        Assert.DoesNotMatch(@"(background|url)\s*[:=(]\s*[""']?\s*https?:", result.Html);
+        Assert.Contains("href=\"http://t.example/page\"", result.Html, StringComparison.Ordinal); // a link is not a load
+    }
+
+    [Fact]
+    public void A_Resolver_Cannot_Bring_Anything_Active_Into_The_Body()
+    {
+        // Whatever the resolver returns goes through the same check as any picture address: only data:image is kept.
+        var result = Sanitizer.Sanitize(
+            "<img src=\"https://cdn.example.org/a.png\">",
+            null,
+            IMessageHtmlSanitizer.MaxInputLength,
+            _ => "javascript:alert(1)");
+
+        AssertInert(result.Html);
+        Assert.DoesNotContain("javascript", result.Html, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void No_More_Than_The_Limit_Of_Pictures_Is_Reported()
+    {
+        var html = string.Concat(Enumerable.Range(0, 50).Select(i => $"<img src=\"https://cdn.example.org/{i}.png\">"));
+
+        var result = Sanitizer.Sanitize(html, null, IMessageHtmlSanitizer.MaxInputLength);
+
+        Assert.Equal(IMessageHtmlSanitizer.MaxExternalImages, result.ExternalImageList.Count);
+        Assert.Equal(50, result.BlockedExternalResources); // all are still taken out
+    }
+
     [Fact]
     public async Task Pictures_Of_The_Mail_Itself_Keep_Their_Content_Id()
     {

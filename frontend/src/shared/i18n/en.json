@@ -115,6 +115,8 @@
     "verified": "Sender verified",
     "suspicious": "This looks like fraud: the sender pretends to be a different organization. Do not follow links and do not enter a password.",
     "imagesBlocked": "External images are hidden so that the sender cannot tell when you opened the message.",
+    "showImages": "Show",
+    "imagesSomeMissing": "Some images could not be loaded.",
     "toYou": "To: you <{{address}}>",
     "to": "To: {{names}}",
     "toMany": "To: {{names}} and {{count}} more",

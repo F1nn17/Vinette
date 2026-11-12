@@ -77,7 +77,17 @@ function recipients(
     : t('reader.to', { names: names.join(', ') });
 }
 
-function Header({ message, address }: { message: MessageDetail; address?: string }) {
+interface HeaderProps {
+  message: MessageDetail;
+  address?: string;
+  /** The reader asked for the pictures of this message. */
+  imagesAsked: boolean;
+  /** The pictures are being fetched. */
+  imagesLoading: boolean;
+  onShowImages: () => void;
+}
+
+function Header({ message, address, imagesAsked, imagesLoading, onShowImages }: HeaderProps) {
   const { t, i18n } = useTranslation();
   const sender = message.from;
   const name = sender ? sender.name || sender.address : t('list.noSender');
@@ -126,9 +136,21 @@ function Header({ message, address }: { message: MessageDetail; address?: string
       <SenderCheckBadge verdict={verdict} />
 
       {blocked > 0 && (
-        <div className="flex items-center gap-3 rounded-md bg-bg px-4 py-3 text-secondary text-text-2">
+        <div className="flex flex-wrap items-center gap-3 rounded-md bg-bg px-4 py-3 text-secondary text-text-2">
           <ImageOff size={18} strokeWidth={1.8} aria-hidden className="shrink-0 text-muted" />
-          <p>{t('reader.imagesBlocked')}</p>
+          <p className="min-w-0 flex-1">
+            {imagesAsked ? t('reader.imagesSomeMissing') : t('reader.imagesBlocked')}
+          </p>
+          {message.canShowImages && !imagesAsked && (
+            <Button variant="secondary" size="sm" className="max-md:h-11" onClick={onShowImages}>
+              {t('reader.showImages')}
+            </Button>
+          )}
+          {imagesLoading && (
+            <span role="status" className="text-muted">
+              {t('common.loading')}
+            </span>
+          )}
         </div>
       )}
     </header>
@@ -143,7 +165,9 @@ export function ReadingPane({ messageId, address, onBack }: ReadingPaneProps) {
   const { t } = useTranslation();
   const [fullFor, setFullFor] = useState<string | null>(null); // the message whose whole body was asked for
   const full = messageId !== undefined && fullFor === messageId;
-  const query = useMessage(messageId, full);
+  const [imagesFor, setImagesFor] = useState<string | null>(null); // the message whose pictures were asked for
+  const images = messageId !== undefined && imagesFor === messageId;
+  const query = useMessage(messageId, { full, images });
   const flags = useSetFlags(messageId);
   const markedRead = useRef<string | null>(null);
   const [failedFor, setFailedFor] = useState<string | null>(null); // the message whose flag could not be saved
@@ -210,7 +234,13 @@ export function ReadingPane({ messageId, address, onBack }: ReadingPaneProps) {
       )}
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col gap-5 px-10 py-7 max-md:px-4">
-          <Header message={message} address={address} />
+          <Header
+            message={message}
+            address={address}
+            imagesAsked={images}
+            imagesLoading={images && query.isFetching}
+            onShowImages={() => setImagesFor(messageId)}
+          />
           {message.truncated && (
             <div className="flex flex-wrap items-center gap-3 rounded-md bg-bg px-4 py-3 text-secondary text-text-2">
               <p className="min-w-0 flex-1">{t('reader.truncated')}</p>

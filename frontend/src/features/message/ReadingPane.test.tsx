@@ -21,6 +21,8 @@ const message = (extra: Record<string, unknown> = {}) => ({
   bodyFormat: 'html',
   body: '<p>Hello</p>',
   blockedExternalResources: 0,
+  canShowImages: false,
+  imagesShown: 0,
   truncated: false,
   sender: { verdict: 'unknown', domain: 'studio.example' },
   attachments: [],
@@ -192,6 +194,112 @@ describe('ReadingPane', () => {
       renderPane();
 
       expect(await screen.findByText(/Внешние изображения скрыты/u)).toBeInTheDocument();
+    });
+
+    it('has no button when the server cannot show them (the feature is off)', async () => {
+      mockApi(() => message({ blockedExternalResources: 3, canShowImages: false }));
+      renderPane();
+
+      await screen.findByText(/Внешние изображения скрыты/u);
+      expect(screen.queryByRole('button', { name: 'Показать' })).not.toBeInTheDocument();
+    });
+
+    it('asks for the pictures when the button is pressed, and shows them without a blank screen in between', async () => {
+      const urls: string[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn<typeof fetch>((input) => {
+          const url = String(input);
+          urls.push(url);
+          return Promise.resolve(
+            json(
+              url.includes('images=true')
+                ? message({
+                    blockedExternalResources: 0,
+                    canShowImages: false,
+                    imagesShown: 2,
+                    body: '<img src="data:image/png;base64,iVBORw0KGgo=">',
+                  })
+                : message({ blockedExternalResources: 2, canShowImages: true }),
+            ),
+          );
+        }),
+      );
+      const user = userEvent.setup();
+      renderPane();
+      await screen.findByText(/Внешние изображения скрыты/u);
+
+      await user.click(screen.getByRole('button', { name: 'Показать' }));
+
+      await waitFor(() =>
+        expect(
+          (screen.getByTitle('Layouts, second iteration') as HTMLIFrameElement).getAttribute(
+            'srcdoc',
+          ),
+        ).toContain('data:image/png'),
+      );
+      expect(
+        urls.filter((u) => u.includes('/messages/SU5CT1g.1.7') && !u.includes('/flags')),
+      ).toEqual(['/api/v1/messages/SU5CT1g.1.7', '/api/v1/messages/SU5CT1g.1.7?images=true']);
+      expect(screen.queryByText(/Внешние изображения скрыты/u)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Показать' })).not.toBeInTheDocument();
+    });
+
+    it('says so when some of the pictures could not be loaded', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn<typeof fetch>((input) =>
+          Promise.resolve(
+            json(
+              String(input).includes('images=true')
+                ? message({ blockedExternalResources: 1, canShowImages: false, imagesShown: 1 })
+                : message({ blockedExternalResources: 2, canShowImages: true }),
+            ),
+          ),
+        ),
+      );
+      const user = userEvent.setup();
+      renderPane();
+      await user.click(await screen.findByRole('button', { name: 'Показать' }));
+
+      expect(
+        await screen.findByText('Некоторые изображения не удалось загрузить.'),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Показать' })).not.toBeInTheDocument();
+    });
+
+    it('asks for the pictures of the open message only', async () => {
+      const urls: string[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn<typeof fetch>((input) => {
+          urls.push(String(input));
+          return Promise.resolve(
+            json(message({ id: 'x', blockedExternalResources: 2, canShowImages: true })),
+          );
+        }),
+      );
+      const user = userEvent.setup();
+      const view = render(
+        <QueryClientProvider
+          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        >
+          <ReadingPane messageId="SU5CT1g.1.7" address="user@example.com" />
+        </QueryClientProvider>,
+      );
+      await user.click(await screen.findByRole('button', { name: 'Показать' }));
+      await waitFor(() => expect(urls.some((u) => u.includes('images=true'))).toBe(true));
+
+      view.rerender(
+        <QueryClientProvider
+          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        >
+          <ReadingPane messageId="SU5CT1g.1.8" address="user@example.com" />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => expect(urls).toContain('/api/v1/messages/SU5CT1g.1.8'));
+      expect(urls).not.toContain('/api/v1/messages/SU5CT1g.1.8?images=true');
     });
   });
 

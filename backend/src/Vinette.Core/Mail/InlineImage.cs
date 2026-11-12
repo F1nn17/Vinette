@@ -8,9 +8,12 @@ namespace Vinette.Core.Mail;
 public static class InlineImage
 {
     /// <summary>The <c>data:image/…;base64,…</c> address for <paramref name="content"/>, or null if it is not a safe picture or is too big.</summary>
-    public static string? ToDataUri(ReadOnlySpan<byte> content)
+    public static string? ToDataUri(ReadOnlySpan<byte> content) => ToDataUri(content, MessageLimits.MaxInlineImageBytes);
+
+    /// <summary>The <c>data:image/…;base64,…</c> address for <paramref name="content"/>, or null if it is not a safe picture or is over <paramref name="maxBytes"/>.</summary>
+    public static string? ToDataUri(ReadOnlySpan<byte> content, int maxBytes)
     {
-        if (content.Length is 0 or > MessageLimits.MaxInlineImageBytes)
+        if (content.Length == 0 || content.Length > maxBytes)
         {
             return null;
         }

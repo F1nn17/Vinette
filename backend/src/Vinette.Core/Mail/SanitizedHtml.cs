@@ -13,8 +13,15 @@ namespace Vinette.Core.Mail;
 /// <param name="Rejected">
 /// The markup was refused as a whole (it is nested so deeply that no real mail is): show the text version instead.
 /// </param>
-public sealed record SanitizedHtml(string Html, int BlockedExternalResources, bool Truncated, bool Rejected)
+/// <param name="ExternalImages">
+/// The addresses of the external pictures (<c>img src</c> on the web) the body asks for, once each, at most
+/// <see cref="IMessageHtmlSanitizer.MaxExternalImages"/>; what the reader can be offered to load.
+/// </param>
+public sealed record SanitizedHtml(string Html, int BlockedExternalResources, bool Truncated, bool Rejected, IReadOnlyList<string>? ExternalImages = null)
 {
+    /// <summary>The external pictures (never null).</summary>
+    public IReadOnlyList<string> ExternalImageList => ExternalImages ?? [];
+
     /// <summary>The result for a mail without HTML, and for a rejected one.</summary>
     public static SanitizedHtml Empty { get; } = new(string.Empty, 0, false, false);
 }
@@ -27,6 +34,9 @@ public interface IMessageHtmlSanitizer
 
     /// <summary>The deepest nesting of elements that is accepted; deeper markup is <see cref="SanitizedHtml.Rejected"/>.</summary>
     const int MaxNesting = 200;
+
+    /// <summary>How many external picture addresses are reported (and so can be loaded) for one body.</summary>
+    const int MaxExternalImages = 30;
 
     /// <summary>The biggest <c>data:</c> image that is kept, in decoded bytes.</summary>
     const int MaxDataImageBytes = 1024 * 1024;
@@ -42,5 +52,14 @@ public interface IMessageHtmlSanitizer
     /// for its Content-ID (text of a <c>data:image</c> address built by the application); when it returns null, or there is
     /// no resolver, the picture's address is taken out (with a resolver) or kept as it is (without). Never throws for any input.
     /// </summary>
-    SanitizedHtml Sanitize(string? html, Func<string, string?>? resolveContentId, int maxInputLength);
+    SanitizedHtml Sanitize(string? html, Func<string, string?>? resolveContentId, int maxInputLength) =>
+        Sanitize(html, resolveContentId, maxInputLength, null);
+
+    /// <summary>
+    /// Cleans <paramref name="html"/>. An external picture (<c>img src</c> on the web) is replaced by what
+    /// <paramref name="resolveExternalImage"/> returns for its address (the text of a <c>data:image</c> address the
+    /// application made from a picture it fetched itself); null, or no resolver, takes the picture out and counts it as
+    /// blocked. The addresses asked for are in <see cref="SanitizedHtml.ExternalImages"/> either way.
+    /// </summary>
+    SanitizedHtml Sanitize(string? html, Func<string, string?>? resolveContentId, int maxInputLength, Func<string, string?>? resolveExternalImage);
 }

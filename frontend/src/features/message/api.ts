@@ -11,15 +11,21 @@ export const messageKey = (id: string) => ['message', id] as const;
 
 /**
  * One message opened for reading: headers, the cleaned body, the sender check, the attachments. A very long body comes
- * cut; with `full` the server sends as much of it as it ever shows.
+ * cut; with `full` the server sends as much of it as it ever shows. With `images` it fetches the pictures the message
+ * takes from the web (the reader's browser never does) and puts them into the body.
  */
-export function useMessage(id: string | undefined, full = false) {
+export function useMessage(
+  id: string | undefined,
+  { full = false, images = false }: { full?: boolean; images?: boolean } = {},
+) {
+  const flags = [full && 'full', images && 'images'].filter(Boolean) as string[];
+  const query = [full && 'full=true', images && 'images=true'].filter(Boolean).join('&');
   return useQuery({
-    queryKey: full ? [...messageKey(id ?? ''), 'full'] : messageKey(id ?? ''),
+    queryKey: [...messageKey(id ?? ''), ...flags],
     enabled: id !== undefined,
     queryFn: ({ signal }) =>
       apiGet<MessageDetail>(
-        `/api/v1/messages/${encodeURIComponent(id ?? '')}${full ? '?full=true' : ''}`,
+        `/api/v1/messages/${encodeURIComponent(id ?? '')}${query ? `?${query}` : ''}`,
         signal,
       ),
     // Showing the whole body replaces the beginning without a blank screen in between (never another message in its place).

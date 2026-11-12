@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using Vinette.Api.Configuration;
+using Vinette.Api.Mail.Images;
 using Vinette.Core.Authentication;
 using Vinette.Core.Mail;
 using Vinette.Mail;
@@ -39,6 +40,11 @@ public static class MailServices
         });
         services.AddSingleton<IMessageParser, MimeMessageParser>();
         services.AddSingleton<IMessageHtmlSanitizer, MessageHtmlSanitizer>();
+        services.AddSingleton<IDnsResolver, SystemDnsResolver>();
+        services.AddSingleton<IExternalImageFetcher>(provider => new ExternalImageFetcher(
+            provider.GetRequiredService<IOptions<ExternalImagesOptions>>(),
+            provider.GetRequiredService<IDnsResolver>(),
+            provider.GetRequiredService<ILogger<ExternalImageFetcher>>()));
         services.AddHostedService<MailConnectionCleanupService>();
         return services;
     }
