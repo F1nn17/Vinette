@@ -16,6 +16,7 @@ import {
   TextArea,
   TextField,
 } from '@/shared/ui';
+import { MessageFrame } from '@/features/message';
 
 /** Dev-only catalogue of UI primitives in all states (route exists only in dev builds). */
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -59,6 +60,16 @@ export function DevUiPage() {
           disabled
           className="w-80"
         />
+      </Section>
+
+      <Section title="MessageFrame (sandboxed; the script, the handler and the link below must do nothing)">
+        <div className="h-72 w-full max-w-2xl rounded-md border border-line">
+          <MessageFrame
+            title="Hostile sample"
+            format="html"
+            body={`<p id="visible">Visible text with a <a href="https://example.org">safe link</a>.</p><script>document.body.setAttribute('data-pwned','script');fetch('/__pwned_script')</script><img src="x" onerror="document.body.setAttribute('data-pwned','onerror');fetch('/__pwned_onerror')"><a href="javascript:document.body.setAttribute('data-pwned','link')">javascript link</a>`}
+          />
+        </div>
       </Section>
 
       <Section title="IconButton">

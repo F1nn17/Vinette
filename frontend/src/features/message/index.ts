@@ -1,1 +1,8 @@
-export {};
+export { MessageFrame, FRAME_SANDBOX, type MessageFrameProps } from './MessageFrame';
+export {
+  buildFrameDocument,
+  FRAME_CSP,
+  DEFAULT_FRAME_COLORS,
+  type BodyFormat,
+  type FrameColors,
+} from './frame-document';
