@@ -68,7 +68,7 @@ GNU Make, .NET SDK (версия в [backend/global.json](backend/global.json)),
 | `make dev-mail-down` | остановить dev-почту и удалить её данные |
 | `make seed` | загрузить тестовые письма из `backend/tests/fixtures` в ящики alice и bob (идемпотентно; нужен Python 3) |
 | `make seed-reset` | удалить загруженные ранее письма и загрузить заново |
-| `make e2e` | Playwright e2e: поднимает dev-почту (`E2E_MAIL=0` — не поднимать), бэкенд и Vite, прогоняет `frontend/e2e` |
+| `make e2e` | Playwright e2e: поднимает dev-почту и загружает в неё тестовые письма (`E2E_MAIL=0` — не трогать), запускает бэкенд и Vite, прогоняет `frontend/e2e` |
 | `make docker` | образ `vinette:dev` |
 | `make clean` | удалить артефакты сборки |
 
@@ -98,7 +98,7 @@ GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRE
 
 ### e2e
 
-`make e2e` (Playwright, `frontend/e2e`): smoke и сценарии входа; «чтение» и «отправка» появятся вместе с функциями. Конфигурация [playwright.config.ts](frontend/playwright.config.ts) сама запускает бэкенд (Development, порт 5080) и Vite (порт 5173); уже запущенные серверы переиспользуются. Тестировать готовый экземпляр (например, контейнер): `VINETTE_E2E_URL=http://localhost:8080 pnpm e2e` в `frontend/` — серверы тогда не стартуют. Хелперы — `e2e/helpers.ts` (`accounts`, `waitForAppReady`, `signIn`). Браузер ставится один раз: `pnpm exec playwright install chromium` в `frontend/`. Отчёты и трейсы — в `frontend/test-results` и `frontend/playwright-report` (в git не попадают).
+`make e2e` (Playwright, `frontend/e2e`): smoke, сценарии входа и чтения (`reading.spec.ts`: открыть письмо, вложения, скрытые картинки, мошенническое и враждебное письмо); «отправка» появится вместе с функцией. `make e2e` сам загружает тестовые письма (`make seed`), поэтому сценарии чтения опираются на ящик bob с фикстурами. Конфигурация [playwright.config.ts](frontend/playwright.config.ts) сама запускает бэкенд (Development, порт 5080) и Vite (порт 5173); уже запущенные серверы переиспользуются. Тестировать готовый экземпляр (например, контейнер): `VINETTE_E2E_URL=http://localhost:8080 pnpm e2e` в `frontend/` — серверы тогда не стартуют. Хелперы — `e2e/helpers.ts` (`accounts`, `waitForAppReady`, `signIn`). Браузер ставится один раз: `pnpm exec playwright install chromium` в `frontend/`. Отчёты и трейсы — в `frontend/test-results` и `frontend/playwright-report` (в git не попадают).
 
 ### Docker и голое железо
 
@@ -192,7 +192,7 @@ GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRE
 - Санитайзер покрыт отдельным набором XSS-векторов; новый вектор добавляется данными, а не кодом теста.
 - Интеграционные тесты — против реального почтового сервера в Testcontainers: класс помечается `[Integration]` (trait `Category=Integration`) и `[Collection(DovecotFixture.CollectionName)]`, в сборке теста объявляется `[CollectionDefinition(DovecotFixture.CollectionName)] ... : ICollectionFixture<DovecotFixture>`. Общая инфраструктура — проект `backend/tests/Vinette.TestSupport` (контейнер Dovecot, ящики alice и bob, фикстуры писем загружены в INBOX). `make test` Docker не требует и интеграционные тесты пропускает; запускаются `make test-integration`.
 - Фронтенд: Vitest + Testing Library для логики и компонентов; каждый примитив `shared/ui` имеет тест.
-- e2e: Playwright — сценарии «вход» (готов: `frontend/e2e/auth.spec.ts`), «чтение», «отправка». Работают против настоящего Dovecot, который замедляет неверные входы (до ~15 с), поэтому воркер один и таймауты щедрые; бэкенд для e2e запускается с мягкими лимитами (`playwright.config.ts`).
+- e2e: Playwright — сценарии «вход» (готов: `frontend/e2e/auth.spec.ts`), «чтение» (готов: `frontend/e2e/reading.spec.ts`), «отправка». Работают против настоящего Dovecot, который замедляет неверные входы (до ~15 с), поэтому воркер один и таймауты щедрые; бэкенд для e2e запускается с мягкими лимитами (`playwright.config.ts`).
 - Баг-фикс начинается с теста, который падает. Тесты не зависят от порядка и от внешней сети.
 
 ## 13. Definition of Done
