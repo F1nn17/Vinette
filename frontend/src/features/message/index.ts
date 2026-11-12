@@ -6,3 +6,5 @@ export {
   type BodyFormat,
   type FrameColors,
 } from './frame-document';
+export { ReadingPane, type ReadingPaneProps } from './ReadingPane';
+export { useMessage, type MessageDetail } from './api';

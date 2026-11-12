@@ -1,4 +1,4 @@
-import type { LabelColor } from '@/shared/ui';
+import type { LabelColor } from '../ui/LabelTag';
 
 const COLORS: LabelColor[] = ['work', 'bills', 'personal'];
 

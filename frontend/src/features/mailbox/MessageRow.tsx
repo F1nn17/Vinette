@@ -1,10 +1,9 @@
 import { Flag, Paperclip } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
-import { cn, formatListDate } from '@/shared/lib';
+import { cn, formatListDate, labelColor } from '@/shared/lib';
 import { Avatar, LabelTag } from '@/shared/ui';
 import type { MessageItem } from './api';
-import { labelColor } from './label-color';
 
 export interface MessageRowProps {
   message: MessageItem;
