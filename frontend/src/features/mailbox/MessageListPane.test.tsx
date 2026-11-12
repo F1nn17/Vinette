@@ -93,7 +93,6 @@ function renderPane(url = '/mail/inbox', slug = 'inbox', messageId?: string) {
         element: (
           <AppShell
             messageOpen={false}
-            onBack={() => undefined}
             nav={<p>folders</p>}
             list={
               <MessageListPane

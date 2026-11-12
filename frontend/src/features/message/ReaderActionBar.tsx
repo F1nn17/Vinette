@@ -1,4 +1,13 @@
-import { AlertCircle, Archive, Ellipsis, Flag, Forward, Reply, Trash2 } from 'lucide-react';
+import {
+  AlertCircle,
+  Archive,
+  ArrowLeft,
+  Ellipsis,
+  Flag,
+  Forward,
+  Reply,
+  Trash2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button, IconButton } from '@/shared/ui';
 
@@ -7,6 +16,8 @@ export interface ReaderActionBarProps {
   flagged: boolean;
   /** Sets or removes the flag; without it the flag button cannot be used. */
   onToggleFlag?: () => void;
+  /** On a phone the message fills the screen: this goes back to the list. */
+  onBack?: () => void;
 }
 
 /**
@@ -14,7 +25,7 @@ export interface ReaderActionBarProps {
  * used yet: archiving, spam and deleting arrive with the actions (VIN-071, VIN-074) and replying with the editor
  * (VIN-102), and each of those switches its own button on.
  */
-export function ReaderActionBar({ flagged, onToggleFlag }: ReaderActionBarProps) {
+export function ReaderActionBar({ flagged, onToggleFlag, onBack }: ReaderActionBarProps) {
   const { t } = useTranslation();
   const icon = { size: 18, strokeWidth: 1.8, 'aria-hidden': true } as const;
   return (
@@ -23,10 +34,27 @@ export function ReaderActionBar({ flagged, onToggleFlag }: ReaderActionBarProps)
       aria-label={t('reader.actions')}
       className="flex shrink-0 items-center gap-2 border-b border-subtle px-7 py-3 max-md:px-3"
     >
-      <Button variant="secondary" size="sm" icon={<Reply {...icon} size={16} />} disabled>
+      {onBack && (
+        <IconButton aria-label={t('mailbox.back')} onClick={onBack} className="-ml-1">
+          <ArrowLeft {...icon} />
+        </IconButton>
+      )}
+      <Button
+        variant="secondary"
+        size="sm"
+        className="max-md:h-11"
+        icon={<Reply {...icon} size={16} />}
+        disabled
+      >
         {t('reader.reply')}
       </Button>
-      <Button variant="secondary" size="sm" icon={<Forward {...icon} size={16} />} disabled>
+      <Button
+        variant="secondary"
+        size="sm"
+        className="max-md:h-11"
+        icon={<Forward {...icon} size={16} />}
+        disabled
+      >
         {t('reader.forward')}
       </Button>
       <span aria-hidden="true" className="mx-1 h-5 w-px bg-line max-md:hidden" />

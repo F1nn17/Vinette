@@ -16,6 +16,8 @@ export interface ReadingPaneProps {
   messageId?: string;
   /** The signed-in address: "To: you" is written when the message is addressed to it. */
   address?: string;
+  /** On a phone the message fills the screen; this is what the "back" button does. Absent where the list is beside it. */
+  onBack?: () => void;
 }
 
 function EmptyState() {
@@ -137,7 +139,7 @@ function Header({ message, address }: { message: MessageDetail; address?: string
  * The reading area (DESIGN.md §5): the action bar, then subject, labels, sender, the sender check, the notice about hidden
  * pictures and the body in its sandboxed frame. The attachments follow the body; the quick reply (VIN-103) comes later.
  */
-export function ReadingPane({ messageId, address }: ReadingPaneProps) {
+export function ReadingPane({ messageId, address, onBack }: ReadingPaneProps) {
   const { t } = useTranslation();
   const query = useMessage(messageId);
   const flags = useSetFlags(messageId);
@@ -160,7 +162,7 @@ export function ReadingPane({ messageId, address }: ReadingPaneProps) {
   if (query.isPending) {
     return (
       <div className="flex h-full flex-col">
-        <ReaderActionBar flagged={false} />
+        <ReaderActionBar flagged={false} onBack={onBack} />
         <Skeleton />
       </div>
     );
@@ -169,7 +171,7 @@ export function ReadingPane({ messageId, address }: ReadingPaneProps) {
   if (query.isError) {
     return (
       <div className="flex h-full flex-col">
-        <ReaderActionBar flagged={false} />
+        <ReaderActionBar flagged={false} onBack={onBack} />
         <div
           role="alert"
           className="mx-auto flex w-full max-w-[760px] flex-col items-start gap-3 px-10 py-7 text-text-2"
@@ -187,6 +189,7 @@ export function ReadingPane({ messageId, address }: ReadingPaneProps) {
   return (
     <article aria-labelledby="reader-subject" className="flex h-full flex-col">
       <ReaderActionBar
+        onBack={onBack}
         flagged={message.flagged}
         onToggleFlag={() =>
           flags.mutate(

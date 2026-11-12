@@ -46,6 +46,7 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
   const mobile = layout === 'mobile';
   const [searchOpen, setSearchOpen] = useState(false);
   const [scroller, setScroller] = useState<HTMLElement | null>(null);
+
   const folders = useFolders();
   const folder = folders.data?.find((f) => folderSlug(f) === slug);
   const settings = useSettings();
