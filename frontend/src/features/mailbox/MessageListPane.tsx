@@ -2,19 +2,12 @@ import { RefreshCw, Search } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
-import { describeApiError } from '@/shared/api/describe-error';
 import { dateGroupKey, dateGroupLabel, groupByDate } from '@/shared/lib';
 import { cn } from '@/shared/lib';
 import { Avatar, Chip, IconButton, SearchField } from '@/shared/ui';
 import { useListDensity, useSettings, useUpdateSettings } from '@/features/settings';
-import {
-  useFolders,
-  useMessageBatch,
-  useMessages,
-  type BatchAction,
-  type ListFilter,
-  type MessageItem,
-} from './api';
+import { useFolders, useMessages, type ListFilter, type MessageItem } from './api';
+import { useMessageBatch, type BatchAction } from './batch';
 import { folderLabel, folderSlug } from './folder-label';
 import { ListEmpty, ListError, ListNoFolder, ListSkeleton, OfflineBanner } from './list-states';
 import { ListOptionsMenu } from './ListOptionsMenu';
@@ -38,6 +31,9 @@ import { useOnline } from './use-online';
 import { VirtualMessageRows, type ListEntry } from './VirtualMessageRows';
 
 const FILTERS: ListFilter[] = ['all', 'unread', 'flagged'];
+
+/** The actions that take a message out of the list. */
+const MOVING: BatchAction[] = ['archive', 'spam', 'trash'];
 
 function filterOf(value: string | null): ListFilter {
   return value === 'unread' || value === 'flagged' ? value : 'all';
@@ -120,18 +116,15 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
   };
   const runBatch = (action: BatchAction) => {
     const ids = selectedIds;
-    batch.mutate(
-      { ids, action },
-      {
-        onSuccess: () => {
-          clearSelection();
-          // The open message went to another folder: the reading pane would show a message that is no longer here.
-          if (messageId && ids.includes(messageId) && action !== 'read') {
-            void navigate(`/mail/${encodeURIComponent(slug)}${search}`);
-          }
-        },
-      },
-    );
+    const before = selection;
+    // The list shows the result at once (see `useMessageBatch`), so the selection ends now; if the server refuses, the
+    // rows come back and so does the selection, and a toast says what happened.
+    clearSelection();
+    if (messageId && ids.includes(messageId) && MOVING.includes(action)) {
+      // The open message goes to another folder: the reading pane would show a message that is no longer here.
+      void navigate(`/mail/${encodeURIComponent(slug)}${search}`);
+    }
+    batch.mutate({ ids, action }, { onError: () => apply({ selection: before, capped: false }) });
   };
   const showRecipient = folder?.role === 'sent' || folder?.role === 'drafts';
   const title = folder ? folderLabel(folder, t) : slug === 'inbox' ? t('folders.inbox') : '';
@@ -164,9 +157,7 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
               count={selectedIds.length}
               allSelected={selectedIds.length === Math.min(order.length, MAX_SELECTED)}
               folderRole={folder?.role}
-              busy={batch.isPending}
               capped={capped}
-              error={batch.isError ? describeApiError(batch.error, t) : null}
               onSelectAll={() => apply(selectAll(order))}
               onClear={clearSelection}
               onAction={runBatch}

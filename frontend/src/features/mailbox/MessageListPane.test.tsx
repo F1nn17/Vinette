@@ -5,6 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { AppShell } from './AppShell';
 import { MessageListPane } from './MessageListPane';
 import { labelColor } from '@/shared/lib';
+import { ToastProvider } from '@/shared/toast';
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' }, ...init });
@@ -57,6 +58,8 @@ interface Server {
   batches: { ids: string[]; action: string }[];
   /** Makes the batch actions fail. */
   failBatch?: boolean;
+  /** Holds the answer to the batch actions back until it is released. */
+  hold?: Promise<void>;
 }
 
 function mockServer(pages: (url: URL) => unknown): Server {
@@ -81,7 +84,7 @@ function mockServer(pages: (url: URL) => unknown): Server {
       if (url.pathname === '/api/v1/messages/batch') {
         const body = JSON.parse(String(init?.body)) as { ids: string[]; action: string };
         server.batches.push(body);
-        return Promise.resolve(
+        return (server.hold ?? Promise.resolve()).then(() =>
           server.failBatch
             ? json({ code: 'mail_unavailable', title: 'x' }, { status: 503 })
             : json({ changed: body.ids.length, folder: 'Trash', moved: [] }),
@@ -123,9 +126,11 @@ function renderPane(url = '/mail/inbox', slug = 'inbox', messageId?: string) {
   );
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
+    <ToastProvider>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </ToastProvider>,
   );
   return router;
 }
@@ -679,18 +684,72 @@ describe('selecting messages', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/mail/inbox'));
   });
 
-  it('says in plain words when the action failed, and keeps the selection', async () => {
-    const server = mockServer(() => page(2));
+  it('takes the rows out of the list at once, before the server has answered', async () => {
+    const server = mockServer(() => page(3));
+    let release: () => void = () => undefined;
+    server.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const user = userEvent.setup();
+    renderPane();
+    await screen.findByText('Subject 1');
+
+    await user.click(box(1));
+    await user.click(box(3));
+    await user.click(screen.getByRole('button', { name: 'Удалить' }));
+
+    await waitFor(() => expect(screen.queryByText('Subject 1')).not.toBeInTheDocument());
+    expect(screen.queryByText('Subject 3')).not.toBeInTheDocument();
+    expect(screen.getByText('Subject 2')).toBeInTheDocument();
+    expect(screen.queryByRole('toolbar')).not.toBeInTheDocument(); // and the selection is over
+    release();
+  });
+
+  it('puts the rows and the selection back and says so in a toast when the server refuses', async () => {
+    const server = mockServer(() => page(3));
     server.failBatch = true;
     const user = userEvent.setup();
     renderPane();
     await screen.findByText('Subject 1');
 
     await user.click(box(1));
+    await user.click(box(2));
     await user.click(screen.getByRole('button', { name: 'В спам' }));
 
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Почта временно недоступна');
+    await waitFor(() => expect(screen.getByText('Subject 1')).toBeInTheDocument());
+    expect(screen.getByText('Subject 2')).toBeInTheDocument();
     expect(box(1)).toBeChecked();
+    expect(box(2)).toBeChecked();
+    expect(screen.getByText('Выбрано: 2')).toBeInTheDocument();
+  });
+
+  it('marks as read at once in the list, and the unread count of the folder follows', async () => {
+    const server = mockServer(() => ({
+      // real ids (the folder is in them): the counter of the folder is found by it
+      items: [
+        message(1, { seen: false, id: 'SU5CT1g.1.1' }),
+        message(2, { seen: false, id: 'SU5CT1g.1.2' }),
+      ],
+      next: null,
+    }));
+    let release: () => void = () => undefined;
+    server.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const user = userEvent.setup();
+    renderPane();
+    await screen.findByText('Subject 1');
+    expect(screen.getAllByRole('img', { name: 'Не прочитано' })).toHaveLength(2);
+
+    await user.click(box(1));
+    await user.click(screen.getByRole('button', { name: 'Отметить прочитанными' }));
+
+    await waitFor(() =>
+      expect(screen.getAllByRole('img', { name: 'Не прочитано' })).toHaveLength(1),
+    );
+    expect(screen.getByText('3 непрочитанных')).toBeInTheDocument(); // 4 unread in the folder, minus the one
+    release();
   });
 
   it('does not offer to move messages to the folder they are in', async () => {

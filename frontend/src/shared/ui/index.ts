@@ -11,3 +11,4 @@ export * from './SearchField';
 export * from './Select';
 export * from './TextArea';
 export * from './TextField';
+export * from './Toast';

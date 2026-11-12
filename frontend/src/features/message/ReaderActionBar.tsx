@@ -26,8 +26,6 @@ export interface ReaderActionBarProps {
   folderRole?: string;
   /** Archives, marks as spam, deletes (moves to the trash) or marks as unread; without it those buttons cannot be used. */
   onAction?: (action: ReaderAction) => void;
-  /** An action is running: the buttons wait. */
-  busy?: boolean;
 }
 
 /**
@@ -41,7 +39,6 @@ export function ReaderActionBar({
   onBack,
   folderRole,
   onAction,
-  busy = false,
 }: ReaderActionBarProps) {
   const { t } = useTranslation();
   const icon = { size: 18, strokeWidth: 1.8, 'aria-hidden': true } as const;
@@ -79,7 +76,7 @@ export function ReaderActionBar({
         {folderRole !== 'archive' && (
           <IconButton
             aria-label={t('reader.archive')}
-            disabled={!onAction || busy}
+            disabled={!onAction}
             onClick={() => onAction?.('archive')}
           >
             <Archive {...icon} />
@@ -88,7 +85,7 @@ export function ReaderActionBar({
         {folderRole !== 'junk' && (
           <IconButton
             aria-label={t('reader.spam')}
-            disabled={!onAction || busy}
+            disabled={!onAction}
             onClick={() => onAction?.('spam')}
           >
             <AlertCircle {...icon} />
@@ -97,7 +94,7 @@ export function ReaderActionBar({
         {folderRole !== 'trash' && (
           <IconButton
             aria-label={t('reader.delete')}
-            disabled={!onAction || busy}
+            disabled={!onAction}
             onClick={() => onAction?.('trash')}
           >
             <Trash2 {...icon} />
@@ -122,7 +119,7 @@ export function ReaderActionBar({
                     label: t('reader.archive'),
                     icon: <Archive {...icon} />,
                     onSelect: () => onAction?.('archive'),
-                    disabled: !onAction || busy,
+                    disabled: !onAction,
                     phoneOnly: true,
                   },
                 ]
@@ -134,7 +131,7 @@ export function ReaderActionBar({
                     label: t('reader.spam'),
                     icon: <AlertCircle {...icon} />,
                     onSelect: () => onAction?.('spam'),
-                    disabled: !onAction || busy,
+                    disabled: !onAction,
                     phoneOnly: true,
                   },
                 ]
@@ -146,7 +143,7 @@ export function ReaderActionBar({
                     label: t('reader.delete'),
                     icon: <Trash2 {...icon} />,
                     onSelect: () => onAction?.('trash'),
-                    disabled: !onAction || busy,
+                    disabled: !onAction,
                     phoneOnly: true,
                   },
                 ]
@@ -164,7 +161,7 @@ export function ReaderActionBar({
               label: t('reader.markUnread'),
               icon: <MailPlus {...icon} />,
               onSelect: () => onAction?.('unread'),
-              disabled: !onAction || busy,
+              disabled: !onAction,
             },
           ]}
         />
