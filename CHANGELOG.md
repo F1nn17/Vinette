@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Messages can be read: selecting one in the list opens it in the reading area with its subject, labels, sender, recipients, date, a confirmation or a warning from the sender check, a notice when external images were hidden, and the body in a sandboxed frame. The action buttons (reply, forward, archive, spam, delete, flag) are shown but not active yet.
 - A message now says whether its sender passed the checks of your mail server (`sender`: `verified`, `suspicious` or `unknown`, from the `Authentication-Results` header). "Verified" is believed only from the topmost header of your own server: set `SenderCheck:TrustedAuthservIds` (`VINETTE_SenderCheck__TrustedAuthservIds__0`) to the name your server writes at the start of that header if it is not the address in `Imap:Host`. A failed check is reported whichever server wrote it.
 - `GET /api/v1/messages/{id}/attachments/{partId}` downloads an attached file: always as a download (never shown in the browser), with a safe file name, `nosniff` and a type from a short list of harmless ones (HTML, SVG and anything unusual are sent as plain bytes). An attached mail is downloaded as an `.eml` file.
 - Pictures that belong to a mail (inline images sent with it) are shown in its body: they are embedded into the page (PNG, JPEG, GIF, WebP up to 1 MB each and 8 MB per message, recognized by their content, never SVG), so opening a message needs no further request for them.

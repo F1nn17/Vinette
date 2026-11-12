@@ -144,7 +144,7 @@ describe('authentication', () => {
 
     renderApp('/mail/inbox');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Почта' })).toBeInTheDocument();
+    expect(await screen.findByText('Выберите письмо, чтобы прочитать')).toBeInTheDocument();
   });
 
   it('shows a loading state until the server has answered', () => {
@@ -191,7 +191,7 @@ describe('authentication', () => {
   it('signs the user out everywhere in the app when any call answers 401', async () => {
     const server = mockServer({ signedIn: true });
     const { router, queryClient } = renderApp('/mail/inbox');
-    await screen.findByRole('heading', { level: 1, name: 'Почта' });
+    await screen.findByText('Выберите письмо, чтобы прочитать');
     queryClient.setQueryData(['mail', 'inbox'], ['private message list']);
 
     server.signedIn = false;
@@ -206,7 +206,7 @@ describe('authentication', () => {
   it('drops the cached mailbox data, but keeps the user, when a folder was recreated on the mail side', async () => {
     mockServer({ signedIn: true });
     const { router, queryClient } = renderApp('/mail/inbox');
-    await screen.findByRole('heading', { level: 1, name: 'Почта' });
+    await screen.findByText('Выберите письмо, чтобы прочитать');
     queryClient.setQueryData(['mail', 'inbox'], ['stale message list']);
 
     await act(async () => {

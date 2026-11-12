@@ -99,7 +99,7 @@ describe('login screen', () => {
     const server = mockServer();
     server.signedIn = true;
     const router = renderLogin('/mail/inbox');
-    await screen.findByRole('heading', { level: 1, name: 'Почта' });
+    await screen.findByText('Выберите письмо, чтобы прочитать');
 
     await act(async () => {
       await apiGet('/api/v1/revoked').catch(() => undefined);

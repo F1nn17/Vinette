@@ -102,5 +102,23 @@
       "comfortable": "Comfortable",
       "compact": "Compact"
     }
+  },
+  "reader": {
+    "actions": "Message actions",
+    "reply": "Reply",
+    "forward": "Forward",
+    "archive": "Archive",
+    "spam": "Mark as spam",
+    "delete": "Delete",
+    "flag": "Flag",
+    "more": "More",
+    "verified": "Sender verified",
+    "suspicious": "This looks like fraud: the sender pretends to be a different organization. Do not follow links and do not enter a password.",
+    "imagesBlocked": "External images are hidden so that the sender cannot tell when you opened the message.",
+    "toYou": "To: you <{{address}}>",
+    "to": "To: {{names}}",
+    "toMany": "To: {{names}} and {{count}} more",
+    "noRecipients": "No recipients",
+    "emptyBody": "This message has no text."
   }
 }

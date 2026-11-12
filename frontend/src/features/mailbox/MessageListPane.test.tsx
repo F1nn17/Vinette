@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { AppShell } from './AppShell';
 import { MessageListPane } from './MessageListPane';
-import { labelColor } from './label-color';
+import { labelColor } from '@/shared/lib';
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' }, ...init });
