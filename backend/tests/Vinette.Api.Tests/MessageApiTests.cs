@@ -17,6 +17,7 @@ public sealed partial class MessageApiTests(DovecotFixture dovecot) : IDisposabl
         b.UseSetting("Imap:Host", dovecot.Host);
         b.UseSetting("Imap:Port", dovecot.ImapPort.ToString(System.Globalization.CultureInfo.InvariantCulture));
         b.UseSetting("Imap:Security", "None");
+        b.UseSetting("SenderCheck:TrustedAuthservIds:0", "mail.vinette.test"); // the name the fixtures' headers carry
     });
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
@@ -104,6 +105,53 @@ public sealed partial class MessageApiTests(DovecotFixture dovecot) : IDisposabl
         var body = message.GetProperty("body").GetString()!;
         Assert.DoesNotContain("cid:", body, StringComparison.Ordinal); // the inline picture is in the body itself
         Assert.Contains("src=\"data:image/png;base64,", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_Sender_Who_Passed_The_Checks_Of_Our_Server_Is_Verified()
+    {
+        var message = await OpenAsync("Verified sender");
+
+        Assert.Equal("verified", message.GetProperty("sender").GetProperty("verdict").GetString());
+        Assert.Equal("example.org", message.GetProperty("sender").GetProperty("domain").GetString());
+    }
+
+    [Fact]
+    public async Task A_Sender_Who_Failed_The_Checks_Is_Suspicious()
+    {
+        var message = await OpenAsync("Your account is locked");
+
+        Assert.Equal("suspicious", message.GetProperty("sender").GetProperty("verdict").GetString());
+        Assert.Equal("bank.example", message.GetProperty("sender").GetProperty("domain").GetString());
+    }
+
+    [Fact]
+    public async Task Mail_Without_The_Header_Says_Nothing_About_Its_Sender()
+    {
+        var message = await OpenAsync("Plain ASCII message");
+
+        Assert.Equal("unknown", message.GetProperty("sender").GetProperty("verdict").GetString());
+    }
+
+    [Fact]
+    public async Task Without_A_Configured_Name_Only_The_Address_Of_The_Mail_Server_Is_Trusted_So_Nobody_Is_Verified_Here()
+    {
+        using var plain = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        {
+            b.UseSetting("Imap:Host", dovecot.Host);
+            b.UseSetting("Imap:Port", dovecot.ImapPort.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            b.UseSetting("Imap:Security", "None");
+        });
+        var client = plain.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        var login = await CsrfClient.PostJsonAsync(client, "/api/v1/auth/login", new { address = DovecotFixture.Bob.Address, password = DovecotFixture.Bob.Password, rememberMe = false }, Token);
+        var cookie = login.Headers.GetValues("Set-Cookie").Single(v => v.StartsWith(SessionCookie.Name + "=", StringComparison.Ordinal)).Split(';')[0];
+        var ids = await IdsBySubjectAsync(client, cookie);
+
+        var (_, verified) = await GetAsync(client, cookie, $"/api/v1/messages/{ids["Verified sender"]}");
+        var (_, locked) = await GetAsync(client, cookie, $"/api/v1/messages/{ids["Your account is locked"]}");
+
+        Assert.Equal("unknown", verified.GetProperty("sender").GetProperty("verdict").GetString()); // "mail.vinette.test" is not the IMAP host
+        Assert.Equal("suspicious", locked.GetProperty("sender").GetProperty("verdict").GetString()); // a warning needs no trust
     }
 
     [Fact]

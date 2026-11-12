@@ -826,6 +826,7 @@
           "body",
           "blockedExternalResources",
           "truncated",
+          "sender",
           "attachments"
         ],
         "type": "object",
@@ -899,6 +900,9 @@
           },
           "truncated": {
             "type": "boolean"
+          },
+          "sender": {
+            "$ref": "#/components/schemas/SenderDto"
           },
           "attachments": {
             "type": "array",
@@ -1068,6 +1072,24 @@
               {
                 "$ref": "#/components/schemas/StorageDto"
               }
+            ]
+          }
+        }
+      },
+      "SenderDto": {
+        "required": [
+          "verdict",
+          "domain"
+        ],
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string"
+          },
+          "domain": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }

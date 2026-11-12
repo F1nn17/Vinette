@@ -29,6 +29,7 @@ public sealed record AttachmentDto(string PartId, string FileName, string Conten
 /// <param name="Body">The body as HTML that is safe for a sandboxed frame; empty for <c>empty</c>. External pictures are already taken out.</param>
 /// <param name="BlockedExternalResources">How many external loads (pictures, backgrounds) were taken out of the body; more than zero means "show images" has something to show.</param>
 /// <param name="Truncated">The body was cut because the mail is very long.</param>
+/// <param name="Sender">What our mail server's checks say about the sender.</param>
 /// <param name="Attachments">The attached files.</param>
 public sealed record MessageDetailDto(
     string Id,
@@ -46,7 +47,13 @@ public sealed record MessageDetailDto(
     string Body,
     int BlockedExternalResources,
     bool Truncated,
+    SenderDto Sender,
     IReadOnlyList<AttachmentDto> Attachments);
+
+/// <summary>The outcome of the sender check.</summary>
+/// <param name="Verdict"><c>verified</c>: the domain in the From line passed our server's checks; <c>suspicious</c>: the checks failed (show a warning); <c>unknown</c>: nothing reliable to say (show nothing).</param>
+/// <param name="Domain">The domain of the From address the verdict is about; absent if the mail has none.</param>
+public sealed record SenderDto(string Verdict, string? Domain);
 
 public static partial class MessageEndpoints
 {
@@ -131,6 +138,7 @@ public static partial class MessageEndpoints
         SessionService sessions,
         IMessageParser parser,
         IMessageHtmlSanitizer sanitizer,
+        SenderVerifier senderVerifier,
         CancellationToken cancellationToken)
     {
         var source = await gateway.ExecuteAsync(
@@ -160,8 +168,18 @@ public static partial class MessageEndpoints
             body,
             blocked,
             truncated,
+            ToDto(senderVerifier.Check(parsed.AuthenticationResults, parsed.From?.Address)),
             [.. parsed.Attachments.Select(a => new AttachmentDto(a.PartId, a.FileName, a.ContentType, a.Size, a.IsMessage))]));
     }
+
+    private static SenderDto ToDto(SenderCheck check) => new(
+        check.Verdict switch
+        {
+            SenderVerdict.Verified => "verified",
+            SenderVerdict.Suspicious => "suspicious",
+            _ => "unknown",
+        },
+        check.Domain);
 
     /// <summary>
     /// The HTML of the mail, cleaned; if it has none, is only blank after cleaning or is refused as hostile, the plain
