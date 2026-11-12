@@ -31,6 +31,18 @@ public static class MessageLimits
     /// </summary>
     public const long MaxViewableBytes = 32L * 1024 * 1024;
 
+    /// <summary>
+    /// How much of the body (HTML or text, in characters) is cleaned and shown at first. A mail longer than this is cut and
+    /// says so; the reader can ask for <see cref="FullBodyChars"/>. Real mail is rarely a tenth of it.
+    /// </summary>
+    public const int DefaultBodyChars = 250_000;
+
+    /// <summary>The most of a body that is ever cleaned and shown, however it is asked for.</summary>
+    public const int FullBodyChars = 1_000_000;
+
+    /// <summary>How long cleaning one body may take; it is given up (and the text version shown) after that.</summary>
+    public static readonly TimeSpan SanitizeTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>The biggest picture of a mail that is embedded into its body, in bytes; a bigger one is not shown.</summary>
     public const int MaxInlineImageBytes = 1024 * 1024;
 

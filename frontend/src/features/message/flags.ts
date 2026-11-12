@@ -12,7 +12,7 @@ export interface FlagChange {
 
 type ListPage = components['schemas']['MessageListResponse'];
 type Snapshot = {
-  message: MessageDetail | undefined;
+  messages: [readonly unknown[], MessageDetail | undefined][];
   lists: [readonly unknown[], InfiniteData<ListPage> | undefined][];
 };
 
@@ -22,7 +22,7 @@ function applyMarks(
   id: string,
   marks: Partial<Pick<MessageDetail, 'seen' | 'flagged' | 'answered' | 'draft'>>,
 ) {
-  queryClient.setQueryData<MessageDetail>(messageKey(id), (message) =>
+  queryClient.setQueriesData<MessageDetail>({ queryKey: messageKey(id) }, (message) =>
     message ? { ...message, ...marks } : message,
   );
   queryClient.setQueriesData<InfiniteData<ListPage>>({ queryKey: ['messages'] }, (data) =>
@@ -58,7 +58,7 @@ export function useSetFlags(messageId: string | undefined) {
       await queryClient.cancelQueries({ queryKey: ['messages'] });
       await queryClient.cancelQueries({ queryKey: messageKey(id) });
       const snapshot: Snapshot = {
-        message: queryClient.getQueryData<MessageDetail>(messageKey(id)),
+        messages: queryClient.getQueriesData<MessageDetail>({ queryKey: messageKey(id) }),
         lists: queryClient.getQueriesData<InfiniteData<ListPage>>({ queryKey: ['messages'] }),
       };
       applyMarks(queryClient, id, change);
@@ -66,7 +66,7 @@ export function useSetFlags(messageId: string | undefined) {
     },
     onError: (_error, _change, snapshot) => {
       if (!snapshot) return;
-      queryClient.setQueryData(messageKey(id), snapshot.message);
+      for (const [key, data] of snapshot.messages) queryClient.setQueryData(key, data);
       for (const [key, data] of snapshot.lists) queryClient.setQueryData(key, data);
     },
     onSuccess: (state) => applyMarks(queryClient, id, state),

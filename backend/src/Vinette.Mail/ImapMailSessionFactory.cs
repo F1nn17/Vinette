@@ -33,7 +33,7 @@ public sealed class ImapMailSessionFactory(ImapConnectionSettings settings) : IM
             await client.ConnectAsync(settings.Host, settings.Port, ImapAuthenticator.ToSocketOptions(settings.Security), timeout.Token).ConfigureAwait(false);
             await ImapAuthenticator.IdentifyAsync(client, new ClientInfo(credentials.ClientIp, null), timeout.Token).ConfigureAwait(false);
             await client.AuthenticateAsync(credentials.Address, credentials.Password, timeout.Token).ConfigureAwait(false);
-            return new ImapMailSession(client, PreviewExtension);
+            return new ImapMailSession(client, PreviewExtension, settings.MaxViewableMessageBytes);
         }
         catch (AuthenticationException exception)
         {

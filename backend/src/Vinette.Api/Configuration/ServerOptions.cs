@@ -35,6 +35,15 @@ public sealed class ImapOptions : IValidatableObject
     [Range(1, 100000)]
     public int MaxConnections { get; set; } = 200;
 
+    /// <summary>
+    /// The biggest mail, in bytes, that is loaded to be shown or to have an attachment downloaded: the application takes a mail
+    /// apart in memory, so this bounds what one request can use. A bigger mail is refused without being downloaded (the
+    /// user sees "too large to be shown"). Raise it only if your mail server accepts bigger mails and the application has
+    /// memory for them.
+    /// </summary>
+    [Range(1_000_000L, 512_000_000L)]
+    public long MaxViewableMessageBytes { get; set; } = Vinette.Core.Mail.MessageLimits.MaxViewableBytes;
+
     /// <summary>How long a request waits for a free connection place before it is answered with 503 and Retry-After.</summary>
     public TimeSpan ConnectionWaitTimeout { get; set; } = TimeSpan.FromSeconds(10);
 

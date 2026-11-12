@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Mvc;
 using Vinette.Api.Errors;
 using Vinette.Api.Sessions;
 using Vinette.Core.Mail;
@@ -29,6 +30,7 @@ public sealed record AttachmentDto(string PartId, string FileName, string Conten
 /// <param name="Body">The body as HTML that is safe for a sandboxed frame; empty for <c>empty</c>. External pictures are already taken out.</param>
 /// <param name="BlockedExternalResources">How many external loads (pictures, backgrounds) were taken out of the body; more than zero means "show images" has something to show.</param>
 /// <param name="Truncated">The body was cut because the mail is very long.</param>
+/// <param name="CanShowFull">The body was cut and asking again with <c>full=true</c> shows more of it.</param>
 /// <param name="Sender">What our mail server's checks say about the sender.</param>
 /// <param name="Attachments">The attached files.</param>
 public sealed record MessageDetailDto(
@@ -47,6 +49,7 @@ public sealed record MessageDetailDto(
     string Body,
     int BlockedExternalResources,
     bool Truncated,
+    bool CanShowFull,
     SenderDto Sender,
     IReadOnlyList<AttachmentDto> Attachments);
 
@@ -178,6 +181,7 @@ public static partial class MessageEndpoints
     private static partial Regex PartIdPattern();
 
     /// <param name="id">The message's identifier from the list (opaque text, use it as it is).</param>
+    /// <param name="full">Show a very long body in full (up to a limit) instead of its beginning.</param>
     private static async Task<IResult> GetAsync(
         MessageId id,
         HttpContext http,
@@ -186,7 +190,8 @@ public static partial class MessageEndpoints
         IMessageParser parser,
         IMessageHtmlSanitizer sanitizer,
         SenderVerifier senderVerifier,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromQuery] bool full = false)
     {
         var source = await gateway.ExecuteAsync(
             http.GetMailCredentials(sessions),
@@ -195,7 +200,7 @@ public static partial class MessageEndpoints
 
         using var stream = new MemoryStream(source.Content, writable: false);
         var parsed = await parser.ParseAsync(stream, cancellationToken);
-        var (format, body, blocked, truncated) = BodyOf(parsed, sanitizer);
+        var (format, body, blocked, truncated) = await BodyOfAsync(parsed, sanitizer, full ? MessageLimits.FullBodyChars : MessageLimits.DefaultBodyChars, cancellationToken);
 
         // What is in a mail is private: nothing in between may keep a copy.
         http.Response.Headers.CacheControl = "private, no-store";
@@ -215,6 +220,7 @@ public static partial class MessageEndpoints
             body,
             blocked,
             truncated,
+            truncated && !full,
             ToDto(senderVerifier.Check(parsed.AuthenticationResults, parsed.From?.Address)),
             [.. parsed.Attachments.Select(a => new AttachmentDto(a.PartId, a.FileName, a.ContentType, a.Size, a.IsMessage))]));
     }
@@ -232,11 +238,28 @@ public static partial class MessageEndpoints
     /// The HTML of the mail, cleaned; if it has none, is only blank after cleaning or is refused as hostile, the plain
     /// text made into HTML (and cleaned the same way, so that one rule covers everything that leaves the server).
     /// </summary>
-    private static (string Format, string Body, int Blocked, bool Truncated) BodyOf(ParsedMessage parsed, IMessageHtmlSanitizer sanitizer)
+    /// <summary>
+    /// Cleaning is bounded in length (the caller's limit) and in time: markup that keeps the cleaner busy for longer than
+    /// <see cref="MessageLimits.SanitizeTimeout"/> is given up on and treated as refused, so a hostile mail cannot tie up the
+    /// request (its worker ends by itself, the input being of bounded length).
+    /// </summary>
+    private static async Task<SanitizedHtml> SanitizeWithinTimeAsync(IMessageHtmlSanitizer sanitizer, string html, Func<string, string?>? resolver, int limit, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await Task.Run(() => sanitizer.Sanitize(html, resolver, limit), CancellationToken.None).WaitAsync(MessageLimits.SanitizeTimeout, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            return new SanitizedHtml(string.Empty, 0, false, true);
+        }
+    }
+
+    private static async Task<(string Format, string Body, int Blocked, bool Truncated)> BodyOfAsync(ParsedMessage parsed, IMessageHtmlSanitizer sanitizer, int limit, CancellationToken cancellationToken)
     {
         if (parsed.Html is not null)
         {
-            var clean = sanitizer.Sanitize(parsed.Html, new InlineImageResolver(parsed.InlineParts).Resolve);
+            var clean = await SanitizeWithinTimeAsync(sanitizer, parsed.Html, new InlineImageResolver(parsed.InlineParts).Resolve, limit, cancellationToken);
             if (!clean.Rejected && (!string.IsNullOrWhiteSpace(clean.Html) || parsed.Text is null))
             {
                 return string.IsNullOrWhiteSpace(clean.Html)
@@ -247,8 +270,8 @@ public static partial class MessageEndpoints
 
         if (!string.IsNullOrWhiteSpace(parsed.Text))
         {
-            var linked = PlainTextHtml.ToHtml(parsed.Text, out var cut);
-            var clean = sanitizer.Sanitize(linked);
+            var linked = PlainTextHtml.ToHtml(parsed.Text, out var cut, limit);
+            var clean = await SanitizeWithinTimeAsync(sanitizer, linked, null, IMessageHtmlSanitizer.MaxInputLength, cancellationToken);
             return ("text", clean.Html, clean.BlockedExternalResources, cut || clean.Truncated);
         }
 

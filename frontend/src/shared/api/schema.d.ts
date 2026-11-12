@@ -263,6 +263,7 @@ export interface components {
             /** Format: int32 */
             blockedExternalResources: number | string;
             truncated: boolean;
+            canShowFull: boolean;
             sender: components["schemas"]["SenderDto"];
             attachments: components["schemas"]["AttachmentDto"][];
         };
@@ -563,7 +564,9 @@ export interface operations {
     };
     GetMessage: {
         parameters: {
-            query?: never;
+            query?: {
+                full?: boolean;
+            };
             header?: never;
             path: {
                 id: string;

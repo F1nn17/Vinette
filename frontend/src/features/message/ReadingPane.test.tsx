@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ReadingPane } from './ReadingPane';
 
@@ -312,6 +312,147 @@ describe('ReadingPane', () => {
 
     await screen.findByRole('heading', { name: 'Layouts, second iteration' });
     expect(screen.queryByRole('button', { name: 'Назад к списку' })).not.toBeInTheDocument();
+  });
+
+  describe('a very long body', () => {
+    const cut = (extra: Record<string, unknown> = {}) =>
+      message({
+        truncated: true,
+        canShowFull: true,
+        body: '<div>the beginning</div>',
+        bodyFormat: 'text',
+        ...extra,
+      });
+
+    it('says that only the beginning is shown, with a button to show all of it', async () => {
+      mockApi(() => cut());
+      renderPane();
+
+      expect(
+        await screen.findByText('Письмо очень длинное: показано только его начало.'),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Показать целиком' })).toBeEnabled();
+    });
+
+    it('asks for the whole body when the button is pressed, and shows it without a blank screen in between', async () => {
+      const urls: string[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn<typeof fetch>((input) => {
+          const url = String(input);
+          urls.push(url);
+          return Promise.resolve(
+            json(
+              url.includes('full=true')
+                ? message({
+                    truncated: false,
+                    canShowFull: false,
+                    body: '<div>the beginning and the rest</div>',
+                    bodyFormat: 'text',
+                  })
+                : cut(),
+            ),
+          );
+        }),
+      );
+      const user = userEvent.setup();
+      renderPane();
+      await screen.findByText('Письмо очень длинное: показано только его начало.');
+
+      await user.click(screen.getByRole('button', { name: 'Показать целиком' }));
+
+      await waitFor(() =>
+        expect(
+          (screen.getByTitle('Layouts, second iteration') as HTMLIFrameElement).getAttribute(
+            'srcdoc',
+          ),
+        ).toContain('the beginning and the rest'),
+      );
+      expect(
+        urls.filter((u) => u.includes('/messages/SU5CT1g.1.7') && !u.includes('/flags')),
+      ).toEqual(['/api/v1/messages/SU5CT1g.1.7', '/api/v1/messages/SU5CT1g.1.7?full=true']);
+      expect(
+        screen.queryByText('Письмо очень длинное: показано только его начало.'),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Показать целиком' })).not.toBeInTheDocument();
+    });
+
+    it('keeps the beginning on screen and the button busy while the rest is coming', async () => {
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn<typeof fetch>(async (input) => {
+          if (String(input).includes('full=true')) await gate;
+          return json(
+            String(input).includes('full=true')
+              ? message({ truncated: false, canShowFull: false })
+              : cut(),
+          );
+        }),
+      );
+      const user = userEvent.setup();
+      renderPane();
+      await user.click(await screen.findByRole('button', { name: 'Показать целиком' }));
+
+      expect(screen.getByTitle('Layouts, second iteration')).toBeInTheDocument(); // not a blank screen
+      expect(screen.getByRole('button', { name: 'Загрузка…' })).toBeDisabled();
+      release();
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: 'Загрузка…' })).not.toBeInTheDocument(),
+      );
+    });
+
+    it('says so, without a button, when there is nothing more to show', async () => {
+      mockApi(() => cut({ canShowFull: false }));
+      renderPane();
+
+      expect(
+        await screen.findByText('Письмо очень длинное: показано только его начало.'),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Показать целиком' })).not.toBeInTheDocument();
+    });
+
+    it('says nothing about a body that is not cut', async () => {
+      mockApi(() => message({ truncated: false, canShowFull: false }));
+      renderPane();
+
+      await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+      expect(screen.queryByText(/очень длинное/u)).not.toBeInTheDocument();
+    });
+
+    it('asks for the whole body of the open message only: another message starts with its beginning', async () => {
+      const urls: string[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn<typeof fetch>((input) => {
+          urls.push(String(input));
+          return Promise.resolve(json(cut({ id: 'x' })));
+        }),
+      );
+      const user = userEvent.setup();
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const view = render(
+        <QueryClientProvider client={client}>
+          <ReadingPane messageId="SU5CT1g.1.7" address="user@example.com" />
+        </QueryClientProvider>,
+      );
+      await user.click(await screen.findByRole('button', { name: 'Показать целиком' }));
+      await waitFor(() => expect(urls.some((u) => u.includes('full=true'))).toBe(true));
+
+      view.rerender(
+        <QueryClientProvider
+          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        >
+          <ReadingPane messageId="SU5CT1g.1.8" address="user@example.com" />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => expect(urls).toContain('/api/v1/messages/SU5CT1g.1.8'));
+      expect(urls).not.toContain('/api/v1/messages/SU5CT1g.1.8?full=true');
+    });
   });
 
   it('says in plain words when the mail has no text', async () => {

@@ -185,6 +185,38 @@ public sealed class DovecotFixture : IAsyncLifetime
         }
     }
 
+    /// <summary>
+    /// Puts a mail into a folder that is generated inside the container, so that a mail of tens of megabytes never travels
+    /// through the test: one text part and one attachment of <paramref name="attachmentBytes"/> bytes (zeros, as base64), or a
+    /// body of <paramref name="bodyChars"/> characters in the given <paramref name="bodyType"/> ("html" or "plain").
+    /// </summary>
+    public async Task SaveGeneratedMessageAsync(
+        MailAccount account,
+        string folder,
+        string subject,
+        long attachmentBytes,
+        int bodyChars,
+        string bodyType,
+        CancellationToken cancellationToken)
+    {
+        var body = bodyType == "html" ? "<p>x</p>" : "word ";
+        var repeat = Math.Max(1, bodyChars / body.Length);
+        var script =
+            "{ printf 'From: gen@example.org\\r\\nTo: a@vinette.test\\r\\nSubject: " + subject + "\\r\\nMIME-Version: 1.0\\r\\n"
+            + "Content-Type: multipart/mixed; boundary=\"b\"\\r\\n\\r\\n--b\\r\\nContent-Type: text/" + bodyType + "; charset=utf-8\\r\\n\\r\\n'; "
+            + "yes '" + body + "' | head -n " + repeat + " | tr -d '\\n'; printf '\\r\\n'; "
+            + (attachmentBytes > 0
+                ? "printf -- '--b\\r\\nContent-Type: application/octet-stream; name=big.bin\\r\\nContent-Disposition: attachment; filename=big.bin\\r\\nContent-Transfer-Encoding: base64\\r\\n\\r\\n'; "
+                  + "head -c " + attachmentBytes + " /dev/zero | base64 -w 76; printf '\\r\\n'; "
+                : string.Empty)
+            + "printf -- '--b--\\r\\n'; } | doveadm save -u " + account.Address + " -m '" + folder + "'";
+        var result = await Container.ExecAsync(["sh", "-c", script], cancellationToken);
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"Saving a generated message into {folder} failed (exit {result.ExitCode}): {result.Stderr}");
+        }
+    }
+
     /// <summary>Sets the storage limit of a mailbox, e.g. "10M" (docker-mailserver's <c>setup quota set</c>).</summary>
     public async Task SetQuotaAsync(MailAccount account, string limit, CancellationToken cancellationToken)
     {

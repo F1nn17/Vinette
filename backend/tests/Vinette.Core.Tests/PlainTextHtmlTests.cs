@@ -140,6 +140,29 @@ public class PlainTextHtmlTests
         Assert.True(html.Length < PlainTextHtml.MaxLength + 200);
     }
 
+    [Theory]
+    [InlineData(100, true)]
+    [InlineData(5_000, false)]
+    public void The_Length_Asked_For_Is_The_Length_Converted(int limit, bool cut)
+    {
+        var html = PlainTextHtml.ToHtml(new string('a', 1_000) + " " + new string('b', 3_000), out var truncated, limit);
+
+        Assert.Equal(cut, truncated);
+        Assert.Equal(cut, html.Length < 1_500);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(int.MaxValue)]
+    public void A_Silly_Length_Is_Brought_Into_Range(int limit)
+    {
+        var html = PlainTextHtml.ToHtml(new string('a', PlainTextHtml.MaxLength + 50), out var truncated, limit);
+
+        Assert.True(truncated);
+        Assert.True(html.Length < PlainTextHtml.MaxLength + 200);
+    }
+
     [Fact]
     public void Hostile_Input_Is_Handled_In_Linear_Time()
     {

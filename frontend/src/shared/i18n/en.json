@@ -122,6 +122,8 @@
     "emptyBody": "This message has no text.",
     "attachments": "Attachments · {{count}}",
     "download": "Download {{name}}, {{size}}",
-    "flagFailed": "Could not save the mark. Check your connection and try again."
+    "flagFailed": "Could not save the mark. Check your connection and try again.",
+    "truncated": "This message is very long: only the beginning is shown.",
+    "showFull": "Show all"
   }
 }
