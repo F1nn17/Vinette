@@ -13,8 +13,9 @@ export const appRoutes: RouteObject[] = [
   {
     element: <RequireAuth />,
     children: [
-      { path: '/mail/:folder', element: <MailboxPage /> },
-      { path: '/mail/:folder/:messageId', element: <MailboxPage /> },
+      // One route for the list and for an open message: the screen is not built again when a message is opened, so the
+      // list keeps what it loaded and where it was scrolled to.
+      { path: '/mail/:folder/:messageId?', element: <MailboxPage /> },
       { path: '/compose', element: <ComposePage /> },
     ],
   },

@@ -29,11 +29,10 @@ function fakeWindow(initialWidth: number) {
   };
 }
 
-function renderShell(messageOpen = false, onBack = vi.fn()) {
-  render(
+function renderShell(messageOpen = false) {
+  return render(
     <AppShell
       messageOpen={messageOpen}
-      onBack={onBack}
       nav={<p>folders-content</p>}
       list={
         <>
@@ -44,7 +43,6 @@ function renderShell(messageOpen = false, onBack = vi.fn()) {
       reader={<p>reader-content</p>}
     />,
   );
-  return onBack;
 }
 
 const layoutOf = () => document.querySelector('[data-layout]')?.getAttribute('data-layout');
@@ -95,27 +93,96 @@ describe('AppShell', () => {
     expect(screen.getByText('reader-content')).toBeInTheDocument();
   });
 
-  it('on mobile shows only the list until a message is open, then only the message with a back button', async () => {
+  it('on mobile shows only the list until a message is open, then only the message', () => {
     fakeWindow(400);
-    const user = userEvent.setup();
     const { unmount } = render(
       <AppShell
         messageOpen={false}
-        onBack={vi.fn()}
         nav="n"
         list={<p>list-content</p>}
         reader={<p>reader-content</p>}
       />,
     );
-    expect(screen.getByText('list-content')).toBeInTheDocument();
+    expect(screen.getByText('list-content')).toBeVisible();
     expect(screen.queryByText('reader-content')).not.toBeInTheDocument();
     unmount();
 
-    const onBack = renderShell(true);
-    expect(screen.queryByText('list-content')).not.toBeInTheDocument();
-    expect(screen.getByText('reader-content')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Назад к списку' }));
-    expect(onBack).toHaveBeenCalledOnce();
+    renderShell(true);
+    expect(screen.getByText('reader-content')).toBeVisible();
+    expect(screen.getByText('list-content')).not.toBeVisible(); // out of sight
+  });
+
+  it('on mobile the list stays in the page while a message is open, so that where it was is still there when the reader goes back', () => {
+    fakeWindow(400);
+    const list = <p data-testid="list-state">list</p>;
+    const shell = (open: boolean) => (
+      <AppShell messageOpen={open} nav="n" list={list} reader={<p>reader-content</p>} />
+    );
+    const { rerender } = render(shell(false));
+    const before = screen.getByTestId('list-state');
+
+    rerender(shell(true));
+    expect(screen.getByTestId('list-state')).toBe(before); // the same element: not thrown away and built again
+    expect(before).not.toBeVisible();
+
+    rerender(shell(false));
+    expect(screen.getByTestId('list-state')).toBe(before);
+    expect(before).toBeVisible();
+    expect(screen.queryByText('reader-content')).not.toBeInTheDocument();
+  });
+
+  it('on a desktop and a tablet the list is always on screen', () => {
+    for (const width of [900, 1400]) {
+      fakeWindow(width);
+      const { unmount } = render(
+        <AppShell messageOpen nav="n" list={<p>list-content</p>} reader={<p>reader-content</p>} />,
+      );
+      expect(screen.getByText('list-content')).toBeVisible();
+      expect(screen.getByText('reader-content')).toBeVisible();
+      unmount();
+    }
+  });
+
+  it('on mobile moves the focus to the message when it opens, and back to the row that was open when it closes', () => {
+    fakeWindow(400);
+    const list = (
+      <a href="#one" aria-current="true">
+        row
+      </a>
+    );
+    const shell = (open: boolean) => (
+      <AppShell messageOpen={open} nav="n" list={list} reader={<p>reader-content</p>} />
+    );
+    const { rerender } = render(shell(false));
+    expect(document.body).toHaveFocus(); // nothing moves on the first render
+
+    rerender(shell(true));
+    expect(screen.getByRole('main')).toHaveFocus();
+
+    rerender(shell(false));
+    expect(screen.getByRole('link', { name: 'row' })).toHaveFocus();
+  });
+
+  it('on a desktop opening a message does not take the focus away from the list', () => {
+    fakeWindow(1400);
+    const shell = (open: boolean) => (
+      <AppShell
+        messageOpen={open}
+        nav="n"
+        list={
+          <a href="#one" aria-current="true">
+            row
+          </a>
+        }
+        reader={<p>reader-content</p>}
+      />
+    );
+    const { rerender } = render(shell(false));
+    screen.getByRole('link', { name: 'row' }).focus();
+
+    rerender(shell(true));
+
+    expect(screen.getByRole('link', { name: 'row' })).toHaveFocus();
   });
 
   it('on mobile the folders are a drawer: closed by default, opened by the menu, closed by Escape and by the backdrop', async () => {

@@ -1,8 +1,6 @@
-import { ArrowLeft } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib';
-import { IconButton } from '@/shared/ui';
 import { ShellContext, type ShellState } from './shell-context';
 import { useLayout } from './use-layout';
 
@@ -15,15 +13,13 @@ export interface AppShellProps {
   reader: ReactNode;
   /** Whether a message is open: on mobile it then takes the whole screen. */
   messageOpen: boolean;
-  /** Called by the "back" button on mobile. */
-  onBack: () => void;
 }
 
 /**
  * The three-column frame of the mailbox (DESIGN.md §5, §8): 248 | 408 | rest on a desktop, a 64 px rail beside list and
  * reader on a tablet, one column on mobile. Semantic regions: nav, section (the list), main (the reading area).
  */
-export function AppShell({ nav, list, reader, messageOpen, onBack }: AppShellProps) {
+export function AppShell({ nav, list, reader, messageOpen }: AppShellProps) {
   const { t } = useTranslation();
   const layout = useLayout();
   const [navOpen, setNavOpen] = useState(false);
@@ -40,6 +36,9 @@ export function AppShell({ nav, list, reader, messageOpen, onBack }: AppShellPro
     return () => document.removeEventListener('keydown', onKey);
   }, [drawerOpen]);
 
+  const showList = !drawer || !messageOpen;
+  const showReader = !drawer || messageOpen;
+
   const state = useMemo<ShellState>(
     () => ({
       layout,
@@ -50,8 +49,28 @@ export function AppShell({ nav, list, reader, messageOpen, onBack }: AppShellPro
     [layout, drawerOpen],
   );
 
-  const showList = !drawer || !messageOpen;
-  const showReader = !drawer || messageOpen;
+  // On a phone opening a message and going back are screen changes: the focus goes where the reader's eyes are, to the
+  // message, and back to the row that was open. (Not on the first render, nor on a desktop where nothing moves.)
+  const reading = drawer && messageOpen;
+  const readerRef = useRef<HTMLElement>(null);
+  const listRef = useRef<HTMLElement>(null);
+  const wasReading = useRef(reading);
+  const openedRow = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (reading) {
+      // The row that is open now: the address no longer names it once the list is back, so it is remembered here.
+      openedRow.current =
+        listRef.current?.querySelector<HTMLElement>('[aria-current="true"]') ?? null;
+    }
+
+    if (wasReading.current === reading) return;
+    wasReading.current = reading;
+    if (reading) {
+      readerRef.current?.focus({ preventScroll: true });
+    } else if (openedRow.current?.isConnected) {
+      openedRow.current.focus({ preventScroll: true });
+    }
+  }, [reading]);
 
   return (
     <ShellContext.Provider value={state}>
@@ -81,23 +100,29 @@ export function AppShell({ nav, list, reader, messageOpen, onBack }: AppShellPro
         >
           {nav}
         </nav>
-        {showList && (
-          <section
-            aria-label={t('mailbox.list')}
-            className="flex min-h-0 min-w-0 flex-col overflow-hidden border-x border-line bg-surface"
-          >
-            {list}
-          </section>
-        )}
+        {/* On a phone the message covers the list (same grid cell) and the list is only made invisible: what was loaded and where it was scrolled to is still there when the reader goes back. */}
+        <section
+          ref={listRef}
+          aria-label={t('mailbox.list')}
+          // Out of sight but still laid out, not removed from the page: a box that is removed forgets how far it was scrolled.
+          style={showList ? undefined : { visibility: 'hidden' }}
+          className={cn(
+            'flex min-h-0 min-w-0 flex-col overflow-hidden border-x border-line bg-surface',
+            drawer && 'col-start-1 row-start-1',
+          )}
+        >
+          {list}
+        </section>
         {showReader && (
-          <main aria-label={t('mailbox.reader')} className="min-w-0 overflow-y-auto bg-surface">
-            {drawer && (
-              <div className="p-2">
-                <IconButton aria-label={t('mailbox.back')} onClick={onBack}>
-                  <ArrowLeft size={18} strokeWidth={1.8} aria-hidden />
-                </IconButton>
-              </div>
+          <main
+            ref={readerRef}
+            tabIndex={-1}
+            aria-label={t('mailbox.reader')}
+            className={cn(
+              'min-h-0 min-w-0 overflow-hidden bg-surface outline-none',
+              drawer && 'col-start-1 row-start-1',
             )}
+          >
             {reader}
           </main>
         )}

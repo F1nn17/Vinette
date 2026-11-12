@@ -40,11 +40,15 @@ function mockApi(answer: () => Response | unknown) {
   return urls;
 }
 
-function renderPane(messageId: string | null = 'SU5CT1g.1.7', address = 'user@example.com') {
+function renderPane(
+  messageId: string | null = 'SU5CT1g.1.7',
+  address = 'user@example.com',
+  onBack?: () => void,
+) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <ReadingPane messageId={messageId ?? undefined} address={address} />
+      <ReadingPane messageId={messageId ?? undefined} address={address} onBack={onBack} />
     </QueryClientProvider>,
   );
 }
@@ -264,6 +268,50 @@ describe('ReadingPane', () => {
 
     await screen.findByRole('heading', { name: 'Layouts, second iteration' });
     expect(screen.queryByText(/Вложения/u)).not.toBeInTheDocument();
+  });
+
+  describe('on a phone', () => {
+    it('has a back button first in the bar, which goes back to the list', async () => {
+      mockApi(() => message());
+      const onBack = vi.fn();
+      const user = userEvent.setup();
+      renderPane('SU5CT1g.1.7', 'user@example.com', onBack);
+
+      await screen.findByRole('heading', { name: 'Layouts, second iteration' }); // the message, not the placeholder
+      const bar = screen.getByRole('toolbar', { name: 'Действия с письмом' });
+      const [first] = within(bar).getAllByRole('button');
+      expect(first).toHaveAccessibleName('Назад к списку');
+      await user.click(first!);
+
+      expect(onBack).toHaveBeenCalledOnce();
+    });
+
+    it('has the back button while the message loads and when it cannot be loaded', async () => {
+      mockApi(() => json({ code: 'not_found', title: 'x' }, { status: 404 }));
+      renderPane('SU5CT1g.1.7', 'user@example.com', vi.fn());
+
+      expect(await screen.findByRole('alert')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Назад к списку' })).toBeInTheDocument();
+    });
+
+    it('has touch targets of at least 44 px for the buttons of the bar', async () => {
+      mockApi(() => message());
+      renderPane('SU5CT1g.1.7', 'user@example.com', vi.fn());
+
+      await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+      const bar = screen.getByRole('toolbar', { name: 'Действия с письмом' });
+      for (const button of within(bar).getAllByRole('button')) {
+        expect(button.className).toMatch(/max-md:(size-11|h-11)/u);
+      }
+    });
+  });
+
+  it('has no back button where the list is beside the message', async () => {
+    mockApi(() => message());
+    renderPane();
+
+    await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+    expect(screen.queryByRole('button', { name: 'Назад к списку' })).not.toBeInTheDocument();
   });
 
   it('says in plain words when the mail has no text', async () => {

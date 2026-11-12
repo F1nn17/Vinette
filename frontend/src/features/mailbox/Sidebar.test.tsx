@@ -71,7 +71,6 @@ function renderSidebar(url = '/mail/inbox', slug = 'inbox') {
         element: (
           <AppShell
             messageOpen={false}
-            onBack={() => undefined}
             nav={<Sidebar address="alice@vinette.test" folderSlug={slug} />}
             list="list"
             reader="reader"
