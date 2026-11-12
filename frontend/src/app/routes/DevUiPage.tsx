@@ -15,6 +15,7 @@ import {
   Select,
   TextArea,
   TextField,
+  Toast,
 } from '@/shared/ui';
 import { MessageFrame } from '@/features/message';
 
@@ -145,6 +146,23 @@ export function DevUiPage() {
         <div className="w-72">
           <ProgressBar aria-label="Storage" value={21} tone="ink" />
         </div>
+      </Section>
+
+      <Section title="Toast">
+        <Toast closeLabel="Close" onClose={() => undefined}>
+          The message was moved to the trash
+        </Toast>
+        <Toast
+          closeLabel="Close"
+          onClose={() => undefined}
+          actionLabel="Undo"
+          onAction={() => undefined}
+        >
+          The message was moved to the trash
+        </Toast>
+        <Toast tone="error" closeLabel="Close" onClose={() => undefined}>
+          The mail is not available right now. Try again in a few minutes.
+        </Toast>
       </Section>
 
       <Section title="Logo">

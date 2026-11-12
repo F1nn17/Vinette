@@ -1,7 +1,7 @@
 import { AlertCircle, Archive, ListChecks, MailOpen, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { IconButton } from '@/shared/ui';
-import type { BatchAction } from './api';
+import type { BatchAction } from './batch';
 import { MAX_SELECTED } from './selection';
 
 export interface SelectionBarProps {
@@ -11,12 +11,8 @@ export interface SelectionBarProps {
   allSelected: boolean;
   /** The role of the folder the list shows: the action that would leave the messages where they are is not offered. */
   folderRole?: string;
-  /** An action is running: the buttons wait. */
-  busy: boolean;
   /** A selection went over the limit: say so. */
   capped: boolean;
-  /** What went wrong with the last action, in plain words. */
-  error?: string | null;
   onSelectAll: () => void;
   onClear: () => void;
   onAction: (action: BatchAction) => void;
@@ -32,9 +28,7 @@ export function SelectionBar({
   count,
   allSelected,
   folderRole,
-  busy,
   capped,
-  error,
   onSelectAll,
   onClear,
   onAction,
@@ -66,48 +60,27 @@ export function SelectionBar({
             </button>
           ))}
         {folderRole !== 'archive' && (
-          <IconButton
-            aria-label={t('selection.archive')}
-            disabled={busy}
-            onClick={() => onAction('archive')}
-          >
+          <IconButton aria-label={t('selection.archive')} onClick={() => onAction('archive')}>
             <Archive size={18} strokeWidth={1.8} aria-hidden />
           </IconButton>
         )}
         {folderRole !== 'junk' && (
-          <IconButton
-            aria-label={t('selection.spam')}
-            disabled={busy}
-            onClick={() => onAction('spam')}
-          >
+          <IconButton aria-label={t('selection.spam')} onClick={() => onAction('spam')}>
             <AlertCircle size={18} strokeWidth={1.8} aria-hidden />
           </IconButton>
         )}
         {folderRole !== 'trash' && (
-          <IconButton
-            aria-label={t('selection.trash')}
-            disabled={busy}
-            onClick={() => onAction('trash')}
-          >
+          <IconButton aria-label={t('selection.trash')} onClick={() => onAction('trash')}>
             <Trash2 size={18} strokeWidth={1.8} aria-hidden />
           </IconButton>
         )}
-        <IconButton
-          aria-label={t('selection.read')}
-          disabled={busy}
-          onClick={() => onAction('read')}
-        >
+        <IconButton aria-label={t('selection.read')} onClick={() => onAction('read')}>
           <MailOpen size={18} strokeWidth={1.8} aria-hidden />
         </IconButton>
       </div>
       {capped && (
         <p role="status" className="text-secondary text-muted">
           {t('selection.limit', { max: MAX_SELECTED })}
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="text-secondary text-warning">
-          {error}
         </p>
       )}
     </div>

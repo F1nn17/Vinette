@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router';
 import { appRoutes } from '@/app/routes';
 import { apiGet, resetCsrfToken } from '@/shared/api/client';
+import { ToastProvider } from '@/shared/toast';
 import { RedirectIfSignedIn, RequireAuth, SessionProvider, useSession } from '.';
 import { ApiError } from '@/shared/api/client';
 
@@ -71,11 +72,13 @@ function renderRoutes(routes: RouteObject[], entry: Parameters<typeof createMemo
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const router = createMemoryRouter(routes, entry);
   render(
-    <QueryClientProvider client={queryClient}>
-      <SessionProvider>
-        <RouterProvider router={router} />
-      </SessionProvider>
-    </QueryClientProvider>,
+    <ToastProvider>
+      <QueryClientProvider client={queryClient}>
+        <SessionProvider>
+          <RouterProvider router={router} />
+        </SessionProvider>
+      </QueryClientProvider>
+    </ToastProvider>,
   );
   return { router, queryClient };
 }

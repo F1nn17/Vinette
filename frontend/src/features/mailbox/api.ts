@@ -1,5 +1,5 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost } from '@/shared/api/client';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { apiGet } from '@/shared/api/client';
 import type { components } from '@/shared/api/schema';
 
 export type Folder = components['schemas']['FolderDto'];
@@ -58,27 +58,5 @@ export function useMessages(
       );
     },
     getNextPageParam: (last) => last.next,
-  });
-}
-
-export type BatchAction = 'archive' | 'spam' | 'trash' | 'read' | 'unread' | 'flag' | 'unflag';
-export type BatchResult = components['schemas']['MessageBatchResultDto'];
-
-/**
- * One action on the selected messages (at most 100 of one folder, see `MAX_SELECTED`). Afterwards the lists and the
- * folder counters are loaded again: what moved is gone from this list, and the counters changed.
- */
-export function useMessageBatch() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ ids, action }: { ids: string[]; action: BatchAction }) =>
-      apiPost<BatchResult>('/api/v1/messages/batch', { ids, action, to: null }),
-    onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['messages'] }),
-        queryClient.invalidateQueries({ queryKey: FOLDERS_KEY }),
-        queryClient.invalidateQueries({ queryKey: ['message'] }),
-      ]);
-    },
   });
 }

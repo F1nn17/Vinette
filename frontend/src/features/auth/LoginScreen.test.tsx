@@ -3,6 +3,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { appRoutes } from '@/app/routes';
+import { ToastProvider } from '@/shared/toast';
 import { apiGet, resetCsrfToken } from '@/shared/api/client';
 import { SessionProvider as SessionProviderForTests } from './SessionProvider';
 
@@ -53,11 +54,13 @@ function renderLogin(entry = '/login') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const router = createMemoryRouter(appRoutes, { initialEntries: [entry] });
   render(
-    <QueryClientProvider client={queryClient}>
-      <SessionProviderForTests>
-        <RouterProvider router={router} />
-      </SessionProviderForTests>
-    </QueryClientProvider>,
+    <ToastProvider>
+      <QueryClientProvider client={queryClient}>
+        <SessionProviderForTests>
+          <RouterProvider router={router} />
+        </SessionProviderForTests>
+      </QueryClientProvider>
+    </ToastProvider>,
   );
   return router;
 }

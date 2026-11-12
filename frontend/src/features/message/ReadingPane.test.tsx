@@ -541,26 +541,6 @@ describe('ReadingPane', () => {
       expect(within(bar()).queryByRole('button', { name: 'В спам' })).not.toBeInTheDocument();
     });
 
-    it('waits while an action is running', async () => {
-      mockApi(() => message());
-      mount({ onAction: vi.fn(), actionBusy: true });
-      await screen.findByRole('heading', { name: 'Layouts, second iteration' });
-
-      for (const name of ['В архив', 'В спам', 'Удалить']) {
-        expect(within(bar()).getByRole('button', { name })).toBeDisabled();
-      }
-    });
-
-    it('says in plain words what went wrong', async () => {
-      mockApi(() => message());
-      mount({
-        onAction: vi.fn(),
-        actionError: 'Почта временно недоступна. Попробуйте через несколько минут.',
-      });
-
-      expect(await screen.findByRole('alert')).toHaveTextContent('Почта временно недоступна');
-    });
-
     it('"More" opens a panel with "Mark as unread", and chosen it asks for it and closes', async () => {
       mockApi(() => message());
       const onAction = vi.fn();

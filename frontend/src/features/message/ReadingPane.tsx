@@ -24,10 +24,6 @@ export interface ReadingPaneProps {
   folderRole?: string;
   /** Archives, marks as spam, deletes or marks as unread the open message; the screen decides where to go afterwards. */
   onAction?: (action: ReaderAction) => void;
-  /** An action is running. */
-  actionBusy?: boolean;
-  /** What went wrong with the last action, in plain words. */
-  actionError?: string | null;
 }
 
 function EmptyState() {
@@ -180,8 +176,6 @@ export function ReadingPane({
   onBack,
   folderRole,
   onAction,
-  actionBusy = false,
-  actionError,
 }: ReadingPaneProps) {
   const { t } = useTranslation();
   const [fullFor, setFullFor] = useState<string | null>(null); // the message whose whole body was asked for
@@ -239,7 +233,6 @@ export function ReadingPane({
         onBack={onBack}
         folderRole={folderRole}
         onAction={onAction}
-        busy={actionBusy}
         flagged={message.flagged}
         onToggleFlag={() =>
           flags.mutate(
@@ -254,14 +247,6 @@ export function ReadingPane({
           className="shrink-0 bg-warning-bg px-7 py-2 text-secondary text-warning max-md:px-4"
         >
           {t('reader.flagFailed')}
-        </p>
-      )}
-      {actionError && (
-        <p
-          role="alert"
-          className="shrink-0 bg-warning-bg px-7 py-2 text-secondary text-warning max-md:px-4"
-        >
-          {actionError}
         </p>
       )}
       <div className="min-h-0 flex-1 overflow-y-auto">

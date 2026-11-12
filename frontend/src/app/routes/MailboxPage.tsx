@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { useSession } from '@/features/auth';
 import {
@@ -11,7 +10,6 @@ import {
   useMessageBatch,
 } from '@/features/mailbox';
 import { ReadingPane } from '@/features/message';
-import { describeApiError } from '@/shared/api/describe-error';
 
 /** The mailbox screen: `/mail/:folder` and `/mail/:folder/:messageId`. Sidebar, list and reading area. */
 export function MailboxPage() {
@@ -20,7 +18,6 @@ export function MailboxPage() {
   const { search } = useLocation();
   const { address } = useSession();
   const layout = useLayout();
-  const { t } = useTranslation();
   const folders = useFolders();
   const role = folders.data?.find((f) => folderSlug(f) === folder)?.role;
   const batch = useMessageBatch();
@@ -39,12 +36,12 @@ export function MailboxPage() {
           address={address ?? undefined}
           onBack={layout === 'mobile' ? () => void navigate(toList) : undefined}
           folderRole={role}
-          actionBusy={batch.isPending}
-          actionError={batch.isError ? describeApiError(batch.error, t) : null}
           onAction={(action) => {
             if (messageId === undefined) return;
-            // The message is no longer in this list afterwards (or is unread again): back to the list.
-            batch.mutate({ ids: [messageId], action }, { onSuccess: () => void navigate(toList) });
+            // The screen follows at once (see `useMessageBatch`): the message is no longer in this list afterwards (or is
+            // unread again), so back to the list; if the server refuses, the list gets it back and a toast says so.
+            batch.mutate({ ids: [messageId], action });
+            void navigate(toList);
           }}
         />
       }
