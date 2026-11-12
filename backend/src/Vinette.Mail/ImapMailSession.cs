@@ -14,6 +14,9 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
 
     private bool PreviewExtension => previewExtension;
 
+    /// <summary>Tests only: false moves messages by COPY, mark and expunge even if the server has MOVE.</summary>
+    internal bool MoveExtension { get; init; } = true;
+
     public bool IsConnected => client.IsConnected && client.IsAuthenticated;
 
     public Task PingAsync(CancellationToken cancellationToken) => client.NoOpAsync(cancellationToken);
@@ -184,6 +187,65 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
             after.HasFlag(MessageFlags.Flagged),
             after.HasFlag(MessageFlags.Answered),
             after.HasFlag(MessageFlags.Draft));
+    }
+
+    public async Task<MessageId?> MoveMessageAsync(MessageId id, string targetFolder, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(targetFolder);
+        var (source, uidValidity) = await OpenAsync(id.Folder, cancellationToken, FolderAccess.ReadWrite).ConfigureAwait(false);
+        if (id.UidValidity != uidValidity)
+        {
+            throw new UidValidityChangedException(id.Folder, id.UidValidity, uidValidity);
+        }
+
+        IMailFolder destination;
+        try
+        {
+            destination = IsInboxPath(targetFolder) ? client.Inbox : await client.GetFolderAsync(targetFolder, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is FolderNotFoundException or ImapCommandException or InvalidOperationException)
+        {
+            throw new MailFolderNotFoundException("The folder does not exist or cannot hold messages.", exception);
+        }
+
+        var uid = new UniqueId(id.Uid);
+        _ = await FlagsOfAsync(source, uid, cancellationToken).ConfigureAwait(false) ?? throw new MailMessageNotFoundException("The message is not in the folder.");
+
+        UniqueId? moved;
+        try
+        {
+            if (MoveExtension && client.Capabilities.HasFlag(ImapCapabilities.Move))
+            {
+                moved = await source.MoveToAsync(uid, destination, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                // The copy comes first: if it fails nothing was changed. Only the one message is removed, never others that happen to be marked.
+                moved = await source.CopyToAsync(uid, destination, cancellationToken).ConfigureAwait(false);
+                await source.AddFlagsAsync(uid, MessageFlags.Deleted, silent: true, cancellationToken).ConfigureAwait(false);
+                await source.ExpungeAsync([uid], cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (FolderNotFoundException exception)
+        {
+            throw new MailFolderNotFoundException("The folder does not exist or cannot hold messages.", exception);
+        }
+
+        return moved is { Validity: > 0 } where ? new MessageId(targetFolder, where.Validity, where.Id) : null;
+    }
+
+    public async Task DeleteMessagePermanentlyAsync(MessageId id, CancellationToken cancellationToken)
+    {
+        var (folder, uidValidity) = await OpenAsync(id.Folder, cancellationToken, FolderAccess.ReadWrite).ConfigureAwait(false);
+        if (id.UidValidity != uidValidity)
+        {
+            throw new UidValidityChangedException(id.Folder, id.UidValidity, uidValidity);
+        }
+
+        var uid = new UniqueId(id.Uid);
+        _ = await FlagsOfAsync(folder, uid, cancellationToken).ConfigureAwait(false) ?? throw new MailMessageNotFoundException("The message is not in the folder.");
+        await folder.AddFlagsAsync(uid, MessageFlags.Deleted, silent: true, cancellationToken).ConfigureAwait(false);
+        await folder.ExpungeAsync([uid], cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<MessageFlags?> FlagsOfAsync(IMailFolder folder, UniqueId uid, CancellationToken cancellationToken)
