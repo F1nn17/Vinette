@@ -1,10 +1,12 @@
 import { ImageOff, MailOpen } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { describeApiError } from '@/shared/api/describe-error';
 import { formatMessageDate, labelColor } from '@/shared/lib';
 import { Avatar, Button, LabelTag } from '@/shared/ui';
 import { useMessage, verdictOf, type MessageDetail } from './api';
 import { AttachmentList } from './AttachmentList';
+import { useSetFlags } from './flags';
 import { MessageFrame } from './MessageFrame';
 import { ReaderActionBar } from './ReaderActionBar';
 import { SenderCheckBadge } from './SenderCheckBadge';
@@ -138,6 +140,20 @@ function Header({ message, address }: { message: MessageDetail; address?: string
 export function ReadingPane({ messageId, address }: ReadingPaneProps) {
   const { t } = useTranslation();
   const query = useMessage(messageId);
+  const flags = useSetFlags(messageId);
+  const markedRead = useRef<string | null>(null);
+  const [failedFor, setFailedFor] = useState<string | null>(null); // the message whose flag could not be saved
+  const flagFailed = failedFor === messageId;
+
+  // Opening an unread message reads it. Once per message: if the server refuses, the mark goes back and is not forced again.
+  const opened = query.data;
+  const { mutate } = flags;
+  useEffect(() => {
+    if (messageId !== undefined && opened && !opened.seen && markedRead.current !== messageId) {
+      markedRead.current = messageId;
+      mutate({ seen: true });
+    }
+  }, [messageId, opened, mutate]);
 
   if (messageId === undefined) return <EmptyState />;
 
@@ -170,7 +186,23 @@ export function ReadingPane({ messageId, address }: ReadingPaneProps) {
   const message = query.data;
   return (
     <article aria-labelledby="reader-subject" className="flex h-full flex-col">
-      <ReaderActionBar flagged={message.flagged} />
+      <ReaderActionBar
+        flagged={message.flagged}
+        onToggleFlag={() =>
+          flags.mutate(
+            { flagged: !message.flagged },
+            { onSuccess: () => setFailedFor(null), onError: () => setFailedFor(messageId) },
+          )
+        }
+      />
+      {flagFailed && (
+        <p
+          role="alert"
+          className="shrink-0 bg-warning-bg px-7 py-2 text-secondary text-warning max-md:px-4"
+        >
+          {t('reader.flagFailed')}
+        </p>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col gap-5 px-10 py-7 max-md:px-4">
           <Header message={message} address={address} />

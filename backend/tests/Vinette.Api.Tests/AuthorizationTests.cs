@@ -26,6 +26,7 @@ public sealed class AuthorizationTests : IDisposable
 
     private static readonly string[] ExpectedAnonymousEndpoints =
     [
+        "* /mail/{*path}", // the SPA fallback for addresses under /mail, whose message ids contain dots
         "* {*path:nonfile}", // the SPA fallback; it never serves /api, /hubs or /branding
         "GET /api/v1/csrf",
         "GET /api/v1/health",

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Opening a message marks it as read (the dot in the list and the unread counter of the folder follow at once), and the flag button works: it sets and removes the flag, and goes back with a clear message if it cannot be saved. `PATCH /api/v1/messages/{id}/flags` changes the read and flag marks.
 - Attachments of an open message are listed under its text, two cards per row with the file type, name and size, and are downloaded with one click or with Tab and Enter. Files are always saved, never opened in the browser.
 - Messages can be read: selecting one in the list opens it in the reading area with its subject, labels, sender, recipients, date, a confirmation or a warning from the sender check, a notice when external images were hidden, and the body in a sandboxed frame. The action buttons (reply, forward, archive, spam, delete, flag) are shown but not active yet.
 - A message now says whether its sender passed the checks of your mail server (`sender`: `verified`, `suspicious` or `unknown`, from the `Authentication-Results` header). "Verified" is believed only from the topmost header of your own server: set `SenderCheck:TrustedAuthservIds` (`VINETTE_SenderCheck__TrustedAuthservIds__0`) to the name your server writes at the start of that header if it is not the address in `Imap:Host`. A failed check is reported whichever server wrote it.
@@ -53,5 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A link to a message (`/mail/<folder>/<message>`) opens the application after a page reload and from a bookmark; it answered with an error before.
 - Subjects, senders and previews written in KOI8-R, Windows-1251 and other legacy charsets are shown correctly in the message list (the application did not load these charsets before).
 - A request parameter the server cannot read (e.g. `limit=abc`) now answers `400` with a problem body instead of `500`.

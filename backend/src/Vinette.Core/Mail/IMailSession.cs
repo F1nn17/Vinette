@@ -37,6 +37,15 @@ public interface IMailSession : IAsyncDisposable
     Task<MessageSource> GetMessageAsync(MessageId id, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Changes the read and flag marks of one message (IMAP STORE) and returns the flags it has afterwards. Setting a mark that
+    /// is already set is not an error.
+    /// </summary>
+    /// <exception cref="MailFolderNotFoundException">There is no such folder, or it cannot hold messages.</exception>
+    /// <exception cref="UidValidityChangedException">The id belongs to an earlier incarnation of the folder.</exception>
+    /// <exception cref="MailMessageNotFoundException">The message is not in the folder (any more).</exception>
+    Task<MessageFlagState> UpdateFlagsAsync(MessageId id, MessageFlagChange change, CancellationToken cancellationToken);
+
+    /// <summary>
     /// How much of the mailbox's storage is used (IMAP GETQUOTAROOT). Null when the server has no quota extension or
     /// sets no storage limit for this mailbox: then there is nothing to show.
     /// </summary>

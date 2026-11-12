@@ -365,6 +365,102 @@
         }
       }
     },
+    "/api/v1/messages/{id}/flags": {
+      "patch": {
+        "tags": [
+          "Mail"
+        ],
+        "operationId": "UpdateMessageFlags",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MessageFlagsPatch"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageFlagsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/messages/{id}/attachments/{partId}": {
       "get": {
         "tags": [
@@ -909,6 +1005,50 @@
             "items": {
               "$ref": "#/components/schemas/AttachmentDto"
             }
+          }
+        }
+      },
+      "MessageFlagsDto": {
+        "required": [
+          "seen",
+          "flagged",
+          "answered",
+          "draft"
+        ],
+        "type": "object",
+        "properties": {
+          "seen": {
+            "type": "boolean"
+          },
+          "flagged": {
+            "type": "boolean"
+          },
+          "answered": {
+            "type": "boolean"
+          },
+          "draft": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MessageFlagsPatch": {
+        "required": [
+          "seen",
+          "flagged"
+        ],
+        "type": "object",
+        "properties": {
+          "seen": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "flagged": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },

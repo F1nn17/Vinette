@@ -20,7 +20,7 @@ public static partial class SpaIndex
 
     public static IEndpointRouteBuilder MapSpa(this IEndpointRouteBuilder app)
     {
-        app.MapFallback(async (HttpContext ctx, IWebHostEnvironment env, IOptions<BrandingOptions> branding) =>
+        async Task<IResult> Serve(HttpContext ctx, IWebHostEnvironment env, IOptions<BrandingOptions> branding)
         {
             var path = ctx.Request.Path;
             if (path.StartsWithSegments("/api") || path.StartsWithSegments("/hubs") || path.StartsWithSegments("/branding") || path.StartsWithSegments("/metrics"))
@@ -37,7 +37,14 @@ public static partial class SpaIndex
             var html = await ReadAsync(file, ctx.RequestAborted);
             ctx.Response.Headers.CacheControl = "no-cache";
             return Results.Content(Render(html, branding.Value), "text/html; charset=utf-8");
-        }).AllowAnonymous().ExcludeFromDescription();
+        }
+
+        // A file-like last segment (".../x.js") is not a page, so a missing file is a 404 and not the application...
+        app.MapFallback(Serve).AllowAnonymous().ExcludeFromDescription();
+
+        // ...except under /mail, whose addresses end in a message id such as SU5CT1g.1731000000.42: a link to a message, a
+        // bookmark and a reload must open the application.
+        app.MapFallback("/mail/{*path}", Serve).AllowAnonymous().ExcludeFromDescription();
         return app;
     }
 
