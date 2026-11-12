@@ -4,6 +4,7 @@ import { describeApiError } from '@/shared/api/describe-error';
 import { formatMessageDate, labelColor } from '@/shared/lib';
 import { Avatar, Button, LabelTag } from '@/shared/ui';
 import { useMessage, verdictOf, type MessageDetail } from './api';
+import { AttachmentList } from './AttachmentList';
 import { MessageFrame } from './MessageFrame';
 import { ReaderActionBar } from './ReaderActionBar';
 import { SenderCheckBadge } from './SenderCheckBadge';
@@ -132,7 +133,7 @@ function Header({ message, address }: { message: MessageDetail; address?: string
 
 /**
  * The reading area (DESIGN.md §5): the action bar, then subject, labels, sender, the sender check, the notice about hidden
- * pictures and the body in its sandboxed frame. Attachments (VIN-065) and the quick reply (VIN-103) come later.
+ * pictures and the body in its sandboxed frame. The attachments follow the body; the quick reply (VIN-103) comes later.
  */
 export function ReadingPane({ messageId, address }: ReadingPaneProps) {
   const { t } = useTranslation();
@@ -184,6 +185,7 @@ export function ReadingPane({ messageId, address }: ReadingPaneProps) {
               />
             )}
           </div>
+          <AttachmentList messageId={message.id} attachments={message.attachments} />
         </div>
       </div>
     </article>

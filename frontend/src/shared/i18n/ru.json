@@ -121,6 +121,8 @@
     "to": "Кому: {{names}}",
     "toMany": "Кому: {{names}} и ещё {{count}}",
     "noRecipients": "Получатели не указаны",
-    "emptyBody": "В письме нет текста."
+    "emptyBody": "В письме нет текста.",
+    "attachments": "Вложения · {{count}}",
+    "download": "Скачать {{name}}, {{size}}"
   }
 }

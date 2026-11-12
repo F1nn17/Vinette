@@ -233,6 +233,39 @@ describe('ReadingPane', () => {
     });
   });
 
+  it('lists the attachments after the body, each as a download link', async () => {
+    mockApi(() =>
+      message({
+        attachments: [
+          {
+            partId: '1.2',
+            fileName: 'report.pdf',
+            contentType: 'application/pdf',
+            size: 2048,
+            isMessage: false,
+          },
+        ],
+      }),
+    );
+    renderPane();
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Вложения · 1' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Скачать report\.pdf/u })).toHaveAttribute(
+      'href',
+      '/api/v1/messages/SU5CT1g.1.7/attachments/1.2',
+    );
+  });
+
+  it('shows no attachments section for a message without files', async () => {
+    mockApi(() => message({ attachments: [] }));
+    renderPane();
+
+    await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+    expect(screen.queryByText(/Вложения/u)).not.toBeInTheDocument();
+  });
+
   it('says in plain words when the mail has no text', async () => {
     mockApi(() => message({ bodyFormat: 'empty', body: '' }));
     renderPane();
