@@ -229,6 +229,30 @@ public partial class MessageHtmlSanitizerTests
     }
 
     [Fact]
+    public void A_Resolver_Turns_A_Content_Id_Into_Whatever_It_Returns_And_Drops_What_It_Cannot_Resolve()
+    {
+        var asked = new List<string>();
+        string? Resolve(string id)
+        {
+            asked.Add(id);
+            return id == "known@x" ? "data:image/png;base64,iVBORw0KGgo=" : null;
+        }
+
+        var output = Sanitizer.Sanitize("<img src=\"cid:known@x\" alt=\"a\"><img src=\"cid:unknown@x\" alt=\"b\"><img src=\"https://example.org/p.png\">", Resolve).Html;
+
+        Assert.Equal(["known@x", "unknown@x"], asked); // only cid: addresses reach the resolver
+        Assert.Contains("src=\"data:image/png;base64,iVBORw0KGgo=\"", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("cid:", output, StringComparison.Ordinal);
+        Assert.Equal(1, Regex.Count(output, "src="));
+    }
+
+    [Fact]
+    public void Without_A_Resolver_Content_Ids_Stay_As_They_Are()
+    {
+        Assert.Contains("src=\"cid:a@x\"", Sanitizer.Sanitize("<img src=\"cid:a@x\">", null).Html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Content_Ids_Are_Kept_And_An_Empty_One_Is_Not()
     {
         Assert.Contains("src=\"cid:logo@example.org\"", Clean("<img src=\"cid:logo@example.org\">"), StringComparison.Ordinal);
