@@ -266,4 +266,5 @@ public sealed class LabelsIntegrationTests(DovecotFixture dovecot)
 
         Assert.Empty(found.Items);
         Assert.Equal(0, found.Total);
-    }}
+    }
+}

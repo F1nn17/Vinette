@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
+import { ToastProvider } from '@/shared/toast';
 import { AppShell } from './AppShell';
 import { Sidebar } from './Sidebar';
 import { DESKTOP_MIN_WIDTH } from './use-layout';
@@ -42,6 +43,7 @@ function mockApi(options: { folders?: () => Response; storage?: unknown } = {}) 
       const url = String(input);
       if (url === '/api/v1/folders')
         return Promise.resolve(options.folders?.() ?? json({ folders: FOLDERS }));
+      if (url === '/api/v1/labels') return Promise.resolve(json({ labels: [] }));
       if (url === '/api/v1/quota')
         return Promise.resolve(
           json({
@@ -83,7 +85,9 @@ function renderSidebar(url = '/mail/inbox', slug = 'inbox') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
     </QueryClientProvider>,
   );
   return router;

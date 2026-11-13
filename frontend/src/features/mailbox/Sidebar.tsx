@@ -17,6 +17,7 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import { describeApiError } from '@/shared/api/describe-error';
 import { cn, formatBytes } from '@/shared/lib';
 import { Button, Logo, ProgressBar } from '@/shared/ui';
+import { SidebarLabels } from '@/features/labels';
 import { useFolders, useQuota, type Folder } from './api';
 import { folderLabel, folderSlug } from './folder-label';
 import { useShell } from './shell-context';
@@ -79,13 +80,15 @@ export interface SidebarProps {
   address: string;
   /** The folder in the address (`/mail/<slug>`), see `folderSlug`. */
   folderSlug: string;
+  /** The label whose list is open (`/mail/@label/<name>`), if any: then no folder is the current one. */
+  labelName?: string;
 }
 
 /**
  * The folder panel (DESIGN.md §5): logo, account, "Compose", folders with counters, labels, storage. On a tablet it is a
  * rail of icons; on mobile the same content sits in a drawer.
  */
-export function Sidebar({ address, folderSlug: current }: SidebarProps) {
+export function Sidebar({ address, folderSlug: current, labelName }: SidebarProps) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { search } = useLocation();
@@ -190,17 +193,7 @@ export function Sidebar({ address, folderSlug: current }: SidebarProps) {
         {folders.isSuccess && rows.map((row) => <div key={row.key}>{row.node}</div>)}
       </div>
 
-      {!rail && (
-        <section aria-labelledby="sidebar-labels" className="flex flex-col gap-1 px-1.5">
-          <h2
-            id="sidebar-labels"
-            className="py-1.5 text-caps font-semibold tracking-wider text-muted uppercase"
-          >
-            {t('sidebar.labels')}
-          </h2>
-          <p className="text-secondary text-muted">{t('sidebar.noLabels')}</p>
-        </section>
-      )}
+      {!rail && <SidebarLabels activeLabel={labelName} onNavigate={closeNav} />}
 
       {!rail && storage && (
         <div className="mt-auto flex flex-col gap-2 px-1.5">

@@ -5,9 +5,10 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { dateGroupKey, dateGroupLabel, groupByDate } from '@/shared/lib';
 import { cn } from '@/shared/lib';
 import { Avatar, Chip, IconButton, SearchField } from '@/shared/ui';
+import { MessageLabelsMenu, labelPath, useLabelMessages } from '@/features/labels';
 import { useListDensity, useSettings, useUpdateSettings } from '@/features/settings';
 import { useFolders, useMessages, type ListFilter, type MessageItem } from './api';
-import { useMessageBatch, type BatchAction } from './batch';
+import { folderOfId, useMessageBatch, type BatchAction } from './batch';
 import { folderLabel, folderSlug } from './folder-label';
 import { ListEmpty, ListError, ListNoFolder, ListSkeleton, OfflineBanner } from './list-states';
 import { ListOptionsMenu } from './ListOptionsMenu';
@@ -44,6 +45,8 @@ function filterOf(value: string | null): ListFilter {
 export interface MessageListPaneProps {
   /** The folder in the address, see `folderSlug`. */
   folderSlug: string;
+  /** The list is not of a folder but of the messages that have this label, from all folders (VIN-078). */
+  labelName?: string;
   /** The open message, if any; its row is highlighted. */
   messageId?: string;
   /** The signed-in address: its initials are the account button of the mobile header. */
@@ -55,10 +58,18 @@ export interface MessageListPaneProps {
  * loaded on request ("Show more"); the filter lives in the address (`?filter=`), so it survives a reload and is shared
  * with the sidebar's "Flagged".
  */
-export function MessageListPane({ folderSlug: slug, messageId, address }: MessageListPaneProps) {
+export function MessageListPane({
+  folderSlug: slug,
+  labelName,
+  messageId,
+  address,
+}: MessageListPaneProps) {
   const { t, i18n } = useTranslation();
   const [params, setParams] = useSearchParams();
-  const filter = filterOf(params.get('filter'));
+  const labelMode = labelName !== undefined;
+  // The list of a label has no filters: it is one page of what has the label, from all folders.
+  const filter = labelMode ? 'all' : filterOf(params.get('filter'));
+  const basePath = labelMode ? labelPath(labelName) : `/mail/${encodeURIComponent(slug)}`;
   const online = useOnline();
   const { layout } = useShell();
   const mobile = layout === 'mobile';
@@ -67,7 +78,7 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
   const navigate = useNavigate();
   const batch = useMessageBatch();
   // The selection belongs to one folder and filter: another list starts with nothing selected.
-  const listKey = `${slug}|${params.get('filter') ?? ''}`;
+  const listKey = labelMode ? `@label|${labelName}` : `${slug}|${params.get('filter') ?? ''}`;
   const [selectionState, setSelectionState] = useState<{
     key: string;
     selection: Selection;
@@ -81,10 +92,17 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
   const updateSettings = useUpdateSettings();
   // Phones keep the preview whatever the choice (DESIGN.md §8 has one density).
   const compact = density === 'compact' && !mobile;
-  const messages = useMessages(folder?.path, filter, !compact, !settings.isPending);
+  const folderMessages = useMessages(
+    labelMode ? undefined : folder?.path,
+    filter,
+    !compact,
+    !settings.isPending,
+  );
+  const labelMessages = useLabelMessages(labelName, !compact, !settings.isPending);
+  const messages = labelMode ? labelMessages : folderMessages;
 
   const items = messages.data?.pages.flatMap((p) => p.items) ?? [];
-  const unread = folder ? Number(folder.unread) : 0;
+  const unread = folder && !labelMode ? Number(folder.unread) : 0;
   const search = params.toString() ? `?${params.toString()}` : '';
   const now = new Date();
   const groupWords = {
@@ -123,7 +141,7 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
     clearSelection();
     if (messageId && ids.includes(messageId) && MOVING.includes(action)) {
       // The open message goes to another folder: the reading pane would show a message that is no longer here.
-      void navigate(`/mail/${encodeURIComponent(slug)}${search}`);
+      void navigate(`${basePath}${search}`);
     }
     batch.mutate({ ids, action }, { onError: () => apply({ selection: before, capped: false }) });
   };
@@ -131,11 +149,11 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
   // The keyboard (VIN-077): a place in the list ("current") that j and k move and Enter opens. Without one the open message is it.
   const [cursor, setCursor] = useState<{ key: string; id: string } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [labelsOpen, setLabelsOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const currentId =
     cursor?.key === listKey && order.includes(cursor.id) ? cursor.id : (messageId ?? null);
-  const openMessage = (id: string) =>
-    void navigate(`/mail/${encodeURIComponent(slug)}/${id}${search}`);
+  const openMessage = (id: string) => void navigate(`${basePath}/${id}${search}`);
   const moveCursor = (step: 1 | -1) => {
     if (order.length === 0) return;
     const at = currentId === null ? -1 : order.indexOf(currentId);
@@ -147,9 +165,11 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
   };
   /** What an action from the keyboard applies to: the selected messages, else the open one, else the one under the cursor. */
   const targets = () => (selecting ? selectedIds : currentId === null ? [] : [currentId]);
+  const roleOfId = (id: string) =>
+    labelMode ? folders.data?.find((f) => f.path === folderOfId(id))?.role : folder?.role;
   const keyAction = (action: BatchAction, skipIn: string) => {
-    const ids = targets();
-    if (ids.length > 0 && folder?.role !== skipIn) runBatch(action, ids);
+    const ids = targets().filter((id) => roleOfId(id) !== skipIn);
+    if (ids.length > 0) runBatch(action, ids);
   };
   useShortcuts({
     next: () => moveCursor(1),
@@ -167,15 +187,24 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
     compose: () => void navigate('/compose'),
     help: () => setHelpOpen(true),
   });
-  const showRecipient = folder?.role === 'sent' || folder?.role === 'drafts';
-  const title = folder ? folderLabel(folder, t) : slug === 'inbox' ? t('folders.inbox') : '';
-  const error = folders.isError ? folders.error : messages.isError ? messages.error : null;
-  const missing = folders.isSuccess && !folder;
-  const loading = folders.isPending || (folder !== undefined && messages.isPending);
+  const showRecipient = !labelMode && (folder?.role === 'sent' || folder?.role === 'drafts');
+  const title = labelMode
+    ? labelName
+    : folder
+      ? folderLabel(folder, t)
+      : slug === 'inbox'
+        ? t('folders.inbox')
+        : '';
+  const error =
+    folders.isError && !labelMode ? folders.error : messages.isError ? messages.error : null;
+  const missing = folders.isSuccess && !folder && !labelMode;
+  const loading = labelMode
+    ? messages.isPending
+    : folders.isPending || (folder !== undefined && messages.isPending);
 
   const refresh = () => {
     void folders.refetch();
-    if (folder) void messages.refetch();
+    if (folder || labelMode) void messages.refetch();
   };
 
   const setFilter = (next: ListFilter) => {
@@ -204,6 +233,19 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
               onClear={clearSelection}
               onAction={runBatch}
               narrow={mobile}
+              labels={{
+                open: labelsOpen,
+                onToggle: () => setLabelsOpen((open) => !open),
+                menu: (
+                  <MessageLabelsMenu
+                    ids={selectedIds}
+                    labelsOfMessages={selectedIds.map(
+                      (id) => items.find((m) => m.id === id)?.labels ?? [],
+                    )}
+                    onClose={() => setLabelsOpen(false)}
+                  />
+                ),
+              }}
             />
           </>
         ) : (
@@ -257,13 +299,15 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
             placeholder={t('list.search')}
           />
         )}
-        <div role="group" aria-label={t('list.filters')} className="flex flex-wrap gap-2">
-          {FILTERS.map((f) => (
-            <Chip key={f} pressed={filter === f} onClick={() => setFilter(f)}>
-              {t(`list.filter.${f}`)}
-            </Chip>
-          ))}
-        </div>
+        {!labelMode && (
+          <div role="group" aria-label={t('list.filters')} className="flex flex-wrap gap-2">
+            {FILTERS.map((f) => (
+              <Chip key={f} pressed={filter === f} onClick={() => setFilter(f)}>
+                {t(`list.filter.${f}`)}
+              </Chip>
+            ))}
+          </div>
+        )}
       </header>
 
       {!online && <OfflineBanner />}
@@ -279,7 +323,9 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
 
         {missing && !error && <ListNoFolder />}
 
-        {!loading && !error && folder && items.length === 0 && <ListEmpty />}
+        {!loading && !error && (folder || labelMode) && items.length === 0 && (
+          <ListEmpty label={labelMode} />
+        )}
 
         {items.length > 0 && (
           <VirtualMessageRows
@@ -293,7 +339,7 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
             renderRow={(m) => (
               <MessageRow
                 message={m}
-                to={`/mail/${encodeURIComponent(slug)}/${m.id}${search}`}
+                to={`${basePath}/${m.id}${search}`}
                 selected={m.id === messageId}
                 showRecipient={showRecipient}
                 now={now}
@@ -303,8 +349,16 @@ export function MessageListPane({ folderSlug: slug, messageId, address }: Messag
                 checked={selection.ids.has(m.id)}
                 current={m.id === currentId && cursor?.key === listKey}
                 selecting={selecting}
-                onSelect={(how) =>
-                  apply(how === 'range' ? extend(selection, order, m.id) : toggle(selection, m.id))
+                // The messages of a label are in several folders, and an action is for one folder: no selection there.
+                onSelect={
+                  labelMode
+                    ? undefined
+                    : (how) =>
+                        apply(
+                          how === 'range'
+                            ? extend(selection, order, m.id)
+                            : toggle(selection, m.id),
+                        )
                 }
               />
             )}

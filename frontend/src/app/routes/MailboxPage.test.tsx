@@ -96,6 +96,7 @@ function mockServer(): Server {
         return (server.hold ?? Promise.resolve()).then(() => server.batchAnswer());
       }
       if (url.pathname === '/api/v1/folders') return Promise.resolve(json({ folders: FOLDERS }));
+      if (url.pathname === '/api/v1/labels') return Promise.resolve(json({ labels: [] }));
       if (url.pathname === '/api/v1/settings') {
         return Promise.resolve(
           json({

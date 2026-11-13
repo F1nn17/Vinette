@@ -394,4 +394,5 @@ public sealed class LabelsApiTests(DovecotFixture dovecot) : IDisposable
         var response = await client.Http.SendAsync(anonymous, Token);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }}
+    }
+}

@@ -6,4 +6,4 @@ export { useLayout, DESKTOP_MIN_WIDTH, TABLET_MIN_WIDTH, type Layout } from './u
 export { MessageListPane, type MessageListPaneProps } from './MessageListPane';
 export { NavMenuButton } from './NavMenuButton';
 export { useFolders } from './api';
-export { useMessageBatch } from './batch';
+export { folderOfId, useMessageBatch } from './batch';
