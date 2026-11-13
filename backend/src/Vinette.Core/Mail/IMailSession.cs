@@ -98,6 +98,13 @@ public interface IMailSession : IAsyncDisposable
     Task<IReadOnlyList<string>> UpdateMessageLabelsAsync(MessageId id, IReadOnlyCollection<string> add, IReadOnlyCollection<string> remove, CancellationToken cancellationToken);
 
     /// <summary>
+    /// The newest messages that carry a label, from every folder except the trash and the spam folder (IMAP SEARCH KEYWORD in each).
+    /// Messages are ordered by date, newest first, and there is no further page: <see cref="LabeledMessages.Total"/> says if some are not shown.
+    /// A folder that cannot be searched is skipped.
+    /// </summary>
+    Task<LabeledMessages> ListLabeledMessagesAsync(string label, int limit, bool includePreview, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Renames a label on every message of every folder, or, with <paramref name="newName"/> null, takes it off every message. Returns how many
     /// messages changed. A folder that cannot be searched is skipped.
     /// </summary>

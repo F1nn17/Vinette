@@ -336,4 +336,62 @@ public sealed class LabelsApiTests(DovecotFixture dovecot) : IDisposable
 
         Assert.Empty(await bob.NamesAsync());
     }
-}
+
+    [Fact]
+    public async Task The_Messages_Of_A_Label_Are_Listed_From_All_Folders_With_Ids_That_Open()
+    {
+        var client = await StartAsync(2, "Work");
+        var ids = (await client.MessagesAsync()).Select(m => m.Id).ToList();
+        await client.SendAsync(HttpMethod.Patch, $"/api/v1/messages/{ids[0]}/labels", new { add = new[] { "Счета 2026" } });
+        await client.SendAsync(HttpMethod.Patch, $"/api/v1/messages/{ids[1]}/labels", new { add = new[] { "Счета 2026" } });
+        await client.SendAsync(HttpMethod.Post, $"/api/v1/messages/{ids[1]}/move", new { to = "Work" });
+
+        var (status, page) = await client.GetAsync($"/api/v1/labels/{Uri.EscapeDataString("Счета 2026")}/messages?preview=false");
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Equal(2, page.GetProperty("total").GetInt32());
+        Assert.Equal(JsonValueKind.Null, page.GetProperty("next").ValueKind);
+        var listed = page.GetProperty("items").EnumerateArray().ToList();
+        Assert.Equal(2, listed.Count);
+        foreach (var item in listed)
+        {
+            Assert.Equal(["Счета 2026"], item.GetProperty("labels").EnumerateArray().Select(l => l.GetString()));
+            var (opened, _) = await client.GetAsync($"/api/v1/messages/{item.GetProperty("id").GetString()}");
+            Assert.Equal(HttpStatusCode.OK, opened);
+        }
+    }
+
+    [Theory]
+    [InlineData("Work")]
+    [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
+    public async Task A_Name_That_Cannot_Be_A_Label_Is_Refused_When_Listing(string name)
+    {
+        var client = await StartAsync(0);
+
+        var (status, _) = await client.GetAsync($"/api/v1/labels/{Uri.EscapeDataString(name)}/messages");
+
+        Assert.Equal(HttpStatusCode.BadRequest, status);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    public async Task The_List_Of_A_Label_Refuses_A_Page_Size_Out_Of_Range(int limit)
+    {
+        var client = await StartAsync(0);
+
+        var (status, _) = await client.GetAsync($"/api/v1/labels/Work/messages?limit={limit}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, status);
+    }
+
+    [Fact]
+    public async Task The_List_Of_A_Label_Needs_A_Session()
+    {
+        var client = await StartAsync(0);
+
+        using var anonymous = new HttpRequestMessage(HttpMethod.Get, "/api/v1/labels/Work/messages");
+        var response = await client.Http.SendAsync(anonymous, Token);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }}
