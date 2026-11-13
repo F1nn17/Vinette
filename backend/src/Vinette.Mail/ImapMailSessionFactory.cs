@@ -16,6 +16,9 @@ public sealed class ImapMailSessionFactory(ImapConnectionSettings settings) : IM
     /// <summary>Tests only: false makes messages move by COPY, mark and expunge even if the server has the MOVE extension.</summary>
     internal bool MoveExtension { get; init; } = true;
 
+    /// <summary>Tests only: which of CONDSTORE and QRESYNC the watch of the inbox may use, the others are pretended away.</summary>
+    internal DeltaSync DeltaSync { get; init; } = DeltaSync.Full;
+
     public async Task<IMailSession> OpenAsync(MailCredentials credentials, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(credentials);
@@ -36,7 +39,7 @@ public sealed class ImapMailSessionFactory(ImapConnectionSettings settings) : IM
             await client.ConnectAsync(settings.Host, settings.Port, ImapAuthenticator.ToSocketOptions(settings.Security), timeout.Token).ConfigureAwait(false);
             await ImapAuthenticator.IdentifyAsync(client, new ClientInfo(credentials.ClientIp, null), timeout.Token).ConfigureAwait(false);
             await client.AuthenticateAsync(credentials.Address, credentials.Password, timeout.Token).ConfigureAwait(false);
-            return new ImapMailSession(client, PreviewExtension, settings.MaxViewableMessageBytes) { MoveExtension = MoveExtension };
+            return new ImapMailSession(client, PreviewExtension, settings.MaxViewableMessageBytes) { MoveExtension = MoveExtension, DeltaSyncMode = DeltaSync };
         }
         catch (AuthenticationException exception)
         {

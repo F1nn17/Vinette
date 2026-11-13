@@ -162,7 +162,7 @@ public sealed class MailboxWatcher(IMailSessionFactory factory, MailboxWatchSett
                     _ = Interlocked.Increment(ref openCount);
                     try
                     {
-                        await session.WatchInboxAsync(change => DispatchAsync(watch, change), settings.IdleRestart, token).ConfigureAwait(false);
+                        await session.WatchInboxAsync(change => DispatchAsync(watch, change), settings.IdleRestart, watch.State, token).ConfigureAwait(false);
                     }
                     finally
                     {
@@ -284,6 +284,9 @@ public sealed class MailboxWatcher(IMailSessionFactory factory, MailboxWatchSett
         public string Address { get; } = address;
 
         public List<Listener> Listeners { get; } = [];
+
+        /// <summary>What the watch knows of the inbox, from one connection to the next.</summary>
+        public MailboxWatchState State { get; } = new();
 
         public CancellationTokenSource Stop { get; } = new();
 

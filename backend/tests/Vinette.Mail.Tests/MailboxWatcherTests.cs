@@ -25,7 +25,7 @@ public sealed class MailboxWatcherTests
         /// <summary>The connection breaks.</summary>
         public void Break() => end.TrySetResult(new IOException("connection lost"));
 
-        public async Task WatchInboxAsync(Func<MailboxEvent, ValueTask> onChange, TimeSpan restartAfter, CancellationToken cancellationToken)
+        public async Task WatchInboxAsync(Func<MailboxEvent, ValueTask> onChange, TimeSpan restartAfter, MailboxWatchState state, CancellationToken cancellationToken)
         {
             deliver = onChange;
             watching.TrySetResult();

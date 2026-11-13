@@ -12,9 +12,10 @@ internal sealed record MessageMarks(MessageFlags Flags, IReadOnlyList<string> Ke
 /// <param name="Expunged">How many messages were removed.</param>
 /// <param name="Marks">The latest marks of the messages the server named by UID; the last report about a message wins.</param>
 /// <param name="MarksByPosition">The latest marks of the messages the server named by their place in the folder only (0-based); a position is good only while nothing was removed.</param>
-internal sealed record NoticeBatch(bool CountChanged, int Expunged, IReadOnlyDictionary<uint, MessageMarks> Marks, IReadOnlyDictionary<int, MessageMarks> MarksByPosition)
+/// <param name="Stale">What changed cannot be said (a reconnect to a server that cannot tell what happened meanwhile): the folder must be read again.</param>
+internal sealed record NoticeBatch(bool CountChanged, int Expunged, IReadOnlyDictionary<uint, MessageMarks> Marks, IReadOnlyDictionary<int, MessageMarks> MarksByPosition, bool Stale = false)
 {
-    public bool IsEmpty => !CountChanged && Expunged == 0 && Marks.Count == 0 && MarksByPosition.Count == 0;
+    public bool IsEmpty => !CountChanged && Expunged == 0 && Marks.Count == 0 && MarksByPosition.Count == 0 && !Stale;
 }
 
 /// <summary>

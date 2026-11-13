@@ -131,9 +131,11 @@ public interface IMailSession : IAsyncDisposable
     /// until <paramref name="cancellationToken"/> is cancelled or the connection breaks (which throws). The server is asked to
     /// end an IDLE and start a new one every <paramref name="restartAfter"/>, as servers drop an IDLE that lasts too long. While it
     /// runs the connection can do nothing else, so it is a connection of its own. <paramref name="onChange"/> runs for every
-    /// notification, one after another.
+    /// notification, one after another. <paramref name="state"/> is what an earlier connection of the same watch knew: if it is
+    /// <see cref="MailboxWatchState.Known"/> and the folder is the same, what happened since is found out first and reported (with
+    /// CONDSTORE and QRESYNC, exactly; without, as far as counting goes, and "stale" for the rest); the session keeps it up to date.
     /// </summary>
-    Task WatchInboxAsync(Func<MailboxEvent, ValueTask> onChange, TimeSpan restartAfter, CancellationToken cancellationToken);
+    Task WatchInboxAsync(Func<MailboxEvent, ValueTask> onChange, TimeSpan restartAfter, MailboxWatchState state, CancellationToken cancellationToken);
 
     /// <summary>
     /// How much of the mailbox's storage is used (IMAP GETQUOTAROOT). Null when the server has no quota extension or
