@@ -13,7 +13,7 @@
     <!-- Metrics export (VIN-035). OpenTelemetry Apache-2.0; the Prometheus exporter is still published as a pre-release. -->
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.20.1-beta.1" />
-    <PackageVersion Include="HtmlSanitizer" Version="9.2.1039" />
+    <PackageVersion Include="HtmlSanitizer" Version="11.0.26" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.15" />
     <!-- Tests. xunit.v3 Apache-2.0, Testcontainers MIT, coverlet MIT. -->
