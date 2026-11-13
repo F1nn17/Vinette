@@ -1,23 +1,5 @@
 namespace Vinette.Core.Mail;
 
-/// <summary>What the mail server reported about the inbox while it was being watched (the raw IMAP notifications).</summary>
-public enum MailboxChangeKind
-{
-    /// <summary>The number of messages changed (mail arrived).</summary>
-    CountChanged,
-
-    /// <summary>A message was removed from the folder.</summary>
-    Expunged,
-
-    /// <summary>The marks of a message (read, flag, labels) changed.</summary>
-    FlagsChanged,
-}
-
-/// <summary>One notification from the mail server about a folder.</summary>
-/// <param name="Folder">The folder's path (only the inbox is watched for now).</param>
-/// <param name="Kind">What happened.</param>
-public sealed record MailboxChange(string Folder, MailboxChangeKind Kind);
-
 /// <summary>
 /// Follows a mailbox for changes without being asked (IMAP IDLE) and reports them. One watching connection is kept per
 /// mailbox, whatever the number of web sessions that listen to it: it opens with the first listener, closes a while after the
@@ -35,5 +17,5 @@ public interface IMailboxWatcher
         string address,
         string sessionId,
         Func<CancellationToken, ValueTask<MailCredentials?>> credentials,
-        Func<MailboxChange, ValueTask> onChange);
+        Func<MailboxEvent, ValueTask> onChange);
 }

@@ -133,7 +133,7 @@ public interface IMailSession : IAsyncDisposable
     /// runs the connection can do nothing else, so it is a connection of its own. <paramref name="onChange"/> runs for every
     /// notification, one after another.
     /// </summary>
-    Task WatchInboxAsync(Func<MailboxChange, ValueTask> onChange, TimeSpan restartAfter, CancellationToken cancellationToken);
+    Task WatchInboxAsync(Func<MailboxEvent, ValueTask> onChange, TimeSpan restartAfter, CancellationToken cancellationToken);
 
     /// <summary>
     /// How much of the mailbox's storage is used (IMAP GETQUOTAROOT). Null when the server has no quota extension or

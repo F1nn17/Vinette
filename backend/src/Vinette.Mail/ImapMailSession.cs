@@ -411,37 +411,70 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         return LabelsOf(summary.Keywords);
     }
 
-    public async Task WatchInboxAsync(Func<MailboxChange, ValueTask> onChange, TimeSpan restartAfter, CancellationToken cancellationToken)
+    public async Task WatchInboxAsync(Func<MailboxEvent, ValueTask> onEvent, TimeSpan restartAfter, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(onChange);
-        var (inbox, _) = await OpenAsync("INBOX", cancellationToken).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(onEvent);
+        var (inbox, uidValidity) = await OpenAsync("INBOX", cancellationToken).ConfigureAwait(false);
 
-        // The events come on the thread that waits for the server: they are only queued there, and delivered from here.
-        var queue = System.Threading.Channels.Channel.CreateUnbounded<MailboxChange>(new System.Threading.Channels.UnboundedChannelOptions { SingleReader = true });
-        void Count(object? sender, EventArgs e) => queue.Writer.TryWrite(new MailboxChange("INBOX", MailboxChangeKind.CountChanged));
-        void Expunged(object? sender, MessageEventArgs e) => queue.Writer.TryWrite(new MailboxChange("INBOX", MailboxChangeKind.Expunged));
-        void Flags(object? sender, MessageFlagsChangedEventArgs e) => queue.Writer.TryWrite(new MailboxChange("INBOX", MailboxChangeKind.FlagsChanged));
+        // The notifications come on the thread that waits for the server (nothing else may be sent meanwhile): they are only
+        // collected there. The first one ends the wait shortly (so that a burst is answered once), and the answer is made
+        // between two waits, when the connection can be asked questions.
+        var notices = new MailboxNotices();
+        CancellationTokenSource? waiting = null;
+        void Wake()
+        {
+            try
+            {
+                waiting?.CancelAfter(NoticeDelay);
+            }
+            catch (ObjectDisposedException)
+            {
+                // the wait has just ended
+            }
+        }
+
+        void Count(object? sender, EventArgs e)
+        {
+            notices.CountChanged();
+            Wake();
+        }
+
+        void Expunged(object? sender, MessageEventArgs e)
+        {
+            notices.Expunged();
+            Wake();
+        }
+
+        void Vanished(object? sender, MessagesVanishedEventArgs e)
+        {
+            notices.Expunged(e.UniqueIds.Count);
+            Wake();
+        }
+
+        void Flags(object? sender, MessageFlagsChangedEventArgs e)
+        {
+            notices.Flags(e.UniqueId?.Id, e.Index, e.Flags, e.Keywords);
+            Wake();
+        }
+
         inbox.CountChanged += Count;
         inbox.MessageExpunged += Expunged;
+        inbox.MessagesVanished += Vanished;
         inbox.MessageFlagsChanged += Flags;
         try
         {
-            var delivering = Task.Run(
-                async () =>
-                {
-                    await foreach (var change in queue.Reader.ReadAllAsync(CancellationToken.None).ConfigureAwait(false))
-                    {
-                        await onChange(change).ConfigureAwait(false);
-                    }
-                },
-                CancellationToken.None);
-            try
+            var lastUid = (await inbox.SearchAsync(SearchQuery.All, cancellationToken).ConfigureAwait(false)).Select(u => u.Id).DefaultIfEmpty(0u).Max();
+            var counters = (Total: inbox.Count, Unread: await UnreadAsync(inbox, cancellationToken).ConfigureAwait(false));
+            var idle = client.Capabilities.Contains(ImapCapability.Idle);
+            _ = notices.Take(); // what was reported while the folder was being looked at is in the state just read
+
+            while (!cancellationToken.IsCancellationRequested)
             {
-                var idle = client.Capabilities.Contains(ImapCapability.Idle);
-                while (!cancellationToken.IsCancellationRequested)
+                using var done = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                done.CancelAfter(restartAfter);
+                waiting = done;
+                try
                 {
-                    using var done = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    done.CancelAfter(restartAfter);
                     if (idle)
                     {
                         await client.IdleAsync(done.Token, CancellationToken.None).ConfigureAwait(false);
@@ -455,26 +488,131 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
                         }
                         catch (OperationCanceledException)
                         {
-                            // the restart time or the end of the watch
+                            // the restart time, a notice or the end of the watch
                         }
 
                         await client.NoOpAsync(CancellationToken.None).ConfigureAwait(false);
                     }
                 }
-            }
-            finally
-            {
-                _ = queue.Writer.TryComplete();
-                await delivering.ConfigureAwait(false);
+                finally
+                {
+                    waiting = null;
+                }
+
+                var batch = notices.Take();
+                if (cancellationToken.IsCancellationRequested || batch.IsEmpty)
+                {
+                    continue;
+                }
+
+                (lastUid, counters) = await AnswerAsync(inbox, uidValidity, batch, lastUid, counters, onEvent, cancellationToken).ConfigureAwait(false);
+                _ = notices.Take(); // what our own questions made the server say is already in the answer
             }
         }
         finally
         {
             inbox.CountChanged -= Count;
             inbox.MessageExpunged -= Expunged;
+            inbox.MessagesVanished -= Vanished;
             inbox.MessageFlagsChanged -= Flags;
         }
     }
+
+    /// <summary>The most arrivals of one burst that are reported one by one; more than that make the folder "stale".</summary>
+    internal const int MaxArrivalsReported = 20;
+
+    /// <summary>After the first notice the wait goes on this long, so that a burst of notices is answered together.</summary>
+    internal TimeSpan NoticeDelay { get; init; } = TimeSpan.FromMilliseconds(250);
+
+    private static async Task<(uint LastUid, (int Total, int Unread) Counters)> AnswerAsync(
+        IMailFolder inbox,
+        uint uidValidity,
+        NoticeBatch batch,
+        uint lastUid,
+        (int Total, int Unread) counters,
+        Func<MailboxEvent, ValueTask> onEvent,
+        CancellationToken cancellationToken)
+    {
+        const string Path = "INBOX";
+        var events = new List<MailboxEvent>();
+        if (batch.Expunged > 0)
+        {
+            events.Add(new MessagesRemoved(Path, batch.Expunged));
+        }
+
+        if (batch.CountChanged)
+        {
+            var range = new UniqueIdRange(new UniqueId(lastUid + 1), UniqueId.MaxValue);
+            // "4:*" also matches the last message when it is below 4 (an IMAP rule): only the really new ones count.
+            var arrived = (await inbox.SearchAsync(SearchQuery.Uids(range), cancellationToken).ConfigureAwait(false)).Select(u => u.Id).Where(u => u > lastUid).Order().ToList();
+            if (arrived.Count > 0)
+            {
+                var reported = arrived.TakeLast(MaxArrivalsReported).Select(u => new UniqueId(u)).ToList();
+                var fetched = await inbox.FetchAsync(reported, SummaryItems, cancellationToken).ConfigureAwait(false);
+                events.AddRange(fetched.OrderBy(m => m.UniqueId.Id).Select(m => new MessageArrived(Path, ToSummary(Path, uidValidity, m))));
+                if (arrived.Count > reported.Count)
+                {
+                    events.Add(new FolderStale(Path));
+                }
+
+                lastUid = arrived[^1];
+            }
+        }
+
+        // Marks the server named by position only: the UID is looked up, which holds only while nothing was removed (positions shift).
+        var marked = new Dictionary<uint, MessageMarks>(batch.Marks);
+        var unnamed = false;
+        if (batch.MarksByPosition.Count > 0)
+        {
+            if (batch.Expunged > 0 || batch.MarksByPosition.Keys.Any(i => i < 0 || i >= inbox.Count))
+            {
+                unnamed = true;
+            }
+            else
+            {
+                var found = await inbox.FetchAsync([.. batch.MarksByPosition.Keys], MessageSummaryItems.UniqueId, cancellationToken).ConfigureAwait(false);
+                foreach (var summary in found)
+                {
+                    if (batch.MarksByPosition.TryGetValue(summary.Index, out var byPosition))
+                    {
+                        marked.TryAdd(summary.UniqueId.Id, byPosition);
+                    }
+                }
+            }
+        }
+
+        foreach (var (uid, marks) in marked.OrderBy(m => m.Key))
+        {
+            events.Add(new MessageMarksChanged(
+                Path,
+                new MessageId(Path, uidValidity, uid),
+                marks.Flags.HasFlag(MessageFlags.Seen),
+                marks.Flags.HasFlag(MessageFlags.Flagged),
+                marks.Flags.HasFlag(MessageFlags.Answered),
+                LabelsOf(marks.Keywords)));
+        }
+
+        if (unnamed)
+        {
+            events.Add(new FolderStale(Path));
+        }
+
+        var now = (Total: inbox.Count, Unread: await UnreadAsync(inbox, cancellationToken).ConfigureAwait(false));
+        if (now != counters)
+        {
+            events.Add(new FolderCountersChanged(Path, now.Total, now.Unread));
+        }
+
+        foreach (var change in events)
+        {
+            await onEvent(change).ConfigureAwait(false);
+        }
+
+        return (lastUid, now);
+    }
+
+    private static async Task<int> UnreadAsync(IMailFolder folder, CancellationToken cancellationToken) =>
+        (await folder.SearchAsync(SearchQuery.NotSeen, cancellationToken).ConfigureAwait(false)).Count;
 
     /// <summary>How often a server without IDLE is asked what changed.</summary>
     internal TimeSpan PollInterval { get; init; } = TimeSpan.FromSeconds(30);
