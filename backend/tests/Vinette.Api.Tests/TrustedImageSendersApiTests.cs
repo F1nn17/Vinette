@@ -81,7 +81,7 @@ public sealed class TrustedImageSendersApiTests(DovecotFixture dovecot) : IDispo
         request.Headers.Add("Cookie", cookie);
         var response = await client.SendAsync(request, Token);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement;
+        return JsonElement.Parse(await response.Content.ReadAsStringAsync(Token));
     }
 
     private static async Task<JsonElement> PatchSettingsAsync(Session s, object body)
@@ -89,7 +89,7 @@ public sealed class TrustedImageSendersApiTests(DovecotFixture dovecot) : IDispo
         var session = s.Cookie[(SessionCookie.Name.Length + 1)..];
         var response = await CsrfClient.SendAsync(s.Client, HttpMethod.Patch, "/api/v1/settings", Token, JsonContent.Create(body), session);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement;
+        return JsonElement.Parse(await response.Content.ReadAsStringAsync(Token));
     }
 
     private static Task<JsonElement> OpenAsync(Session s) => GetAsync(s.Client, s.Cookie, $"/api/v1/messages/{s.MessageId}");

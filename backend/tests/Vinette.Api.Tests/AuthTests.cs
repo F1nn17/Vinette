@@ -68,7 +68,7 @@ public sealed class AuthTests : IDisposable
     private static async Task<JsonElement> ProblemAsync(HttpResponseMessage response)
     {
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-        return JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement;
+        return JsonElement.Parse(await response.Content.ReadAsStringAsync(Token));
     }
 
     // ---- Login ----
@@ -81,7 +81,7 @@ public sealed class AuthTests : IDisposable
         var cookie = SetCookie(response);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(Address, JsonDocument.Parse(body).RootElement.GetProperty("address").GetString());
+        Assert.Equal(Address, JsonElement.Parse(body).GetProperty("address").GetString());
         Assert.DoesNotContain("s3cret", body, StringComparison.Ordinal);
 
         Assert.NotNull(cookie);
@@ -149,7 +149,7 @@ public sealed class AuthTests : IDisposable
         var raw = await response.Content.ReadAsStringAsync(Token);
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        Assert.Equal("mail_unavailable", JsonDocument.Parse(raw).RootElement.GetProperty("code").GetString());
+        Assert.Equal("mail_unavailable", JsonElement.Parse(raw).GetProperty("code").GetString());
         Assert.DoesNotContain("secret-host", raw, StringComparison.Ordinal);
         Assert.Null(SetCookie(response));
     }

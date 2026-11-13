@@ -40,7 +40,7 @@ public sealed class MessageListApiTests(DovecotFixture dovecot) : IDisposable
         request.Headers.Add("Cookie", cookie);
         var response = await client.SendAsync(request, Token);
         var text = await response.Content.ReadAsStringAsync(Token);
-        return (response.StatusCode, text.Length == 0 ? default : JsonDocument.Parse(text).RootElement);
+        return (response.StatusCode, text.Length == 0 ? default : JsonElement.Parse(text));
     }
 
     [Fact]

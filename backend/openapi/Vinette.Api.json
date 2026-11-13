@@ -1,5 +1,5 @@
 {
-  "openapi": "3.1.1",
+  "openapi": "3.2.0",
   "info": {
     "title": "Vinette.Api | v1",
     "version": "1.0.0"
@@ -2445,19 +2445,19 @@
   },
   "tags": [
     {
-      "name": "System"
-    },
-    {
       "name": "Auth"
-    },
-    {
-      "name": "Mail"
     },
     {
       "name": "Labels"
     },
     {
+      "name": "Mail"
+    },
+    {
       "name": "Settings"
+    },
+    {
+      "name": "System"
     }
   ]
 }

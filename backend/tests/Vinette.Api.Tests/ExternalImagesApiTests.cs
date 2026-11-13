@@ -64,7 +64,7 @@ public sealed class ExternalImagesApiTests(DovecotFixture dovecot) : IDisposable
         request.Headers.Add("Cookie", cookie);
         var response = await client.SendAsync(request, Token);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement;
+        return JsonElement.Parse(await response.Content.ReadAsStringAsync(Token));
     }
 
     [Fact]

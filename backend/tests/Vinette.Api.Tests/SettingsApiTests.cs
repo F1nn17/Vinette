@@ -62,13 +62,13 @@ public sealed class SettingsApiTests : IDisposable
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/settings");
         request.Headers.Add("Cookie", $"{SessionCookie.Name}={session}");
         var response = await client.SendAsync(request, Token);
-        return (response.StatusCode, JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement);
+        return (response.StatusCode, JsonElement.Parse(await response.Content.ReadAsStringAsync(Token)));
     }
 
     private static async Task<(HttpStatusCode Status, JsonElement Body)> PatchAsync(HttpClient client, string session, object body)
     {
         var response = await CsrfClient.SendAsync(client, HttpMethod.Patch, "/api/v1/settings", Token, JsonContent.Create(body), session);
-        return (response.StatusCode, JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement);
+        return (response.StatusCode, JsonElement.Parse(await response.Content.ReadAsStringAsync(Token)));
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public sealed class SettingsApiTests : IDisposable
         var (client, session) = await SignInAsync("alice@vinette.test");
 
         var response = await CsrfClient.SendAsync(client, HttpMethod.Patch, "/api/v1/settings", Token, new StringContent(json, System.Text.Encoding.UTF8, "application/json"), session);
-        var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement;
+        var problem = JsonElement.Parse(await response.Content.ReadAsStringAsync(Token));
         var (_, after) = await GetAsync(client, session);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

@@ -76,7 +76,7 @@ public sealed class AuthorizationTests : IDisposable
     }
 
     private static async Task<JsonElement> JsonAsync(HttpResponseMessage response) =>
-        JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement;
+        JsonElement.Parse(await response.Content.ReadAsStringAsync(Token));
 
     // ---- /me ----
 

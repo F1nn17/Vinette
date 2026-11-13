@@ -11,7 +11,7 @@ COPY frontend/ ./
 RUN pnpm build
 
 # ---- Backend: dotnet sdk; cross-compiles for the target architecture ----
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS backend
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:11.0 AS backend
 ARG TARGETARCH
 WORKDIR /src
 COPY backend/global.json backend/Directory.Build.props backend/Directory.Packages.props backend/Vinette.sln backend/
@@ -29,7 +29,7 @@ COPY --from=frontend /src/frontend/dist /app/wwwroot
 RUN mkdir -p /data/keys /data/settings
 
 # ---- Runtime: chiseled (distroless-style), non-root ----
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled AS final
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-resolute-chiseled AS final
 ARG VERSION=0.0.0-dev
 ARG REVISION=unknown
 LABEL org.opencontainers.image.title="Vinette" \

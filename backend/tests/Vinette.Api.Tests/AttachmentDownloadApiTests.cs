@@ -43,9 +43,9 @@ public sealed class AttachmentDownloadApiTests(DovecotFixture dovecot) : IDispos
     private async Task<(HttpClient Client, string Cookie, string Id, List<JsonElement> Attachments)> MessageAsync(string subject)
     {
         var (client, cookie) = await SignInAsync();
-        var list = JsonDocument.Parse(await (await SendAsync(client, cookie, "/api/v1/folders/INBOX/messages?limit=100&preview=false")).Content.ReadAsStringAsync(Token)).RootElement;
+        var list = JsonElement.Parse(await (await SendAsync(client, cookie, "/api/v1/folders/INBOX/messages?limit=100&preview=false")).Content.ReadAsStringAsync(Token));
         var id = list.GetProperty("items").EnumerateArray().First(i => i.GetProperty("subject").GetString() == subject).GetProperty("id").GetString()!;
-        var message = JsonDocument.Parse(await (await SendAsync(client, cookie, $"/api/v1/messages/{id}")).Content.ReadAsStringAsync(Token)).RootElement;
+        var message = JsonElement.Parse(await (await SendAsync(client, cookie, $"/api/v1/messages/{id}")).Content.ReadAsStringAsync(Token));
         return (client, cookie, id, [.. message.GetProperty("attachments").EnumerateArray().Select(a => a.Clone())]);
     }
 
@@ -138,7 +138,7 @@ public sealed class AttachmentDownloadApiTests(DovecotFixture dovecot) : IDispos
             var response = await SendAsync(client, cookie, $"/api/v1/messages/{id}/attachments/{partId}");
 
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-            Assert.Equal("not_found", JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement.GetProperty("code").GetString());
+            Assert.Equal("not_found", JsonElement.Parse(await response.Content.ReadAsStringAsync(Token)).GetProperty("code").GetString());
         }
     }
 
@@ -184,13 +184,13 @@ public sealed class AttachmentDownloadApiTests(DovecotFixture dovecot) : IDispos
     public async Task Every_Attachment_Of_Every_Fixture_Is_A_Safe_Download()
     {
         var (client, cookie) = await SignInAsync();
-        var list = JsonDocument.Parse(await (await SendAsync(client, cookie, "/api/v1/folders/INBOX/messages?limit=100&preview=false")).Content.ReadAsStringAsync(Token)).RootElement;
+        var list = JsonElement.Parse(await (await SendAsync(client, cookie, "/api/v1/folders/INBOX/messages?limit=100&preview=false")).Content.ReadAsStringAsync(Token));
         var downloads = 0;
 
         foreach (var item in list.GetProperty("items").EnumerateArray())
         {
             var id = item.GetProperty("id").GetString();
-            var message = JsonDocument.Parse(await (await SendAsync(client, cookie, $"/api/v1/messages/{id}")).Content.ReadAsStringAsync(Token)).RootElement;
+            var message = JsonElement.Parse(await (await SendAsync(client, cookie, $"/api/v1/messages/{id}")).Content.ReadAsStringAsync(Token));
             foreach (var attachment in message.GetProperty("attachments").EnumerateArray())
             {
                 var response = await SendAsync(client, cookie, $"/api/v1/messages/{id}/attachments/{attachment.GetProperty("partId").GetString()}");
