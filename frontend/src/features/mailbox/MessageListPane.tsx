@@ -52,6 +52,8 @@ export interface MessageListPaneProps {
   messageId?: string;
   /** The signed-in address: its initials are the account button of the mobile header. */
   address?: string;
+  /** The key `l` with a message open and nothing selected: opens that message's "Labels" panel (the reading pane shows it). */
+  onOpenLabels?: (messageId: string) => void;
 }
 
 /**
@@ -64,6 +66,7 @@ export function MessageListPane({
   labelName,
   messageId,
   address,
+  onOpenLabels,
 }: MessageListPaneProps) {
   const { t, i18n } = useTranslation();
   const [params, setParams] = useSearchParams();
@@ -189,6 +192,11 @@ export function MessageListPane({
     // The same actions as the buttons; they leave a message where it is already (no archive in the archive, no delete in the trash).
     archive: () => keyAction('archive', 'archive'),
     delete: () => keyAction('trash', 'trash'),
+    // Labels of the selected messages, else of the open one.
+    labels: () => {
+      if (selecting) setLabelsOpen(true);
+      else if (messageId !== undefined) onOpenLabels?.(messageId);
+    },
     search: () => {
       setSearchOpen(true);
       requestAnimationFrame(() => searchRef.current?.focus());

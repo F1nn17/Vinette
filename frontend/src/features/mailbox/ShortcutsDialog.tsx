@@ -9,6 +9,7 @@ const ROWS: { name: ShortcutName; keys: string[] }[] = [
   { name: 'open', keys: ['Enter'] },
   { name: 'archive', keys: ['e'] },
   { name: 'delete', keys: ['#'] },
+  { name: 'labels', keys: ['l'] },
   { name: 'search', keys: ['/'] },
   { name: 'compose', keys: ['c'] },
   { name: 'help', keys: ['?'] },
