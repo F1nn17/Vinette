@@ -7,6 +7,8 @@ import { accounts, signIn, signOutViaApi } from './helpers';
 interface Item {
   id: string;
   subject: string;
+  seen: boolean;
+  flagged: boolean;
 }
 
 /** The messages of a folder as the server lists them. */
@@ -181,5 +183,100 @@ test.describe('actions', () => {
     await expect(page.getByRole('alert').filter({ hasText: 'нет подходящей папки' })).toBeVisible();
     await expect(page.getByRole('link', { name: new RegExp(subject) })).toBeVisible();
     expect(await subjectsOf(page, 'INBOX')).toContain(subject);
+  });
+
+  test('spam, then undo: the message goes to the spam folder and comes back', async ({ page }) => {
+    await openMessage(page, SUBJECT);
+
+    await page
+      .getByRole('toolbar', { name: 'Действия с письмом' })
+      .getByRole('button', { name: 'В спам' })
+      .click();
+
+    const toast = page.getByRole('status').filter({ hasText: 'перенесено в спам' });
+    await expect(toast).toBeVisible();
+    await expect.poll(() => subjectsOf(page, 'Junk')).toContain(SUBJECT);
+    expect(await subjectsOf(page, 'INBOX')).not.toContain(SUBJECT);
+
+    await toast.getByRole('button', { name: 'Отменить' }).click();
+
+    await expect.poll(() => subjectsOf(page, 'INBOX')).toContain(SUBJECT);
+    expect(await subjectsOf(page, 'Junk')).not.toContain(SUBJECT);
+  });
+
+  test('the flag is set and removed from the open message and the server keeps it', async ({
+    page,
+  }) => {
+    await openMessage(page, SUBJECT);
+    const bar = page.getByRole('toolbar', { name: 'Действия с письмом' });
+    const flagged = async () =>
+      (await listOf(page, 'INBOX')).find((i) => i.subject === SUBJECT)?.flagged;
+    expect(await flagged()).toBe(false);
+
+    await bar.getByRole('button', { name: 'Флажок' }).click();
+    await expect(bar.getByRole('button', { name: 'Флажок' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect.poll(flagged).toBe(true);
+
+    await bar.getByRole('button', { name: 'Флажок' }).click();
+    await expect(bar.getByRole('button', { name: 'Флажок' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    await expect.poll(flagged).toBe(false);
+  });
+
+  test('"Mark as unread" from "More" leaves the message unread, and opening it reads it again', async ({
+    page,
+  }) => {
+    await openMessage(page, SUBJECT);
+    const seen = async () => (await listOf(page, 'INBOX')).find((i) => i.subject === SUBJECT)?.seen;
+    await expect.poll(seen).toBe(true); // opening read it
+
+    await page
+      .getByRole('toolbar', { name: 'Действия с письмом' })
+      .getByRole('button', { name: 'Ещё' })
+      .click();
+    await page.getByRole('button', { name: 'Отметить непрочитанным' }).click();
+
+    await expect(page).toHaveURL(/\/mail\/inbox$/);
+    await expect.poll(seen).toBe(false);
+
+    await openMessage(page, SUBJECT);
+    await expect.poll(seen).toBe(true);
+  });
+
+  test('selected unread messages are marked as read at once', async ({ page }) => {
+    const items = (await listOf(page, 'INBOX')).slice(0, 2);
+    await page.evaluate(
+      async (ids) => {
+        const { token } = (await (await fetch('/api/v1/csrf')).json()) as { token: string };
+        await fetch('/api/v1/messages/batch', {
+          method: 'POST',
+          headers: { 'X-CSRF-Token': token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids, action: 'unread' }),
+        });
+      },
+      items.map((i) => i.id),
+    );
+    await expect
+      .poll(async () => (await listOf(page, 'INBOX')).slice(0, 2).some((i) => !i.seen))
+      .toBe(true);
+    await page.goto('/mail/inbox');
+    for (const item of items) {
+      await page.getByRole('checkbox', { name: `Выбрать письмо «${item.subject}»` }).check();
+    }
+
+    await page
+      .getByRole('toolbar', { name: 'Действия с выбранными письмами' })
+      .getByRole('button', { name: 'Отметить прочитанными' })
+      .click();
+
+    await expect
+      .poll(async () => (await listOf(page, 'INBOX')).slice(0, 2).every((i) => i.seen))
+      .toBe(true);
+    await expect(page.getByText(/Выбрано:/u)).toHaveCount(0); // the selection ended with the action
   });
 });

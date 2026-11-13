@@ -7,6 +7,7 @@ import { accounts, signIn, signOutViaApi } from './helpers';
 const SUBJECT = 'Weekly newsletter';
 // Not a simple word: the mail server keeps such a name in an encoded form, and the interface must show it as typed.
 const LABEL = 'Отпуск 2026';
+const RENAMED = 'Командировка';
 
 interface Item {
   id: string;
@@ -39,6 +40,7 @@ test.describe('labels', () => {
 
   test.afterEach(async ({ page }) => {
     await dropLabel(page, LABEL);
+    await dropLabel(page, RENAMED);
     await signOutViaApi(page);
   });
 
@@ -88,5 +90,61 @@ test.describe('labels', () => {
     await expect
       .poll(async () => (await inbox(page)).find((i) => i.id === item?.id)?.labels)
       .not.toContain(LABEL);
+  });
+
+  test('one label on two selected messages, then renamed and recolored from the sidebar', async ({
+    page,
+  }) => {
+    const sidebar = page.getByRole('navigation', { name: 'Папки' });
+    const chosen = (await inbox(page)).slice(0, 2);
+    await page.goto('/mail/inbox');
+    for (const item of chosen) {
+      await page.getByRole('checkbox', { name: `Выбрать письмо «${item.subject}»` }).check();
+    }
+
+    // a new label from the panel of the selection goes onto both messages
+    await page
+      .getByRole('toolbar', { name: 'Действия с выбранными письмами' })
+      .getByRole('button', { name: 'Метки' })
+      .click();
+    await page.getByRole('textbox', { name: 'Название новой метки' }).last().fill(LABEL);
+    await page.keyboard.press('Enter');
+    await expect
+      .poll(async () =>
+        (await inbox(page))
+          .filter((i) => i.labels.includes(LABEL))
+          .map((i) => i.id)
+          .sort(),
+      )
+      .toEqual(chosen.map((i) => i.id).sort());
+    await expect(page.getByRole('checkbox', { name: LABEL })).toBeChecked();
+
+    // rename: the messages carry the new name, the old one is gone
+    await sidebar.getByRole('button', { name: `Действия с меткой «${LABEL}»` }).click();
+    await page.getByRole('button', { name: 'Переименовать' }).click();
+    await page.getByRole('textbox', { name: `Новое название метки «${LABEL}»` }).fill(RENAMED);
+    await page.keyboard.press('Enter');
+    await expect(sidebar.getByRole('link', { name: RENAMED })).toBeVisible();
+    await expect(sidebar.getByRole('link', { name: LABEL })).toHaveCount(0);
+    await expect
+      .poll(async () => (await inbox(page)).filter((i) => i.labels.includes(RENAMED)).length)
+      .toBe(2);
+    expect((await inbox(page)).some((i) => i.labels.includes(LABEL))).toBe(false);
+
+    // the color is chosen from the three of the design and kept
+    await sidebar.getByRole('button', { name: `Действия с меткой «${RENAMED}»` }).click();
+    const saved = page.waitForResponse(
+      (r) => r.url().includes('/api/v1/labels/') && r.request().method() === 'PATCH',
+    );
+    await page
+      .getByRole('group', { name: 'Цвет метки' })
+      .getByRole('button', { name: 'Счета' })
+      .click();
+    expect((await saved).ok()).toBe(true);
+    await page.reload();
+    await sidebar.getByRole('button', { name: `Действия с меткой «${RENAMED}»` }).click();
+    await expect(
+      page.getByRole('group', { name: 'Цвет метки' }).getByRole('button', { name: 'Счета' }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 });
