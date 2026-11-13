@@ -53,8 +53,31 @@ public sealed class ImapOptions : IValidatableObject
     /// </summary>
     public bool AllowInvalidCertificate { get; set; }
 
+    /// <summary>
+    /// How often the connection that follows the inbox (IDLE) ends its wait and starts a new one: mail servers drop an IDLE that
+    /// lasts too long (RFC 2177: 29 minutes). Keep it below that.
+    /// </summary>
+    public TimeSpan IdleRestart { get; set; } = TimeSpan.FromMinutes(25);
+
+    /// <summary>How long the connection that follows a mailbox stays open after the last browser that listened to it has gone.</summary>
+    public TimeSpan IdleGrace { get; set; } = TimeSpan.FromMinutes(1);
+
+    /// <summary>Connections that follow mailboxes, in the whole application (one per mailbox, whatever the number of browsers); keep it with <see cref="MaxConnections"/> below what the mail server allows.</summary>
+    [Range(1, 100000)]
+    public int MaxIdleConnections { get; set; } = 200;
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (IdleRestart <= TimeSpan.Zero || IdleRestart > TimeSpan.FromMinutes(29))
+        {
+            yield return new ValidationResult("IdleRestart must be positive and at most 29 minutes.", [nameof(IdleRestart)]);
+        }
+
+        if (IdleGrace < TimeSpan.Zero)
+        {
+            yield return new ValidationResult("IdleGrace must not be negative.", [nameof(IdleGrace)]);
+        }
+
         if (Timeout <= TimeSpan.Zero)
         {
             yield return new ValidationResult("Timeout must be positive.", [nameof(Timeout)]);

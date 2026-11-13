@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The mail server is now followed for new mail without being asked: one connection per mailbox (shared by all the browsers and devices signed in to it) waits for the server's notifications about the inbox and is closed a minute after the last browser is gone. New settings `Imap:IdleRestart` (default 25 minutes, at most 29), `Imap:IdleGrace` (1 minute) and `Imap:MaxIdleConnections` (200, apart from the limits on the connections that answer requests). Count one more connection per mailbox when you set `mail_max_userip_connections` on Dovecot. The notifications reach the screen with the next real-time tasks.
 - The key `l` opens the "Labels" panel for the selected messages, or, with nothing selected, for the open message; it is listed in the window of keyboard shortcuts.
 - The trash and the spam folder can be emptied: a button under the list heading asks first ("All messages in this folder will be deleted forever. This cannot be undone."), then deletes everything. In the trash, an open message and a selection have a "Delete forever" button (also after a question) in place of "Delete"; there is no "Undo" for these.
 - `POST /api/v1/folders/{folder}/empty` deletes every message of the trash or of the spam folder for good (`{"deleted": N}`; any other folder is refused with 409 `not_in_trash`), and `POST /api/v1/messages/batch` takes the action `delete` for messages of the trash (up to 100).

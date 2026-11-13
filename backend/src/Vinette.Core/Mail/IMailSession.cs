@@ -127,6 +127,15 @@ public interface IMailSession : IAsyncDisposable
     Task<int> RenameLabelAsync(string oldName, string? newName, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Watches the inbox and reports what the server says about it (IMAP IDLE; on a server without it, a check every few seconds),
+    /// until <paramref name="cancellationToken"/> is cancelled or the connection breaks (which throws). The server is asked to
+    /// end an IDLE and start a new one every <paramref name="restartAfter"/>, as servers drop an IDLE that lasts too long. While it
+    /// runs the connection can do nothing else, so it is a connection of its own. <paramref name="onChange"/> runs for every
+    /// notification, one after another.
+    /// </summary>
+    Task WatchInboxAsync(Func<MailboxChange, ValueTask> onChange, TimeSpan restartAfter, CancellationToken cancellationToken);
+
+    /// <summary>
     /// How much of the mailbox's storage is used (IMAP GETQUOTAROOT). Null when the server has no quota extension or
     /// sets no storage limit for this mailbox: then there is nothing to show.
     /// </summary>

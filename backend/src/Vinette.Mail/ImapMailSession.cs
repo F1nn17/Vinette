@@ -411,6 +411,74 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         return LabelsOf(summary.Keywords);
     }
 
+    public async Task WatchInboxAsync(Func<MailboxChange, ValueTask> onChange, TimeSpan restartAfter, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(onChange);
+        var (inbox, _) = await OpenAsync("INBOX", cancellationToken).ConfigureAwait(false);
+
+        // The events come on the thread that waits for the server: they are only queued there, and delivered from here.
+        var queue = System.Threading.Channels.Channel.CreateUnbounded<MailboxChange>(new System.Threading.Channels.UnboundedChannelOptions { SingleReader = true });
+        void Count(object? sender, EventArgs e) => queue.Writer.TryWrite(new MailboxChange("INBOX", MailboxChangeKind.CountChanged));
+        void Expunged(object? sender, MessageEventArgs e) => queue.Writer.TryWrite(new MailboxChange("INBOX", MailboxChangeKind.Expunged));
+        void Flags(object? sender, MessageFlagsChangedEventArgs e) => queue.Writer.TryWrite(new MailboxChange("INBOX", MailboxChangeKind.FlagsChanged));
+        inbox.CountChanged += Count;
+        inbox.MessageExpunged += Expunged;
+        inbox.MessageFlagsChanged += Flags;
+        try
+        {
+            var delivering = Task.Run(
+                async () =>
+                {
+                    await foreach (var change in queue.Reader.ReadAllAsync(CancellationToken.None).ConfigureAwait(false))
+                    {
+                        await onChange(change).ConfigureAwait(false);
+                    }
+                },
+                CancellationToken.None);
+            try
+            {
+                var idle = client.Capabilities.Contains(ImapCapability.Idle);
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    using var done = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    done.CancelAfter(restartAfter);
+                    if (idle)
+                    {
+                        await client.IdleAsync(done.Token, CancellationToken.None).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        // No IDLE: a NOOP lets the server report what happened since the last one.
+                        try
+                        {
+                            await Task.Delay(PollInterval, done.Token).ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // the restart time or the end of the watch
+                        }
+
+                        await client.NoOpAsync(CancellationToken.None).ConfigureAwait(false);
+                    }
+                }
+            }
+            finally
+            {
+                _ = queue.Writer.TryComplete();
+                await delivering.ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            inbox.CountChanged -= Count;
+            inbox.MessageExpunged -= Expunged;
+            inbox.MessageFlagsChanged -= Flags;
+        }
+    }
+
+    /// <summary>How often a server without IDLE is asked what changed.</summary>
+    internal TimeSpan PollInterval { get; init; } = TimeSpan.FromSeconds(30);
+
     public async Task<int> RenameLabelAsync(string oldName, string? newName, CancellationToken cancellationToken)
     {
         var oldKeyword = LabelName.ToKeyword(oldName);
