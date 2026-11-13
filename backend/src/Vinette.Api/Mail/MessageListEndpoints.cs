@@ -123,7 +123,7 @@ public static class MessageListEndpoints
     private static IResult Bad(string title) =>
         Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: title, extensions: new Dictionary<string, object?> { ["code"] = ErrorCodes.BadRequest });
 
-    private static MessageListItemDto ToDto(MessageListItem item) => new(
+    internal static MessageListItemDto ToDto(MessageListItem item) => new(
         item.Id.ToString(),
         item.From is null ? null : new AddressDto(item.From.Name, item.From.Address),
         [.. item.To.Select(a => new AddressDto(a.Name, a.Address))],

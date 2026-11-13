@@ -393,19 +393,9 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
             return 0; // keywords do not tell capitals apart: there is nothing to change on the server
         }
 
-        var root = client.PersonalNamespaces.Count > 0 ? client.PersonalNamespaces[0] : new FolderNamespace('/', string.Empty);
-        var listed = await client.GetFoldersAsync(root, StatusItems.None, subscribedOnly: false, cancellationToken).ConfigureAwait(false);
-        var folders = new List<IMailFolder>(listed) { client.Inbox };
-
         var changed = 0;
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var candidate in folders)
+        foreach (var candidate in await SelectableFoldersAsync(cancellationToken).ConfigureAwait(false))
         {
-            if (candidate.Attributes.HasFlag(FolderAttributes.NoSelect) || candidate.Attributes.HasFlag(FolderAttributes.NonExistent) || !seen.Add(candidate.FullName))
-            {
-                continue;
-            }
-
             try
             {
                 _ = await candidate.OpenAsync(FolderAccess.ReadWrite, cancellationToken).ConfigureAwait(false);
@@ -430,6 +420,60 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         }
 
         return changed;
+    }
+
+    /// <summary>Every folder of the mailbox that can hold messages, the inbox included, each once.</summary>
+    private async Task<List<IMailFolder>> SelectableFoldersAsync(CancellationToken cancellationToken)
+    {
+        var root = client.PersonalNamespaces.Count > 0 ? client.PersonalNamespaces[0] : new FolderNamespace('/', string.Empty);
+        var listed = await client.GetFoldersAsync(root, StatusItems.None, subscribedOnly: false, cancellationToken).ConfigureAwait(false);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        return [.. new List<IMailFolder>(listed) { client.Inbox }
+            .Where(f => !f.Attributes.HasFlag(FolderAttributes.NoSelect) && !f.Attributes.HasFlag(FolderAttributes.NonExistent) && seen.Add(f.FullName))];
+    }
+
+    public async Task<LabeledMessages> ListLabeledMessagesAsync(string label, int limit, bool includePreview, CancellationToken cancellationToken)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
+        var keyword = LabelName.ToKeyword(label);
+        var wanted = includePreview ? SummaryItems | MessageSummaryItems.PreviewText : SummaryItems;
+        var items = new List<MessageListItem>();
+        var total = 0;
+        foreach (var candidate in await SelectableFoldersAsync(cancellationToken).ConfigureAwait(false))
+        {
+            var inbox = IsInbox(candidate);
+            if (!inbox && RoleOf(candidate, inbox: false) is FolderRole.Trash or FolderRole.Junk)
+            {
+                continue; // what was thrown away is not part of "all my mail with this label"
+            }
+
+            try
+            {
+                var path = inbox ? "INBOX" : candidate.FullName;
+                var (folder, uidValidity) = await OpenAsync(path, cancellationToken).ConfigureAwait(false);
+                var found = (await folder.SearchAsync(SearchQuery.HasKeyword(keyword), cancellationToken).ConfigureAwait(false)).OrderByDescending(u => u.Id).ToList();
+                total += found.Count;
+                if (found.Count == 0)
+                {
+                    continue;
+                }
+
+                if (!PreviewExtension)
+                {
+                    client.Capabilities.Disable(ImapCapability.Preview);
+                }
+
+                // Only the newest `limit` of a folder can be among the newest `limit` of all of them.
+                var fetched = await folder.FetchAsync([.. found.Take(limit)], wanted, cancellationToken).ConfigureAwait(false);
+                items.AddRange(fetched.Select(m => ToSummary(path, uidValidity, m)));
+            }
+            catch (Exception exception) when (exception is MailFolderNotFoundException or ImapCommandException or FolderNotFoundException or InvalidOperationException)
+            {
+                // A folder that cannot be opened or searched has nothing to show.
+            }
+        }
+
+        return new LabeledMessages([.. items.OrderByDescending(i => i.Date).ThenByDescending(i => i.Id.Uid).Take(limit)], total);
     }
 
     private static async Task<MessageFlags?> FlagsOfAsync(IMailFolder folder, UniqueId uid, CancellationToken cancellationToken)

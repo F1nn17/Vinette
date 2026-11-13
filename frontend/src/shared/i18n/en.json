@@ -63,7 +63,8 @@
   "common": {
     "close": "Close",
     "loading": "Loading…",
-    "retry": "Try again"
+    "retry": "Try again",
+    "cancel": "Cancel"
   },
   "errors": {
     "mail_unavailable": "Mail is temporarily unavailable. Try again in a few minutes.",
@@ -104,7 +105,8 @@
     "spam": "Mark as spam",
     "trash": "Delete",
     "read": "Mark as read",
-    "limit": "You can select at most {{max}} messages at a time."
+    "limit": "You can select at most {{max}} messages at a time.",
+    "labels": "Labels"
   },
   "list": {
     "noSender": "No sender",
@@ -169,6 +171,28 @@
     "download": "Download {{name}}, {{size}}",
     "flagFailed": "Could not save the mark. Check your connection and try again.",
     "truncated": "This message is very long: only the beginning is shown.",
-    "showFull": "Show all"
+    "showFull": "Show all",
+    "labels": "Labels"
+  },
+  "labels": {
+    "menu": "Labels",
+    "none": "No labels yet. Type a name below to make the first one.",
+    "newField": "Name of the new label",
+    "newPlaceholder": "New label",
+    "add": "New label",
+    "actionsOf": "Actions for the label \"{{name}}\"",
+    "color": "Label color",
+    "colors": {
+      "work": "Work",
+      "bills": "Bills",
+      "personal": "Personal"
+    },
+    "rename": "Rename",
+    "renameField": "New name for the label \"{{name}}\"",
+    "delete": "Delete",
+    "deleteTitle": "Delete the label \"{{name}}\"?",
+    "deleteText": "The label will be taken off all messages. The messages themselves stay where they are.",
+    "deleteConfirm": "Delete label",
+    "empty": "No messages have this label."
   }
 }

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 using Vinette.Api.Errors;
 using Vinette.Api.Sessions;
 using Vinette.Core.Mail;
@@ -73,6 +74,13 @@ public static class LabelEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+        api.MapGet("/labels/{name}/messages", ListMessagesAsync)
+            .WithName("ListLabeledMessages")
+            .WithTags("Labels")
+            .Produces<MessageListResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         api.MapPatch("/messages/{id}/labels", UpdateMessageLabelsAsync)
             .WithName("UpdateMessageLabels")
@@ -259,6 +267,34 @@ public static class LabelEndpoints
         }
 
         return Results.Ok(new MessageLabelsDto(labels));
+    }
+
+    /// <summary>
+    /// The newest messages with a label from all folders except the trash and the spam folder, newest first. There is one page only:
+    /// <c>next</c> is always absent, and <c>total</c> says how many messages have the label (more than are listed if it is above <c>limit</c>).
+    /// A label nobody has put on a message yields an empty list.
+    /// </summary>
+    /// <param name="name">The label's name (URL-encoded).</param>
+    /// <param name="limit">Messages to list, 1 to 100 (default 50).</param>
+    /// <param name="preview">Include the text preview (default true).</param>
+    private static async Task<IResult> ListMessagesAsync(string name, HttpContext http, IMailGateway gateway, SessionService sessions, CancellationToken cancellationToken, [FromQuery] int? limit = null, [FromQuery] bool? preview = null)
+    {
+        var pageSize = limit ?? MessageListQuery.DefaultLimit;
+        if (pageSize is < 1 or > MessageListQuery.MaxLimit)
+        {
+            return Problem(StatusCodes.Status400BadRequest, $"limit must be between 1 and {MessageListQuery.MaxLimit}.", ErrorCodes.BadRequest);
+        }
+
+        if (!LabelName.IsValid(name, out var problem))
+        {
+            return Problem(StatusCodes.Status400BadRequest, problem!, ErrorCodes.BadRequest);
+        }
+
+        var found = await gateway.ExecuteAsync(
+            http.GetMailCredentials(sessions),
+            (session, token) => session.ListLabeledMessagesAsync(LabelName.Normalize(name), pageSize, preview ?? true, token),
+            cancellationToken);
+        return Results.Ok(new MessageListResponse([.. found.Items.Select(MessageListEndpoints.ToDto)], null, found.Total));
     }
 
     private static IResult? Check(string? name, string? color, bool nameRequired)

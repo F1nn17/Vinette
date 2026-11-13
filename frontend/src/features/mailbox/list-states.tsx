@@ -19,10 +19,10 @@ export function ListSkeleton({ rows = 8 }: { rows?: number }) {
   );
 }
 
-/** Nothing to show (an empty folder or a filter that matches nothing). */
-export function ListEmpty() {
+/** Nothing to show (an empty folder or a filter that matches nothing, or a label no message has). */
+export function ListEmpty({ label = false }: { label?: boolean }) {
   const { t } = useTranslation();
-  return <p className="p-5 text-muted">{t('list.empty')}</p>;
+  return <p className="p-5 text-muted">{t(label ? 'labels.empty' : 'list.empty')}</p>;
 }
 
 /** The folder in the address does not exist. */

@@ -211,4 +211,60 @@ public sealed class LabelsIntegrationTests(DovecotFixture dovecot)
 
         Assert.Equal(["Счета 2026"], moved);
     }
+
+    [Fact]
+    public async Task Messages_With_A_Label_Are_Found_In_Every_Folder_Except_The_Trash_And_Spam()
+    {
+        var account = await MailboxAsync(3, "Work");
+
+        var (found, none) = await WithSessionAsync(account, async s =>
+        {
+            var ids = (await ListAsync(s, "INBOX")).Select(m => m.Id).ToList();
+            foreach (var id in ids)
+            {
+                await s.UpdateMessageLabelsAsync(id, ["Счета 2026"], [], Token);
+            }
+
+            _ = await s.MoveMessageAsync(ids[0], "Work", Token);
+            _ = await s.MoveMessageAsync(ids[1], "Trash", Token);
+            return (await s.ListLabeledMessagesAsync("Счета 2026", 50, includePreview: false, Token), await s.ListLabeledMessagesAsync("Нет такой", 50, includePreview: false, Token));
+        });
+
+        Assert.Equal(2, found.Total);
+        Assert.Equal(["INBOX", "Work"], found.Items.Select(i => i.Id.Folder).Order(StringComparer.Ordinal));
+        Assert.All(found.Items, i => Assert.Equal(["Счета 2026"], i.Labels));
+        Assert.Empty(none.Items);
+        Assert.Equal(found.Items.OrderByDescending(i => i.Date).Select(i => i.Id), found.Items.Select(i => i.Id));
+    }
+
+    [Fact]
+    public async Task Only_The_Newest_Messages_Are_Listed_And_The_Total_Counts_All()
+    {
+        var account = await MailboxAsync(3);
+
+        var found = await WithSessionAsync(account, async s =>
+        {
+            foreach (var item in await ListAsync(s, "INBOX"))
+            {
+                await s.UpdateMessageLabelsAsync(item.Id, ["Work"], [], Token);
+            }
+
+            return await s.ListLabeledMessagesAsync("Work", 2, includePreview: true, Token);
+        });
+
+        Assert.Equal(2, found.Items.Count);
+        Assert.Equal(3, found.Total);
+        Assert.All(found.Items, i => Assert.NotEmpty(i.Preview));
+    }
+
+    [Fact]
+    public async Task A_Label_Nobody_Has_Gives_An_Empty_List()
+    {
+        var account = await MailboxAsync(1);
+
+        var found = await WithSessionAsync(account, s => s.ListLabeledMessagesAsync("Nobody", 50, includePreview: false, Token));
+
+        Assert.Empty(found.Items);
+        Assert.Equal(0, found.Total);
+    }
 }

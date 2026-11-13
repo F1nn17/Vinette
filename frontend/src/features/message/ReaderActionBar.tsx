@@ -6,8 +6,10 @@ import {
   Forward,
   MailPlus,
   Reply,
+  Tag,
   Trash2,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, IconButton } from '@/shared/ui';
 import { MoreMenu } from './MoreMenu';
@@ -26,6 +28,8 @@ export interface ReaderActionBarProps {
   folderRole?: string;
   /** Archives, marks as spam, deletes (moves to the trash) or marks as unread; without it those buttons cannot be used. */
   onAction?: (action: ReaderAction) => void;
+  /** The "Labels" button and the panel it opens (VIN-078); without it the button is not shown. */
+  labels?: { open: boolean; onToggle: () => void; menu: ReactNode };
 }
 
 /**
@@ -39,6 +43,7 @@ export function ReaderActionBar({
   onBack,
   folderRole,
   onAction,
+  labels,
 }: ReaderActionBarProps) {
   const { t } = useTranslation();
   const icon = { size: 18, strokeWidth: 1.8, 'aria-hidden': true } as const;
@@ -46,7 +51,7 @@ export function ReaderActionBar({
     <div
       role="toolbar"
       aria-label={t('reader.actions')}
-      className="flex shrink-0 items-center gap-2 border-b border-subtle px-7 py-3 max-md:px-3"
+      className="relative flex shrink-0 items-center gap-2 border-b border-subtle px-7 py-3 max-md:px-3"
     >
       {onBack && (
         <IconButton aria-label={t('mailbox.back')} onClick={onBack} className="-ml-1">
@@ -108,6 +113,16 @@ export function ReaderActionBar({
         >
           <Flag {...icon} className={flagged ? 'fill-flag' : undefined} />
         </IconButton>
+        {labels && (
+          <IconButton
+            aria-label={t('reader.labels')}
+            aria-expanded={labels.open}
+            data-labels-trigger
+            onClick={labels.onToggle}
+          >
+            <Tag {...icon} />
+          </IconButton>
+        )}
       </div>
       <div className="ml-auto">
         <MoreMenu
@@ -156,6 +171,17 @@ export function ReaderActionBar({
               disabled: onToggleFlag === undefined,
               phoneOnly: true,
             },
+            ...(labels
+              ? [
+                  {
+                    key: 'labels',
+                    label: t('reader.labels'),
+                    icon: <Tag {...icon} />,
+                    onSelect: labels.onToggle,
+                    phoneOnly: true,
+                  },
+                ]
+              : []),
             {
               key: 'unread',
               label: t('reader.markUnread'),
@@ -166,6 +192,7 @@ export function ReaderActionBar({
           ]}
         />
       </div>
+      {labels?.open && labels.menu}
     </div>
   );
 }

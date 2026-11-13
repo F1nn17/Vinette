@@ -106,6 +106,11 @@ public sealed record MessageListQuery(string Folder, MessageCursor? After, int L
     public const int MaxLimit = 100;
 }
 
+/// <summary>The messages that carry a label, from all the folders that matter, newest first.</summary>
+/// <param name="Items">The newest messages, at most the number asked for; each is identified by its own folder.</param>
+/// <param name="Total">How many messages carry the label in all (can be more than <paramref name="Items"/> holds).</param>
+public sealed record LabeledMessages(IReadOnlyList<MessageListItem> Items, int Total);
+
 /// <summary>A page of the message list. Messages are ordered by arrival (UID), which never changes for a message.</summary>
 /// <param name="UidValidity">The folder's <c>UIDVALIDITY</c> the page was read with.</param>
 /// <param name="Items">The messages, in the requested order.</param>

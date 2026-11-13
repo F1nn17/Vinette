@@ -1,4 +1,5 @@
-import { AlertCircle, Archive, ListChecks, MailOpen, Trash2, X } from 'lucide-react';
+import { AlertCircle, Archive, ListChecks, MailOpen, Tag, Trash2, X } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconButton } from '@/shared/ui';
 import type { BatchAction } from './batch';
@@ -18,6 +19,8 @@ export interface SelectionBarProps {
   onAction: (action: BatchAction) => void;
   /** A phone: "select all" is an icon, so that everything fits in one line. */
   narrow?: boolean;
+  /** The "Labels" button and the panel it opens (VIN-078); without it the button is not shown. */
+  labels?: { open: boolean; onToggle: () => void; menu: ReactNode };
 }
 
 /**
@@ -33,11 +36,16 @@ export function SelectionBar({
   onClear,
   onAction,
   narrow = false,
+  labels,
 }: SelectionBarProps) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-2">
-      <div role="toolbar" aria-label={t('selection.actions')} className="flex items-center gap-1">
+      <div
+        role="toolbar"
+        aria-label={t('selection.actions')}
+        className="relative flex items-center gap-1"
+      >
         <IconButton aria-label={t('selection.clear')} onClick={onClear} className="-ml-2">
           <X size={18} strokeWidth={1.8} aria-hidden />
         </IconButton>
@@ -74,9 +82,20 @@ export function SelectionBar({
             <Trash2 size={18} strokeWidth={1.8} aria-hidden />
           </IconButton>
         )}
+        {labels && (
+          <IconButton
+            aria-label={t('selection.labels')}
+            aria-expanded={labels.open}
+            data-labels-trigger
+            onClick={labels.onToggle}
+          >
+            <Tag size={18} strokeWidth={1.8} aria-hidden />
+          </IconButton>
+        )}
         <IconButton aria-label={t('selection.read')} onClick={() => onAction('read')}>
           <MailOpen size={18} strokeWidth={1.8} aria-hidden />
         </IconButton>
+        {labels?.open && labels.menu}
       </div>
       {capped && (
         <p role="status" className="text-secondary text-muted">

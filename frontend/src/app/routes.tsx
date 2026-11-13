@@ -16,6 +16,8 @@ export const appRoutes: RouteObject[] = [
       // One route for the list and for an open message: the screen is not built again when a message is opened, so the
       // list keeps what it loaded and where it was scrolled to.
       { path: '/mail/:folder/:messageId?', element: <MailboxPage /> },
+      // The messages of a label from all folders. `@label` cannot be a folder: the folder in the address is always encoded.
+      { path: '/mail/@label/:name/:messageId?', element: <MailboxPage /> },
       { path: '/compose', element: <ComposePage /> },
     ],
   },

@@ -1,6 +1,7 @@
 import { ImageOff, MailOpen } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { MessageLabelsMenu } from '@/features/labels';
 import { useSettings } from '@/features/settings';
 import { describeApiError, type Translate } from '@/shared/api/describe-error';
 import { formatMessageDate, labelColor } from '@/shared/lib';
@@ -183,6 +184,8 @@ export function ReadingPane({
   const markedRead = useRef<string | null>(null);
   const [failedFor, setFailedFor] = useState<string | null>(null); // the message whose flag could not be saved
   const flagFailed = failedFor === messageId;
+  const [labelsFor, setLabelsFor] = useState<string | null>(null); // the message whose "Labels" panel is open
+  const labelsOpen = messageId !== undefined && labelsFor === messageId;
 
   // Opening an unread message reads it. Once per message: if the server refuses, the mark goes back and is not forced again.
   const opened = query.data;
@@ -230,6 +233,17 @@ export function ReadingPane({
         folderRole={folderRole}
         onAction={onAction}
         flagged={message.flagged}
+        labels={{
+          open: labelsOpen,
+          onToggle: () => setLabelsFor(labelsOpen ? null : messageId),
+          menu: (
+            <MessageLabelsMenu
+              ids={[messageId]}
+              labelsOfMessages={[message.labels]}
+              onClose={() => setLabelsFor(null)}
+            />
+          ),
+        }}
         onToggleFlag={() =>
           flags.mutate(
             { flagged: !message.flagged },
