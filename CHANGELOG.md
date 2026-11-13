@@ -67,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- An attachment whose base64 data lacks the closing `=` padding is now read to its end (its last, shorter group was dropped before), after the update of the mail library.
 - A link to a message (`/mail/<folder>/<message>`) opens the application after a page reload and from a bookmark; it answered with an error before.
 - Subjects, senders and previews written in KOI8-R, Windows-1251 and other legacy charsets are shown correctly in the message list (the application did not load these charsets before).
 - A request parameter the server cannot read (e.g. `limit=abc`) now answers `400` with a problem body instead of `500`.

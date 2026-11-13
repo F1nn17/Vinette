@@ -1,6 +1,8 @@
+import type { TFunction } from 'i18next';
 import { ApiError } from './client';
 
-type Translate = (key: string, options?: Record<string, unknown>) => string;
+/** The translation function of i18next (version 27 types it so precisely that no plain function type is accepted for it). */
+export type Translate = TFunction;
 
 /**
  * A text for the user for a failed API call (no technical wording, see docs/design/DESIGN.md). Codes are listed in

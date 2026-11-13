@@ -27,9 +27,18 @@ public sealed class DovecotIntegrationTests(DovecotFixture dovecot)
         using var client = await ConnectAsync(DovecotFixture.Alice);
 
         Assert.True(client.IsAuthenticated);
-        Assert.True(client.Capabilities.HasFlag(
-            ImapCapabilities.SpecialUse | ImapCapabilities.Idle | ImapCapabilities.Move
-            | ImapCapabilities.QuickResync | ImapCapabilities.Quota | ImapCapabilities.Metadata));
+        foreach (var capability in new[]
+        {
+            ImapCapability.SpecialUse,
+            ImapCapability.Idle,
+            ImapCapability.Move,
+            ImapCapability.QuickResync,
+            ImapCapability.Quota,
+            ImapCapability.Metadata,
+        })
+        {
+            Assert.True(client.Capabilities.Contains(capability), $"The server must have {capability}");
+        }
     }
 
     [Fact]

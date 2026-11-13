@@ -2,15 +2,13 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '@/shared/api/client';
+import type { Translate } from '@/shared/api/describe-error';
 import { getBranding } from '@/shared/lib/branding';
 import { Button, Checkbox, IconButton, Logo, TextField } from '@/shared/ui';
 import { useSession } from './session-context';
 
 /** Maps an error of the sign-in call to a text for the user (no technical wording, see docs/design/DESIGN.md). */
-function errorMessage(
-  error: unknown,
-  t: (key: string, options?: Record<string, unknown>) => string,
-) {
+function errorMessage(error: unknown, t: Translate) {
   if (error instanceof ApiError) {
     if (error.code === 'too_many_requests') {
       const minutes = Math.max(1, Math.ceil((error.retryAfterSeconds ?? 60) / 60));

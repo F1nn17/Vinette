@@ -2,7 +2,7 @@ import { ImageOff, MailOpen } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '@/features/settings';
-import { describeApiError } from '@/shared/api/describe-error';
+import { describeApiError, type Translate } from '@/shared/api/describe-error';
 import { formatMessageDate, labelColor } from '@/shared/lib';
 import { Avatar, Button, LabelTag } from '@/shared/ui';
 import { useMessage, verdictOf, type MessageDetail } from './api';
@@ -65,11 +65,7 @@ function Skeleton() {
   );
 }
 
-function recipients(
-  message: MessageDetail,
-  address: string | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
+function recipients(message: MessageDetail, address: string | undefined, t: Translate): string {
   const to = message.to;
   if (to.length === 0) return t('reader.noRecipients');
   const mine = address?.toLowerCase();

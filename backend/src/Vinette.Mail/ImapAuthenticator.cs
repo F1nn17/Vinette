@@ -88,7 +88,7 @@ public sealed class ImapAuthenticator(ImapConnectionSettings settings) : IAuthen
 
     internal static async Task IdentifyAsync(ImapClient imap, ClientInfo client, CancellationToken cancellationToken)
     {
-        if (!imap.Capabilities.HasFlag(ImapCapabilities.Id))
+        if (!imap.Capabilities.Contains(ImapCapability.Id))
         {
             return;
         }
