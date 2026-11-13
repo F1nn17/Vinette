@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
+import { RealtimeContext, type RealtimeStatus } from '@/features/realtime';
 import { AppShell } from './AppShell';
 import { MessageListPane } from './MessageListPane';
 import { labelColor } from '@/shared/lib';
@@ -108,7 +109,12 @@ function mockServer(pages: (url: URL) => unknown): Server {
   return server;
 }
 
-function renderPane(url = '/mail/inbox', slug = 'inbox', messageId?: string) {
+function renderPane(
+  url = '/mail/inbox',
+  slug = 'inbox',
+  messageId?: string,
+  realtime: RealtimeStatus = 'connected',
+) {
   const router = createMemoryRouter(
     [
       {
@@ -133,11 +139,13 @@ function renderPane(url = '/mail/inbox', slug = 'inbox', messageId?: string) {
   );
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <ToastProvider>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </ToastProvider>,
+    <RealtimeContext.Provider value={realtime}>
+      <ToastProvider>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </ToastProvider>
+    </RealtimeContext.Provider>,
   );
   return router;
 }
@@ -338,6 +346,26 @@ describe('offline', () => {
     expect(await screen.findByText('Subject 1')).toBeInTheDocument();
     expect(screen.getByText(/Нет связи/u)).toBeInTheDocument();
     online.mockRestore();
+  });
+
+  it('shows the banner too when the live channel cannot be restored for a few seconds, though the browser thinks it is online', async () => {
+    mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
+    renderPane('/mail/inbox', 'inbox', undefined, 'reconnecting');
+
+    expect(await screen.findByText('Subject 1')).toBeInTheDocument();
+    expect(screen.queryByText(/Нет связи/u)).not.toBeInTheDocument(); // a blink is not worth a notice
+    expect(await screen.findByText(/Нет связи/u, {}, { timeout: 6000 })).toBeInTheDocument();
+    expect(screen.getByText('Subject 1')).toBeInTheDocument(); // what was loaded stays
+  });
+
+  it('has no banner while the channel is connected, connecting or has given up', async () => {
+    mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
+    renderPane('/mail/inbox', 'inbox', undefined, 'disconnected');
+
+    await screen.findByText('Subject 1');
+    await new Promise((resolve) => setTimeout(resolve, 3500));
+
+    expect(screen.queryByText(/Нет связи/u)).not.toBeInTheDocument();
   });
 });
 
