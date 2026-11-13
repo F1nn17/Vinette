@@ -15,7 +15,7 @@
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.20.1-beta.1" />
     <PackageVersion Include="HtmlSanitizer" Version="11.0.26" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
-    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="11.0.0" />
     <!-- Tests. xunit.v3 Apache-2.0, Testcontainers MIT, coverlet MIT. -->
     <PackageVersion Include="xunit.v3.mtp-v2" Version="4.0.3" />
     <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.3" />
