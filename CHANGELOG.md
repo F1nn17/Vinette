@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The key `l` opens the "Labels" panel for the selected messages, or, with nothing selected, for the open message; it is listed in the window of keyboard shortcuts.
 - The trash and the spam folder can be emptied: a button under the list heading asks first ("All messages in this folder will be deleted forever. This cannot be undone."), then deletes everything. In the trash, an open message and a selection have a "Delete forever" button (also after a question) in place of "Delete"; there is no "Undo" for these.
 - `POST /api/v1/folders/{folder}/empty` deletes every message of the trash or of the spam folder for good (`{"deleted": N}`; any other folder is refused with 409 `not_in_trash`), and `POST /api/v1/messages/batch` takes the action `delete` for messages of the trash (up to 100).
 - Labels in the interface: the "+" next to "Labels" in the sidebar makes a new label, the "..." of a label changes its color (Work, Bills, Personal), renames it or deletes it (after a question; the messages stay), and a click on a label shows the messages that have it from all folders except the trash and spam (the newest 50, no filters or selection there). An open message and a selection have a "Labels" button: a panel with a box for each label (half full when only some of the selected messages have it) and a field for a new label.

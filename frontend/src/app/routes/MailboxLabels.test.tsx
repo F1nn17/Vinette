@@ -345,3 +345,57 @@ describe('labels on the selected messages', () => {
     );
   });
 });
+
+describe('the key l', () => {
+  it('opens the labels of the open message', async () => {
+    mockServer();
+    const user = userEvent.setup();
+    renderPage(`/mail/inbox/${IN_INBOX}`);
+    await screen.findByRole('heading', { name: 'Budget for November' });
+
+    await user.keyboard('l');
+
+    expect(await screen.findByRole('checkbox', { name: 'Work' })).toBeChecked();
+  });
+
+  it('opens the labels of the selected messages rather than of the open one', async () => {
+    const server = mockServer();
+    const user = userEvent.setup();
+    renderPage(`/mail/inbox/${IN_INBOX}`);
+    await screen.findByRole('heading', { name: 'Budget for November' });
+    await user.click(
+      await screen.findByRole('checkbox', { name: 'Выбрать письмо «Budget for November»' }),
+    );
+
+    await user.keyboard('l');
+    await user.click(await screen.findByRole('checkbox', { name: 'Home' }));
+
+    await waitFor(() =>
+      expect(server.patches).toEqual([{ id: IN_INBOX, body: { add: ['Home'], remove: null } }]),
+    );
+    expect(screen.getAllByRole('checkbox', { name: 'Home' })).toHaveLength(1); // one panel only
+  });
+
+  it('does nothing when no message is open or selected, and while typing in the new-label field', async () => {
+    mockServer();
+    const user = userEvent.setup();
+    renderPage('/mail/inbox');
+    await screen.findByRole('link', { name: /Budget for November/ });
+
+    await user.keyboard('l');
+
+    expect(screen.queryByRole('checkbox', { name: 'Work' })).not.toBeInTheDocument();
+  });
+
+  it('is listed in the window of the keys', async () => {
+    mockServer();
+    const user = userEvent.setup();
+    renderPage('/mail/inbox');
+    await screen.findByRole('link', { name: /Budget for November/ });
+
+    await user.keyboard('?');
+
+    const dialog = await screen.findByRole('dialog', { name: 'Горячие клавиши' });
+    expect(within(dialog).getByText('Метки')).toBeInTheDocument();
+  });
+});

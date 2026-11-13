@@ -17,6 +17,7 @@ describe('shortcutOf', () => {
     [{ key: '#', code: 'Digit3', shiftKey: true }, 'delete'],
     [{ key: '/', code: 'Slash' }, 'search'],
     [{ key: 'c', code: 'KeyC' }, 'compose'],
+    [{ key: 'l', code: 'KeyL' }, 'labels'],
     [{ key: '?', code: 'Slash', shiftKey: true }, 'help'],
   ] as const)('%j is "%s"', (init, name) => {
     expect(press(init)).toBe(name);
@@ -27,6 +28,7 @@ describe('shortcutOf', () => {
     expect(press({ key: 'л', code: 'KeyK' })).toBe('previous');
     expect(press({ key: 'у', code: 'KeyE' })).toBe('archive');
     expect(press({ key: 'с', code: 'KeyC' })).toBe('compose');
+    expect(press({ key: 'д', code: 'KeyL' })).toBe('labels');
     expect(press({ key: '№', code: 'Digit3', shiftKey: true })).toBe('delete');
     expect(press({ key: '?', code: 'Digit7', shiftKey: true })).toBe('help');
   });

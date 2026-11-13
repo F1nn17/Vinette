@@ -25,6 +25,9 @@ export interface ReadingPaneProps {
   folderRole?: string;
   /** Archives, marks as spam, deletes or marks as unread the open message; the screen decides where to go afterwards. */
   onAction?: (action: ReaderAction) => void;
+  /** The message whose "Labels" panel is open, when the screen holds that state (the key `l` opens it from the list); absent: the pane holds it itself. */
+  labelsFor?: string | null;
+  onLabelsForChange?: (id: string | null) => void;
 }
 
 function EmptyState() {
@@ -173,6 +176,8 @@ export function ReadingPane({
   onBack,
   folderRole,
   onAction,
+  labelsFor: labelsForProp,
+  onLabelsForChange,
 }: ReadingPaneProps) {
   const { t } = useTranslation();
   const [fullFor, setFullFor] = useState<string | null>(null); // the message whose whole body was asked for
@@ -184,7 +189,9 @@ export function ReadingPane({
   const markedRead = useRef<string | null>(null);
   const [failedFor, setFailedFor] = useState<string | null>(null); // the message whose flag could not be saved
   const flagFailed = failedFor === messageId;
-  const [labelsFor, setLabelsFor] = useState<string | null>(null); // the message whose "Labels" panel is open
+  const [ownLabelsFor, setOwnLabelsFor] = useState<string | null>(null);
+  const labelsFor = labelsForProp !== undefined ? labelsForProp : ownLabelsFor;
+  const setLabelsFor = onLabelsForChange ?? setOwnLabelsFor;
   const labelsOpen = messageId !== undefined && labelsFor === messageId;
 
   // Opening an unread message reads it. Once per message: if the server refuses, the mark goes back and is not forced again.

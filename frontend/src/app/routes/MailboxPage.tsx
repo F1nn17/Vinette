@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { useSession } from '@/features/auth';
 import {
@@ -35,6 +36,7 @@ export function MailboxPage() {
   )?.role;
   const batch = useMessageBatch();
   const purge = usePurge();
+  const [labelsFor, setLabelsFor] = useState<string | null>(null); // the message whose "Labels" panel is open
   const toList = `${labelName === undefined ? `/mail/${encodeURIComponent(folder)}` : labelPath(labelName)}${search}`;
 
   return (
@@ -49,6 +51,7 @@ export function MailboxPage() {
             labelName={labelName}
             messageId={messageId}
             address={address ?? undefined}
+            onOpenLabels={setLabelsFor}
           />
         }
         reader={
@@ -57,6 +60,8 @@ export function MailboxPage() {
             address={address ?? undefined}
             onBack={layout === 'mobile' ? () => void navigate(toList) : undefined}
             folderRole={role}
+            labelsFor={labelsFor}
+            onLabelsForChange={setLabelsFor}
             onAction={(action) => {
               if (messageId === undefined) return;
               if (action === 'delete') {
