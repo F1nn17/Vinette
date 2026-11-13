@@ -194,14 +194,15 @@ export function ReadingPane({
   const setLabelsFor = onLabelsForChange ?? setOwnLabelsFor;
   const labelsOpen = messageId !== undefined && labelsFor === messageId;
 
-  // Opening an unread message reads it. Once per message: if the server refuses, the mark goes back and is not forced again.
+  // Opening an unread message reads it. Decided once per message, when it is first shown: a message that was read when it
+  // opened is not read again if it is marked unread while it is open ("Mark as unread", or a mark made elsewhere), and if the
+  // server refuses, the mark goes back and is not forced again.
   const opened = query.data;
   const { mutate } = flags;
   useEffect(() => {
-    if (messageId !== undefined && opened && !opened.seen && markedRead.current !== messageId) {
-      markedRead.current = messageId;
-      mutate({ seen: true });
-    }
+    if (messageId === undefined || !opened || markedRead.current === messageId) return;
+    markedRead.current = messageId;
+    if (!opened.seen) mutate({ seen: true });
   }, [messageId, opened, mutate]);
 
   if (messageId === undefined) return <EmptyState />;
