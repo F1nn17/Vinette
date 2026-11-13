@@ -411,10 +411,15 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         return LabelsOf(summary.Keywords);
     }
 
-    public async Task WatchInboxAsync(Func<MailboxEvent, ValueTask> onEvent, TimeSpan restartAfter, CancellationToken cancellationToken)
+    /// <summary>Which of the server's delta-sync extensions the watch of the inbox uses. Tests only: the others are pretended away.</summary>
+    internal DeltaSync DeltaSyncMode { get; init; } = DeltaSync.Full;
+
+    public async Task WatchInboxAsync(Func<MailboxEvent, ValueTask> onEvent, TimeSpan restartAfter, MailboxWatchState state, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(onEvent);
-        var (inbox, uidValidity) = await OpenAsync("INBOX", cancellationToken).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(state);
+        const string Path = "INBOX";
+        var inbox = client.Inbox;
 
         // The notifications come on the thread that waits for the server (nothing else may be sent meanwhile): they are only
         // collected there. The first one ends the wait shortly (so that a burst is answered once), and the answer is made
@@ -457,16 +462,58 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
             Wake();
         }
 
+        // The handlers come first: with QRESYNC the server reports what changed while it opens the folder.
         inbox.CountChanged += Count;
         inbox.MessageExpunged += Expunged;
         inbox.MessagesVanished += Vanished;
         inbox.MessageFlagsChanged += Flags;
         try
         {
+            var quickResync = DeltaSyncMode == DeltaSync.Full && client.Capabilities.Contains(ImapCapability.QuickResync);
+            var condStore = quickResync || (DeltaSyncMode != DeltaSync.None && client.Capabilities.Contains(ImapCapability.CondStore));
+            var resume = state.Known && quickResync && state.HighestModSeq is > 0;
+            try
+            {
+                if (quickResync)
+                {
+                    await client.EnableAsync(ImapFeatures.QuickResync, cancellationToken).ConfigureAwait(false);
+                }
+
+                _ = resume
+                    ? await inbox.OpenAsync(FolderAccess.ReadOnly, state.UidValidity, state.HighestModSeq!.Value, [], cancellationToken).ConfigureAwait(false)
+                    : await inbox.OpenAsync(FolderAccess.ReadOnly, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is FolderNotFoundException or ImapCommandException or InvalidOperationException)
+            {
+                throw new MailFolderNotFoundException("The folder does not exist or cannot hold messages.", exception);
+            }
+
+            var uidValidity = (uint)inbox.UidValidity;
             var lastUid = (await inbox.SearchAsync(SearchQuery.All, cancellationToken).ConfigureAwait(false)).Select(u => u.Id).DefaultIfEmpty(0u).Max();
             var counters = (Total: inbox.Count, Unread: await UnreadAsync(inbox, cancellationToken).ConfigureAwait(false));
-            var idle = client.Capabilities.Contains(ImapCapability.Idle);
+            void Remember()
+            {
+                state.Known = true;
+                state.UidValidity = uidValidity;
+                state.HighestModSeq = condStore && inbox.HighestModSeq > 0 ? inbox.HighestModSeq : null;
+                state.LastUid = lastUid;
+                state.Total = counters.Total;
+                state.Unread = counters.Unread;
+            }
+
+            if (state.Known && state.UidValidity == uidValidity)
+            {
+                // What happened while no connection was watching, from what the last one knew.
+                (lastUid, counters) = await CatchUpAsync(inbox, uidValidity, state, notices.Take(), quickResync, condStore, lastUid, counters, onEvent, cancellationToken).ConfigureAwait(false);
+            }
+            else if (state.Known)
+            {
+                await onEvent(new FolderStale(Path)).ConfigureAwait(false); // another folder under the same name: nothing carries over
+            }
+
+            Remember();
             _ = notices.Take(); // what was reported while the folder was being looked at is in the state just read
+            var idle = client.Capabilities.Contains(ImapCapability.Idle);
 
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -506,6 +553,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
                 }
 
                 (lastUid, counters) = await AnswerAsync(inbox, uidValidity, batch, lastUid, counters, onEvent, cancellationToken).ConfigureAwait(false);
+                Remember(); // after each answer, so that a lost connection costs only what came after it
                 _ = notices.Take(); // what our own questions made the server say is already in the answer
             }
         }
@@ -523,6 +571,52 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
 
     /// <summary>After the first notice the wait goes on this long, so that a burst of notices is answered together.</summary>
     internal TimeSpan NoticeDelay { get; init; } = TimeSpan.FromMilliseconds(250);
+
+    /// <summary>
+    /// What happened to the inbox while nobody watched it, found out from what the last watch knew, and reported like any change.
+    /// With QRESYNC the server itself says which messages vanished and which changed (the notices collected while opening the
+    /// folder); with CONDSTORE it says which changed (<c>CHANGEDSINCE</c>) and the removals are counted; with neither, arrivals
+    /// are found by UID and counted, and the folder is called stale, since nothing says what else changed.
+    /// </summary>
+    private static async Task<(uint LastUid, (int Total, int Unread) Counters)> CatchUpAsync(
+        IMailFolder inbox,
+        uint uidValidity,
+        MailboxWatchState was,
+        NoticeBatch collected,
+        bool quickResync,
+        bool condStore,
+        uint lastUid,
+        (int Total, int Unread) counters,
+        Func<MailboxEvent, ValueTask> onEvent,
+        CancellationToken cancellationToken)
+    {
+        var expunged = collected.Expunged;
+        var marks = new Dictionary<uint, MessageMarks>(collected.Marks);
+        var stale = collected.MarksByPosition.Count > 0;
+        // The folder as it was left: what is above the last UID known then has arrived since.
+        var arrived = (await inbox.SearchAsync(SearchQuery.Uids(new UniqueIdRange(new UniqueId(was.LastUid + 1), UniqueId.MaxValue)), cancellationToken).ConfigureAwait(false))
+            .Select(u => u.Id).Count(u => u > was.LastUid);
+        if (!quickResync)
+        {
+            expunged = Math.Max(0, was.Total + arrived - inbox.Count); // nobody says which: the count says how many
+            if (condStore && was.HighestModSeq is > 0)
+            {
+                var changed = await inbox.FetchAsync(new UniqueIdRange(UniqueId.MinValue, UniqueId.MaxValue), was.HighestModSeq.Value, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags, cancellationToken).ConfigureAwait(false);
+                foreach (var summary in changed.Where(m => m.UniqueId.Id <= was.LastUid)) // the new ones come as arrivals
+                {
+                    marks[summary.UniqueId.Id] = new MessageMarks(summary.Flags ?? MessageFlags.None, [.. summary.Keywords]);
+                }
+            }
+            else
+            {
+                stale = true;
+            }
+        }
+
+        // Positions carry no meaning across connections; only the UIDs the server named count.
+        var batch = new NoticeBatch(CountChanged: true, expunged, marks.Where(m => m.Key <= was.LastUid).ToDictionary(m => m.Key, m => m.Value), new Dictionary<int, MessageMarks>(), stale);
+        return await AnswerAsync(inbox, uidValidity, batch, was.LastUid, (was.Total, was.Unread), onEvent, cancellationToken).ConfigureAwait(false);
+    }
 
     private static async Task<(uint LastUid, (int Total, int Unread) Counters)> AnswerAsync(
         IMailFolder inbox,
@@ -561,7 +655,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
 
         // Marks the server named by position only: the UID is looked up, which holds only while nothing was removed (positions shift).
         var marked = new Dictionary<uint, MessageMarks>(batch.Marks);
-        var unnamed = false;
+        var unnamed = batch.Stale;
         if (batch.MarksByPosition.Count > 0)
         {
             if (batch.Expunged > 0 || batch.MarksByPosition.Keys.Any(i => i < 0 || i >= inbox.Count))

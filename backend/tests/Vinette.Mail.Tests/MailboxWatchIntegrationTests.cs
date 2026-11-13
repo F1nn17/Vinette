@@ -96,7 +96,7 @@ public sealed class MailboxWatchIntegrationTests(DovecotFixture dovecot)
     {
         var recorder = new Recorder();
         var stop = CancellationTokenSource.CreateLinkedTokenSource(Token);
-        var watching = session.WatchInboxAsync(recorder.Add, TimeSpan.FromMinutes(25), stop.Token);
+        var watching = session.WatchInboxAsync(recorder.Add, TimeSpan.FromMinutes(25), new MailboxWatchState(), stop.Token);
         await Task.Delay(1500, Token);
         return (recorder, stop, watching);
     }
@@ -191,7 +191,7 @@ public sealed class MailboxWatchIntegrationTests(DovecotFixture dovecot)
         await using var session = await Factory(TimeSpan.FromSeconds(3)).OpenAsync(Credentials(account), Token);
         var recorder = new Recorder();
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(Token);
-        var watching = session.WatchInboxAsync(recorder.Add, TimeSpan.FromSeconds(2), stop.Token);
+        var watching = session.WatchInboxAsync(recorder.Add, TimeSpan.FromSeconds(2), new MailboxWatchState(), stop.Token);
         await Task.Delay(TimeSpan.FromSeconds(8), Token);
         Assert.False(watching.IsCompleted);
 
