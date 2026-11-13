@@ -99,7 +99,7 @@ public sealed class LoginRateLimitTests : IDisposable
     {
         Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-        Assert.Equal("too_many_requests", JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement.GetProperty("code").GetString());
+        Assert.Equal("too_many_requests", JsonElement.Parse(await response.Content.ReadAsStringAsync(Token)).GetProperty("code").GetString());
         return (int)response.Headers.RetryAfter!.Delta!.Value.TotalSeconds;
     }
 

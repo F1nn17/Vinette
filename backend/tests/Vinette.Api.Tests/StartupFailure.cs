@@ -27,6 +27,11 @@ internal static class StartupFailure
             {
                 return;
             }
+            catch (AggregateException exception) when (exception.Flatten().InnerExceptions.All(e => e is OptionsValidationException))
+            {
+                // Since .NET 11 the host reports a failed start as an AggregateException around the option errors.
+                return;
+            }
             catch (ObjectDisposedException) when (attempt < Attempts)
             {
                 continue;

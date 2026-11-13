@@ -7,6 +7,13 @@ updates:
     groups:
       nuget-minor-and-patch:
         update-types: [minor, patch]
+    # The platform packages follow the .NET the project targets (ADR-0005): a major version of them needs the next .NET
+    # (its runtime for the OpenAPI tool, its SDK) and moves together with the target framework, not on its own.
+    ignore:
+      - dependency-name: "Microsoft.AspNetCore.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Extensions.*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /frontend
@@ -31,3 +38,9 @@ updates:
     groups:
       docker-minor-and-patch:
         update-types: [minor, patch]
+    # The images follow the .NET the project targets (global.json pins the SDK, ADR-0005): the next major comes with the target framework.
+    ignore:
+      - dependency-name: "dotnet/sdk"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "dotnet/aspnet"
+        update-types: ["version-update:semver-major"]

@@ -69,7 +69,7 @@ public sealed class MailExceptionHandlerTests
     }
 
     private static async Task<JsonElement> ReadProblemAsync(HttpResponseMessage response) =>
-        JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement;
+        JsonElement.Parse(await response.Content.ReadAsStringAsync(Token));
 
     [Fact]
     public async Task A_Rejected_Saved_Password_Ends_The_Session_And_Answers_401()
@@ -127,7 +127,7 @@ public sealed class MailExceptionHandlerTests
         var body = await response.Content.ReadAsStringAsync(Token);
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        Assert.Equal("mail_unavailable", JsonDocument.Parse(body).RootElement.GetProperty("code").GetString());
+        Assert.Equal("mail_unavailable", JsonElement.Parse(body).GetProperty("code").GetString());
         Assert.DoesNotContain("IOException", body, StringComparison.Ordinal);
     }
 
@@ -141,7 +141,7 @@ public sealed class MailExceptionHandlerTests
         var body = await response.Content.ReadAsStringAsync(Token);
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-        Assert.Equal("uid_validity_changed", JsonDocument.Parse(body).RootElement.GetProperty("code").GetString());
+        Assert.Equal("uid_validity_changed", JsonElement.Parse(body).GetProperty("code").GetString());
         Assert.DoesNotContain("Секретная", body, StringComparison.Ordinal);
     }
 
@@ -169,7 +169,7 @@ public sealed class MailExceptionHandlerTests
         var body = await response.Content.ReadAsStringAsync(Token);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("not_found", JsonDocument.Parse(body).RootElement.GetProperty("code").GetString());
+        Assert.Equal("not_found", JsonElement.Parse(body).GetProperty("code").GetString());
         Assert.DoesNotContain("Секретная", body, StringComparison.Ordinal);
     }
 
@@ -183,7 +183,7 @@ public sealed class MailExceptionHandlerTests
         var body = await response.Content.ReadAsStringAsync(Token);
 
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
-        Assert.Equal("payload_too_large", JsonDocument.Parse(body).RootElement.GetProperty("code").GetString());
+        Assert.Equal("payload_too_large", JsonElement.Parse(body).GetProperty("code").GetString());
         Assert.DoesNotContain("99000000", body, StringComparison.Ordinal);
     }
 }

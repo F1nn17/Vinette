@@ -31,14 +31,14 @@ public sealed class MessageBatchApiTests(DovecotFixture dovecot) : IDisposable
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add("Cookie", $"{SessionCookie.Name}={Session}");
             var response = await Http.SendAsync(request, Token);
-            return JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement;
+            return JsonElement.Parse(await response.Content.ReadAsStringAsync(Token));
         }
 
         public async Task<(HttpStatusCode Status, JsonElement Body)> BatchAsync(object body)
         {
             var response = await CsrfClient.SendAsync(Http, HttpMethod.Post, "/api/v1/messages/batch", Token, JsonContent.Create(body), Session);
             var text = await response.Content.ReadAsStringAsync(Token);
-            return (response.StatusCode, text.Length == 0 ? default : JsonDocument.Parse(text).RootElement);
+            return (response.StatusCode, text.Length == 0 ? default : JsonElement.Parse(text));
         }
 
         public async Task<List<JsonElement>> ItemsAsync(string folder) =>

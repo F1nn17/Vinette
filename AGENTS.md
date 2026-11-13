@@ -4,7 +4,7 @@
 
 ## 1. О проекте
 
-Vinette — self-hosted веб-клиент почты для Postfix + Dovecot + Rspamd. Бэкенд (ASP.NET Core, .NET 10) — шлюз: держит IMAP-соединения, отправляет почту через SMTP submission, разбирает MIME. Фронтенд — React SPA, которую раздаёт тот же процесс. Письма — недоверенный контент. White-label: бренд задаётся конфигурацией.
+Vinette — self-hosted веб-клиент почты для Postfix + Dovecot + Rspamd. Бэкенд (ASP.NET Core, .NET 11) — шлюз: держит IMAP-соединения, отправляет почту через SMTP submission, разбирает MIME. Фронтенд — React SPA, которую раздаёт тот же процесс. Письма — недоверенный контент. White-label: бренд задаётся конфигурацией.
 
 - [README.md](README.md) — быстрый старт
 - [ROADMAP.md](ROADMAP.md) — вехи и задачи (VIN-xxx)

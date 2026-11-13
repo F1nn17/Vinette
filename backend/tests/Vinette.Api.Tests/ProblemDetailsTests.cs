@@ -31,7 +31,7 @@ public sealed class ProblemDetailsTests
     private static async Task<JsonElement> ReadProblemAsync(HttpResponseMessage response)
     {
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-        return JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).RootElement;
+        return JsonElement.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public sealed class ProblemDetailsTests
 
         var response = await client.GetAsync("/boom", TestContext.Current.CancellationToken);
         var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        var problem = JsonDocument.Parse(body).RootElement;
+        var problem = JsonElement.Parse(body);
 
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         Assert.Equal("internal_error", problem.GetProperty("code").GetString());

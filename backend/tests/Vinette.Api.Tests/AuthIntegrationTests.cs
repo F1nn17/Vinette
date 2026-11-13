@@ -157,7 +157,7 @@ public sealed class AuthIntegrationTests(DovecotFixture dovecot) : IDisposable
         request.Headers.Add("Cookie", cookie);
         var response = await client.SendAsync(request, Token);
         var body = await response.Content.ReadAsStringAsync(Token);
-        var folders = System.Text.Json.JsonDocument.Parse(body).RootElement.GetProperty("folders").EnumerateArray().ToList();
+        var folders = System.Text.Json.JsonElement.Parse(body).GetProperty("folders").EnumerateArray().ToList();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("INBOX", folders[0].GetProperty("path").GetString());
@@ -197,7 +197,7 @@ public sealed class AuthIntegrationTests(DovecotFixture dovecot) : IDisposable
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/quota");
         request.Headers.Add("Cookie", cookie);
         var response = await client.SendAsync(request, Token);
-        var body = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement;
+        var body = System.Text.Json.JsonElement.Parse(await response.Content.ReadAsStringAsync(Token));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         if (body.TryGetProperty("storage", out var storage) && storage.ValueKind == System.Text.Json.JsonValueKind.Object)

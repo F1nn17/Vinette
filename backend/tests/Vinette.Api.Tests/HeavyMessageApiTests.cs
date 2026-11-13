@@ -49,7 +49,7 @@ public sealed class HeavyMessageApiTests(DovecotFixture dovecot) : IDisposable
         request.Headers.Add("Cookie", cookie);
         var response = await client.SendAsync(request, Token);
         var text = await response.Content.ReadAsStringAsync(Token);
-        return (response, text.Length == 0 ? default : JsonDocument.Parse(text).RootElement);
+        return (response, text.Length == 0 ? default : JsonElement.Parse(text));
     }
 
     [Fact]

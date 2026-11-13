@@ -65,6 +65,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Project scaffold: backend (ASP.NET Core, .NET 10) and frontend (React + Vite) skeletons, build tooling, CI/CD, Docker and systemd deployment, documentation.
 
+### Changed
+
+- The application now runs on .NET 11 (it was .NET 10). The Docker image is built on `dotnet/sdk:11.0` and runs on `dotnet/aspnet:11.0-resolute-chiseled` (Ubuntu 26.04 base); a server without Docker needs the ASP.NET Core 11 runtime. See ADR-0005.
+
 ### Fixed
 
 - An attachment whose base64 data lacks the closing `=` padding is now read to its end (its last, shorter group was dropped before), after the update of the mail library.

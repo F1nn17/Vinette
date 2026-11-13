@@ -38,7 +38,7 @@ internal static class CsrfClient
 
         using var response = await client.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
-        var token = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken)).RootElement.GetProperty("token").GetString()!;
+        var token = JsonElement.Parse(await response.Content.ReadAsStringAsync(cancellationToken)).GetProperty("token").GetString()!;
         var cookie = response.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith(CsrfProtection.CookieName + "=", StringComparison.Ordinal)).Split(';')[0];
         return (token, cookie);
     }

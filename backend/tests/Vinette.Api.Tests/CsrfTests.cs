@@ -68,7 +68,7 @@ public sealed class CsrfTests : IDisposable
     }
 
     private static async Task<string?> CodeAsync(HttpResponseMessage response) =>
-        JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement.GetProperty("code").GetString();
+        JsonElement.Parse(await response.Content.ReadAsStringAsync(Token)).GetProperty("code").GetString();
 
     // ---- The token endpoint ----
 
@@ -79,7 +79,7 @@ public sealed class CsrfTests : IDisposable
         var cookie = response.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith(CsrfProtection.CookieName + "=", StringComparison.Ordinal));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.False(string.IsNullOrWhiteSpace(JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement.GetProperty("token").GetString()));
+        Assert.False(string.IsNullOrWhiteSpace(JsonElement.Parse(await response.Content.ReadAsStringAsync(Token)).GetProperty("token").GetString()));
         Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("secure", cookie, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("samesite=strict", cookie, StringComparison.OrdinalIgnoreCase);

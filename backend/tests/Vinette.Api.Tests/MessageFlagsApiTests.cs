@@ -40,7 +40,7 @@ public sealed class MessageFlagsApiTests(DovecotFixture dovecot) : IDisposable
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("Cookie", cookie);
         var response = await client.SendAsync(request, Token);
-        return JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token)).RootElement;
+        return JsonElement.Parse(await response.Content.ReadAsStringAsync(Token));
     }
 
     private static async Task<(HttpResponseMessage Response, JsonElement Body)> PatchAsync(HttpClient client, string cookie, string id, string json)
@@ -48,7 +48,7 @@ public sealed class MessageFlagsApiTests(DovecotFixture dovecot) : IDisposable
         var sessionId = cookie[(SessionCookie.Name.Length + 1)..];
         var response = await CsrfClient.SendAsync(client, HttpMethod.Patch, $"/api/v1/messages/{id}/flags", Token, new StringContent(json, System.Text.Encoding.UTF8, "application/json"), sessionId);
         var text = await response.Content.ReadAsStringAsync(Token);
-        return (response, text.Length == 0 ? default : JsonDocument.Parse(text).RootElement);
+        return (response, text.Length == 0 ? default : JsonElement.Parse(text));
     }
 
     [Fact]

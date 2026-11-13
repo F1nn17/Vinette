@@ -46,7 +46,7 @@ public sealed class MessageActionsApiTests(DovecotFixture dovecot) : IDisposable
             return [.. page.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("id").GetString()!)];
         }
 
-        private static JsonElement Parse(string text) => text.Length == 0 ? default : JsonDocument.Parse(text).RootElement;
+        private static JsonElement Parse(string text) => text.Length == 0 ? default : JsonElement.Parse(text);
     }
 
     private async Task<Client> StartAsync(int messages, params string[] folders)
