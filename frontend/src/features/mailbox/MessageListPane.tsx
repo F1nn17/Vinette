@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
 import { dateGroupKey, dateGroupLabel, groupByDate } from '@/shared/lib';
 import { cn } from '@/shared/lib';
-import { Avatar, Chip, IconButton, SearchField } from '@/shared/ui';
+import { Avatar, Button, Chip, IconButton, SearchField } from '@/shared/ui';
 import { MessageLabelsMenu, labelPath, useLabelMessages } from '@/features/labels';
 import { useListDensity, useSettings, useUpdateSettings } from '@/features/settings';
 import { useFolders, useMessages, type ListFilter, type MessageItem } from './api';
@@ -12,6 +12,7 @@ import { folderOfId, useMessageBatch, type BatchAction } from './batch';
 import { folderLabel, folderSlug } from './folder-label';
 import { ListEmpty, ListError, ListNoFolder, ListSkeleton, OfflineBanner } from './list-states';
 import { ListOptionsMenu } from './ListOptionsMenu';
+import { useEmptyFolder, usePurge } from './purge';
 import { MessageRow } from './MessageRow';
 import { NavMenuButton } from './NavMenuButton';
 import { ShortcutsDialog } from './ShortcutsDialog';
@@ -36,7 +37,7 @@ import { VirtualMessageRows, type ListEntry } from './VirtualMessageRows';
 const FILTERS: ListFilter[] = ['all', 'unread', 'flagged'];
 
 /** The actions that take a message out of the list. */
-const MOVING: BatchAction[] = ['archive', 'spam', 'trash'];
+const MOVING: BatchAction[] = ['archive', 'spam', 'trash', 'delete'];
 
 function filterOf(value: string | null): ListFilter {
   return value === 'unread' || value === 'flagged' ? value : 'all';
@@ -77,6 +78,8 @@ export function MessageListPane({
   const [scroller, setScroller] = useState<HTMLElement | null>(null);
   const navigate = useNavigate();
   const batch = useMessageBatch();
+  const purge = usePurge();
+  const emptying = useEmptyFolder();
   // The selection belongs to one folder and filter: another list starts with nothing selected.
   const listKey = labelMode ? `@label|${labelName}` : `${slug}|${params.get('filter') ?? ''}`;
   const [selectionState, setSelectionState] = useState<{
@@ -133,6 +136,12 @@ export function MessageListPane({
   const clearSelection = () => {
     batch.reset();
     setSelectionState({ key: listKey, selection: EMPTY_SELECTION, capped: false });
+  };
+  const afterPurge = (ids: string[]) => {
+    // Deleted for good (the batch itself is sent by the question window): no selection any more, and the reading pane
+    // must not show a message that is gone.
+    clearSelection();
+    if (messageId && ids.includes(messageId)) void navigate(`${basePath}${search}`);
   };
   const runBatch = (action: BatchAction, ids: string[] = selectedIds) => {
     const before = selection;
@@ -217,6 +226,8 @@ export function MessageListPane({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+      {purge.dialog}
+      {emptying.dialog}
       <header
         className={cn('flex flex-col px-5 pb-3', mobile ? 'gap-3 px-4 pt-3' : 'gap-3.5 pt-[18px]')}
       >
@@ -231,7 +242,12 @@ export function MessageListPane({
               capped={capped}
               onSelectAll={() => apply(selectAll(order))}
               onClear={clearSelection}
-              onAction={runBatch}
+              // for good: asked first (the trash only)
+              onAction={(action) =>
+                action === 'delete'
+                  ? purge.ask(selectedIds, () => afterPurge(selectedIds))
+                  : runBatch(action)
+              }
               narrow={mobile}
               labels={{
                 open: labelsOpen,
@@ -292,6 +308,17 @@ export function MessageListPane({
             )}
           </div>
         )}
+        {!labelMode &&
+          !selecting &&
+          folder &&
+          (folder.role === 'trash' || folder.role === 'junk') &&
+          items.length > 0 && (
+            <div>
+              <Button variant="secondary" size="sm" onClick={() => emptying.ask(folder)}>
+                {t(folder.role === 'junk' ? 'purge.emptySpam' : 'purge.emptyTrash')}
+              </Button>
+            </div>
+          )}
         {(!mobile || searchOpen) && (
           <SearchField
             inputRef={searchRef}

@@ -1,4 +1,4 @@
-import { AlertCircle, Archive, ListChecks, MailOpen, Tag, Trash2, X } from 'lucide-react';
+import { AlertCircle, Archive, Eraser, ListChecks, MailOpen, Tag, Trash2, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconButton } from '@/shared/ui';
@@ -80,6 +80,11 @@ export function SelectionBar({
         {folderRole !== 'trash' && (
           <IconButton aria-label={t('selection.trash')} onClick={() => onAction('trash')}>
             <Trash2 size={18} strokeWidth={1.8} aria-hidden />
+          </IconButton>
+        )}
+        {folderRole === 'trash' && (
+          <IconButton aria-label={t('selection.purge')} onClick={() => onAction('delete')}>
+            <Eraser size={18} strokeWidth={1.8} aria-hidden />
           </IconButton>
         )}
         {labels && (

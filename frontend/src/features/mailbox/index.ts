@@ -7,3 +7,4 @@ export { MessageListPane, type MessageListPaneProps } from './MessageListPane';
 export { NavMenuButton } from './NavMenuButton';
 export { useFolders } from './api';
 export { folderOfId, useMessageBatch } from './batch';
+export { usePurge } from './purge';

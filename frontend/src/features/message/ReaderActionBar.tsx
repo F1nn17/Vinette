@@ -3,6 +3,7 @@ import {
   Archive,
   ArrowLeft,
   Flag,
+  Eraser,
   Forward,
   MailPlus,
   Reply,
@@ -15,7 +16,7 @@ import { Button, IconButton } from '@/shared/ui';
 import { MoreMenu } from './MoreMenu';
 
 /** What the buttons that move or mark the open message ask for. */
-export type ReaderAction = 'archive' | 'spam' | 'trash' | 'unread';
+export type ReaderAction = 'archive' | 'spam' | 'trash' | 'unread' | 'delete';
 
 export interface ReaderActionBarProps {
   /** The message is marked with a flag. */
@@ -105,6 +106,15 @@ export function ReaderActionBar({
             <Trash2 {...icon} />
           </IconButton>
         )}
+        {folderRole === 'trash' && (
+          <IconButton
+            aria-label={t('reader.purge')}
+            disabled={!onAction}
+            onClick={() => onAction?.('delete')}
+          >
+            <Eraser {...icon} />
+          </IconButton>
+        )}
         <IconButton
           aria-label={t('reader.flag')}
           pressed={flagged}
@@ -158,6 +168,18 @@ export function ReaderActionBar({
                     label: t('reader.delete'),
                     icon: <Trash2 {...icon} />,
                     onSelect: () => onAction?.('trash'),
+                    disabled: !onAction,
+                    phoneOnly: true,
+                  },
+                ]
+              : []),
+            ...(folderRole === 'trash'
+              ? [
+                  {
+                    key: 'purge',
+                    label: t('reader.purge'),
+                    icon: <Eraser {...icon} />,
+                    onSelect: () => onAction?.('delete'),
                     disabled: !onAction,
                     phoneOnly: true,
                   },
