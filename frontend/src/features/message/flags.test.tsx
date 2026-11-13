@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider, type InfiniteData } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ReadingPane } from './ReadingPane';
 
@@ -144,6 +144,21 @@ describe('opening a message reads it', () => {
 
     await screen.findByRole('heading', { name: 'Subject a.1.1' });
     await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(server.patches).toEqual([]);
+  });
+
+  it('does not read a message again when it is marked unread while it is open (it was already read when it opened)', async () => {
+    const server = mockServer([message('a.1.1', { seen: true })]);
+    const client = newClient();
+    renderPane(client, 'a.1.1');
+    await screen.findByRole('heading', { name: 'Subject a.1.1' });
+
+    // "Mark as unread" (or a mark made in another program) sets the open message back to unread
+    act(() => {
+      client.setQueryData(['message', 'a.1.1'], { ...server.messages['a.1.1'], seen: false });
+    });
+    await new Promise((resolve) => setTimeout(resolve, 80));
 
     expect(server.patches).toEqual([]);
   });

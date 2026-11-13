@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- New mail appears in the list while the mailbox is open, without reloading: a message that arrives is put at the top of the inbox (and of the "Unread" or "Flagged" view, if it belongs there), the counters in the sidebar follow, marks set in another mail program (read, flag, labels) show on the rows and in the open message, and messages removed elsewhere leave the list. If the connection is lost, the screen tries again with growing pauses and reads everything again when it is back.
 - A real-time channel at `/hubs/mail` (SignalR): a signed-in browser connects and is sent the changes of its inbox as they happen (a message arrived, messages were removed, marks or counters changed, or the folder must be read again). It needs the session cookie, is closed within half a minute after the session ends, and sends nothing of another mailbox. The screen starts using it with the next real-time task.
 - What the mail server reports about the inbox is turned into events the screen can use: a message arrived (with its line of the list), messages were removed, the marks of a message changed (read, flag, replied to, labels), the counters changed, or the folder must be read again (a big burst of mail). Several notices that come together are answered once. The events reach the screen with the next real-time tasks.
 - The mail server is now followed for new mail without being asked: one connection per mailbox (shared by all the browsers and devices signed in to it) waits for the server's notifications about the inbox and is closed a minute after the last browser is gone. New settings `Imap:IdleRestart` (default 25 minutes, at most 29), `Imap:IdleGrace` (1 minute) and `Imap:MaxIdleConnections` (200, apart from the limits on the connections that answer requests). Count one more connection per mailbox when you set `mail_max_userip_connections` on Dovecot. The notifications reach the screen with the next real-time tasks.
@@ -79,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- "Mark as unread" on a message that was already read when it was opened no longer reads it again at once: opening a message reads it only if it was unread when it was opened.
 - An attachment whose base64 data lacks the closing `=` padding is now read to its end (its last, shorter group was dropped before), after the update of the mail library.
 - A link to a message (`/mail/<folder>/<message>`) opens the application after a page reload and from a bookmark; it answered with an error before.
 - Subjects, senders and previews written in KOI8-R, Windows-1251 and other legacy charsets are shown correctly in the message list (the application did not load these charsets before).
