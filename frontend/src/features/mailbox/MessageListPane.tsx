@@ -31,7 +31,7 @@ import {
 } from './selection';
 import { useShell } from './shell-context';
 import { ComposeFab } from './ComposeFab';
-import { useOnline } from './use-online';
+import { useConnectionLost, useOnline } from './use-online';
 import { VirtualMessageRows, type ListEntry } from './VirtualMessageRows';
 
 const FILTERS: ListFilter[] = ['all', 'unread', 'flagged'];
@@ -75,6 +75,7 @@ export function MessageListPane({
   const filter = labelMode ? 'all' : filterOf(params.get('filter'));
   const basePath = labelMode ? labelPath(labelName) : `/mail/${encodeURIComponent(slug)}`;
   const online = useOnline();
+  const connectionLost = useConnectionLost();
   const { layout } = useShell();
   const mobile = layout === 'mobile';
   const [searchOpen, setSearchOpen] = useState(false);
@@ -345,7 +346,7 @@ export function MessageListPane({
         )}
       </header>
 
-      {!online && <OfflineBanner />}
+      {(!online || connectionLost) && <OfflineBanner />}
 
       <div
         ref={setScroller}
