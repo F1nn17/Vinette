@@ -45,6 +45,8 @@ public sealed class MailLifecycleTests
         public Task<IReadOnlyList<string>> UpdateMessageLabelsAsync(MessageId id, IReadOnlyCollection<string> add, IReadOnlyCollection<string> remove, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<LabeledMessages> ListLabeledMessagesAsync(string label, int limit, bool includePreview, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<int> DeleteMessagesPermanentlyAsync(IReadOnlyList<MessageId> ids, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<int> EmptyFolderAsync(string folder, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<int> RenameLabelAsync(string oldName, string? newName, CancellationToken cancellationToken) => throw new NotSupportedException();
 
 

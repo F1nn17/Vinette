@@ -1,3 +1,4 @@
+using Vinette.Api.Errors;
 using Vinette.Api.Sessions;
 using Vinette.Core.Mail;
 
@@ -31,6 +32,10 @@ public sealed record StorageDto(long UsedBytes, long LimitBytes);
 /// <summary>Mailbox quota. <c>storage</c> is absent when the server does not report one: show nothing then.</summary>
 public sealed record QuotaResponse(StorageDto? Storage);
 
+/// <summary>What emptying a folder did.</summary>
+/// <param name="Deleted">How many messages were deleted for good.</param>
+public sealed record EmptyFolderResult(int Deleted);
+
 public static class FolderEndpoints
 {
     public static IEndpointRouteBuilder MapFolders(this IEndpointRouteBuilder api)
@@ -41,6 +46,14 @@ public static class FolderEndpoints
             .Produces<FoldersResponse>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+        api.MapPost("/folders/{folder}/empty", EmptyAsync)
+            .WithName("EmptyFolder")
+            .WithTags("Mail")
+            .Produces<EmptyFolderResult>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         api.MapGet("/quota", GetQuotaAsync)
             .WithName("GetQuota")
             .WithTags("Mail")
@@ -48,6 +61,30 @@ public static class FolderEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         return api;
+    }
+
+    /// <summary>
+    /// Deletes every message of the trash or of the spam folder for good (there is no way back). Any other folder: 409 <c>not_in_trash</c>.
+    /// </summary>
+    /// <param name="folder">The folder's path (URL-encoded, "/" as %2F).</param>
+    private static async Task<IResult> EmptyAsync(string folder, HttpContext http, IMailGateway gateway, SessionService sessions, CancellationToken cancellationToken)
+    {
+        var deleted = await gateway.ExecuteAsync(
+            http.GetMailCredentials(sessions),
+            async (session, token) =>
+            {
+                var folders = FolderRoleGuesser.Complete(await session.GetFoldersAsync(token)); // the same roles as the sidebar shows
+                return folders.Any(f => f.Role is FolderRole.Trash or FolderRole.Junk && f.CanContainMessages && string.Equals(f.Path, folder, StringComparison.Ordinal))
+                    ? await session.EmptyFolderAsync(folder, token)
+                    : (int?)null;
+            },
+            cancellationToken);
+        return deleted is null
+            ? Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Only the trash and the spam folder can be emptied.",
+                extensions: new Dictionary<string, object?> { ["code"] = ErrorCodes.NotInTrash })
+            : Results.Ok(new EmptyFolderResult(deleted.Value));
     }
 
     private static async Task<QuotaResponse> GetQuotaAsync(

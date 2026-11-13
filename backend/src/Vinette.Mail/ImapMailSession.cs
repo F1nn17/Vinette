@@ -339,6 +339,33 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         await folder.ExpungeAsync([uid], cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<int> DeleteMessagesPermanentlyAsync(IReadOnlyList<MessageId> ids, CancellationToken cancellationToken)
+    {
+        var (folder, present) = await OpenBatchAsync(ids, cancellationToken).ConfigureAwait(false);
+        if (present.Count == 0)
+        {
+            return 0;
+        }
+
+        await folder.AddFlagsAsync(present, MessageFlags.Deleted, silent: true, cancellationToken).ConfigureAwait(false);
+        await folder.ExpungeAsync(present, cancellationToken).ConfigureAwait(false);
+        return present.Count;
+    }
+
+    public async Task<int> EmptyFolderAsync(string folderPath, CancellationToken cancellationToken)
+    {
+        var (folder, _) = await OpenAsync(folderPath, cancellationToken, FolderAccess.ReadWrite).ConfigureAwait(false);
+        var all = await folder.SearchAsync(SearchQuery.All, cancellationToken).ConfigureAwait(false);
+        if (all.Count == 0)
+        {
+            return 0;
+        }
+
+        await folder.AddFlagsAsync(all, MessageFlags.Deleted, silent: true, cancellationToken).ConfigureAwait(false);
+        await folder.ExpungeAsync(all, cancellationToken).ConfigureAwait(false);
+        return all.Count;
+    }
+
     public async Task<IReadOnlyList<string>> GetLabelsAsync(CancellationToken cancellationToken)
     {
         var (inbox, _) = await OpenAsync("INBOX", cancellationToken, FolderAccess.ReadWrite).ConfigureAwait(false); // read-only (EXAMINE) lists no permanent flags
