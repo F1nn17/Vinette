@@ -97,7 +97,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
             var wanted = query.IncludePreview ? SummaryItems | MessageSummaryItems.PreviewText : SummaryItems;
             if (!PreviewExtension)
             {
-                client.Capabilities &= ~ImapCapabilities.Preview; // test switch: use the fallback that reads the beginning of the body
+                client.Capabilities.Disable(ImapCapability.Preview); // test switch: use the fallback that reads the beginning of the body
             }
 
             var fetched = await folder.FetchAsync(first, last, wanted, cancellationToken).ConfigureAwait(false);
@@ -139,7 +139,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
             var wanted = query.IncludePreview ? SummaryItems | MessageSummaryItems.PreviewText : SummaryItems;
             if (!PreviewExtension)
             {
-                client.Capabilities &= ~ImapCapabilities.Preview;
+                client.Capabilities.Disable(ImapCapability.Preview);
             }
 
             var fetched = await folder.FetchAsync([.. pageUids.Select(u => new UniqueId(u))], wanted, cancellationToken).ConfigureAwait(false);
@@ -214,7 +214,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         UniqueId? moved;
         try
         {
-            if (MoveExtension && client.Capabilities.HasFlag(ImapCapabilities.Move))
+            if (MoveExtension && client.Capabilities.Contains(ImapCapability.Move))
             {
                 moved = await source.MoveToAsync(uid, destination, cancellationToken).ConfigureAwait(false);
             }
@@ -256,7 +256,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         UniqueIdMap map;
         try
         {
-            if (MoveExtension && client.Capabilities.HasFlag(ImapCapabilities.Move))
+            if (MoveExtension && client.Capabilities.Contains(ImapCapability.Move))
             {
                 map = await source.MoveToAsync(present, destination, cancellationToken).ConfigureAwait(false);
             }
@@ -523,7 +523,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
 
         var range = new UniqueIdRange(new UniqueId(1), new UniqueId(newestFirst ? uid - 1 : uid));
         var query = SearchQuery.Uids(range);
-        if (client.Capabilities.HasFlag(ImapCapabilities.ESearch))
+        if (client.Capabilities.Contains(ImapCapability.ESearch))
         {
             var result = await folder.SearchAsync(SearchOptions.Count, query, cancellationToken).ConfigureAwait(false);
             return result.Count;
@@ -558,7 +558,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
 
     public async Task<MailQuota?> GetQuotaAsync(CancellationToken cancellationToken)
     {
-        if (!client.Capabilities.HasFlag(ImapCapabilities.Quota))
+        if (!client.Capabilities.Contains(ImapCapability.Quota))
         {
             return null;
         }

@@ -202,7 +202,7 @@ public class CharsetTests
     [Theory]
     [InlineData("AAEC", 3)]
     [InlineData("AAEC\r\nAwQF", 6)] // line breaks inside the base64
-    [InlineData("AAECAw", 3)] // padding missing: the incomplete last group is dropped
+    [InlineData("AAECAw", 4)] // padding missing: the last, shorter group is decoded too (MimeKit 5; 4.x dropped it)
     [InlineData("AAEC!!!!AwQF", 6)] // junk between the groups is skipped
     public async Task Sloppy_Base64_Is_Decoded_As_Far_As_It_Goes(string base64, int size)
     {

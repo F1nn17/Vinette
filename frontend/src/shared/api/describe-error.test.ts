@@ -1,8 +1,10 @@
+import type { TFunction } from 'i18next';
 import { ApiError } from './client';
 import { describeApiError } from './describe-error';
 
-const t = (key: string, options?: Record<string, unknown>) =>
-  options ? `${key}:${JSON.stringify(options)}` : key;
+// A stand-in that shows the key and the values it was given (i18next's own function is not needed to check which text is chosen).
+const t = ((key: string, options?: Record<string, unknown>) =>
+  options ? `${key}:${JSON.stringify(options)}` : key) as unknown as TFunction;
 
 describe('describeApiError', () => {
   it.each([
