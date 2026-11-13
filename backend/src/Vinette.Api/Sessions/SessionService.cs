@@ -64,6 +64,21 @@ public sealed class SessionService(
         return session with { LastSeenAt = now };
     }
 
+    /// <summary>
+    /// Whether the session is still alive, and the session if so, without recording any activity: a long-lived connection (the
+    /// real-time channel) must not keep a session from expiring. Null when it is unknown or expired.
+    /// </summary>
+    public async Task<Session?> PeekAsync(string sessionId, CancellationToken cancellationToken)
+    {
+        if (!SessionId.IsWellFormed(sessionId))
+        {
+            return null;
+        }
+
+        var session = await store.GetAsync(sessionId, cancellationToken);
+        return session is null || IsExpired(session, time.GetUtcNow()) ? null : session;
+    }
+
     /// <summary>The mailbox password in clear text, for opening a mail server connection. Never log or return it.</summary>
     public string RevealPassword(Session session)
     {
