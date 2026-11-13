@@ -52,8 +52,16 @@ builder.Services.AddVinetteForwardedHeaders();
 builder.Services.AddVinetteCsrf();
 builder.Services.AddVinetteLoginRateLimiting();
 builder.Services.AddVinetteProblemDetails();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => options.AddDocumentTransformer(async (document, context, cancellationToken) =>
+{
+    // The events of the real-time channel are not the answer of any endpoint, but the client needs their types: put them in the document.
+    foreach (var type in new[] { typeof(ArrivedEventDto), typeof(RemovedEventDto), typeof(MarksEventDto), typeof(CountersEventDto), typeof(StaleEventDto) })
+    {
+        document.AddComponent(type.Name, await context.GetOrCreateSchemaAsync(type, null, cancellationToken));
+    }
+}));
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<MailHubConnections>();
 
 var dataProtection = builder.Services.AddDataProtection().SetApplicationName("Vinette");
 var keysPath = builder.Configuration[$"{KeyStorageOptions.SectionName}:{nameof(KeyStorageOptions.KeysPath)}"];

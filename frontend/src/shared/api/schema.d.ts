@@ -364,6 +364,33 @@ export interface components {
             name: string;
             address: string;
         };
+        ArrivedEventDto: {
+            message: {
+                id: string;
+                from: {
+                    name: string;
+                    address: string;
+                };
+                to: {
+                    name: string;
+                    address: string;
+                }[];
+                subject: string;
+                /** Format: date-time */
+                date: string;
+                seen: boolean;
+                flagged: boolean;
+                answered: boolean;
+                draft: boolean;
+                hasAttachments: boolean;
+                labels: string[];
+                /** Format: int64 */
+                size: number | string;
+                preview: string;
+            };
+            type?: string;
+            folder: string;
+        };
         AttachmentDto: {
             partId: string;
             fileName: string;
@@ -375,6 +402,14 @@ export interface components {
         BatchMovedDto: {
             from: string;
             id: null | string;
+        };
+        CountersEventDto: {
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            unread: number | string;
+            type?: string;
+            folder: string;
         };
         CreateLabelRequest: {
             name: null | string;
@@ -420,6 +455,15 @@ export interface components {
         };
         LoginResponse: {
             address: string;
+        };
+        MarksEventDto: {
+            id: string;
+            seen: boolean;
+            flagged: boolean;
+            answered: boolean;
+            labels: string[];
+            type?: string;
+            folder: string;
         };
         MeResponse: {
             address: string;
@@ -520,6 +564,12 @@ export interface components {
         QuotaResponse: {
             storage: null | components["schemas"]["StorageDto"];
         };
+        RemovedEventDto: {
+            /** Format: int32 */
+            count: number | string;
+            type?: string;
+            folder: string;
+        };
         SenderDto: {
             verdict: string;
             domain: null | string;
@@ -540,6 +590,10 @@ export interface components {
             };
             trustImagesFrom?: null | string;
             untrustImagesFrom?: null | string;
+        };
+        StaleEventDto: {
+            type?: string;
+            folder: string;
         };
         StorageDto: {
             /** Format: int64 */

@@ -1742,6 +1742,116 @@
           }
         }
       },
+      "ArrivedEventDto": {
+        "required": [
+          "message",
+          "folder"
+        ],
+        "type": "object",
+        "properties": {
+          "message": {
+            "required": [
+              "id",
+              "from",
+              "to",
+              "subject",
+              "date",
+              "seen",
+              "flagged",
+              "answered",
+              "draft",
+              "hasAttachments",
+              "labels",
+              "size",
+              "preview"
+            ],
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "from": {
+                "required": [
+                  "name",
+                  "address"
+                ],
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  }
+                }
+              },
+              "to": {
+                "type": "array",
+                "items": {
+                  "required": [
+                    "name",
+                    "address"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "address": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "subject": {
+                "type": "string"
+              },
+              "date": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "seen": {
+                "type": "boolean"
+              },
+              "flagged": {
+                "type": "boolean"
+              },
+              "answered": {
+                "type": "boolean"
+              },
+              "draft": {
+                "type": "boolean"
+              },
+              "hasAttachments": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "size": {
+                "pattern": "^-?(?:0|[1-9]\\d*)$",
+                "type": [
+                  "integer",
+                  "string"
+                ],
+                "format": "int64"
+              },
+              "preview": {
+                "type": "string"
+              }
+            }
+          },
+          "type": {
+            "type": "string"
+          },
+          "folder": {
+            "type": "string"
+          }
+        }
+      },
       "AttachmentDto": {
         "required": [
           "partId",
@@ -1789,6 +1899,38 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "CountersEventDto": {
+        "required": [
+          "total",
+          "unread",
+          "folder"
+        ],
+        "type": "object",
+        "properties": {
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unread": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "type": {
+            "type": "string"
+          },
+          "folder": {
+            "type": "string"
           }
         }
       },
@@ -1982,6 +2124,43 @@
         "type": "object",
         "properties": {
           "address": {
+            "type": "string"
+          }
+        }
+      },
+      "MarksEventDto": {
+        "required": [
+          "id",
+          "seen",
+          "flagged",
+          "answered",
+          "labels",
+          "folder"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "seen": {
+            "type": "boolean"
+          },
+          "flagged": {
+            "type": "boolean"
+          },
+          "answered": {
+            "type": "boolean"
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "type": {
+            "type": "string"
+          },
+          "folder": {
             "type": "string"
           }
         }
@@ -2467,6 +2646,29 @@
           }
         }
       },
+      "RemovedEventDto": {
+        "required": [
+          "count",
+          "folder"
+        ],
+        "type": "object",
+        "properties": {
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "type": {
+            "type": "string"
+          },
+          "folder": {
+            "type": "string"
+          }
+        }
+      },
       "SenderDto": {
         "required": [
           "verdict",
@@ -2557,6 +2759,20 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "StaleEventDto": {
+        "required": [
+          "folder"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "folder": {
+            "type": "string"
           }
         }
       },
