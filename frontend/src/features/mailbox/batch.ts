@@ -11,7 +11,8 @@ import type { components } from '@/shared/api/schema';
 import { useToast } from '@/shared/toast';
 import { FOLDERS_KEY, type Folder } from './api';
 
-export type BatchAction = 'archive' | 'spam' | 'trash' | 'read' | 'unread' | 'flag' | 'unflag';
+export type BatchAction =
+  'archive' | 'spam' | 'trash' | 'read' | 'unread' | 'flag' | 'unflag' | 'delete'; // for good, from the trash
 export type BatchResult = components['schemas']['MessageBatchResultDto'];
 
 type ListPage = components['schemas']['MessageListResponse'];
@@ -54,6 +55,7 @@ const num = (value: unknown) => Number(value) || 0;
 export function applyBatch(queryClient: QueryClient, ids: readonly string[], action: BatchAction) {
   const wanted = new Set(ids);
   const moves = action in TARGET_ROLE;
+  const leaves = moves || action === 'delete'; // gone from the lists, and from the folder it was in
   const seen = action === 'read' ? true : action === 'unread' ? false : undefined;
   const flagged = action === 'flag' ? true : action === 'unflag' ? false : undefined;
 
@@ -74,7 +76,7 @@ export function applyBatch(queryClient: QueryClient, ids: readonly string[], act
           ...data,
           pages: data.pages.map((page) => ({
             ...page,
-            items: moves
+            items: leaves
               ? page.items.filter((item) => !wanted.has(item.id))
               : page.items.map((item) =>
                   wanted.has(item.id)
@@ -90,7 +92,7 @@ export function applyBatch(queryClient: QueryClient, ids: readonly string[], act
       : data,
   );
 
-  if (!moves) {
+  if (!leaves) {
     for (const id of wanted) {
       queryClient.setQueriesData<Detail>({ queryKey: ['message', id] }, (message) =>
         message
@@ -108,7 +110,7 @@ export function applyBatch(queryClient: QueryClient, ids: readonly string[], act
   const role = TARGET_ROLE[action];
   queryClient.setQueryData<Folder[]>(FOLDERS_KEY, (folders) =>
     folders?.map((folder) => {
-      if (moves && folder.path === source) {
+      if (leaves && folder.path === source) {
         return {
           ...folder,
           total: Math.max(0, num(folder.total) - ids.length),
@@ -172,6 +174,10 @@ export function useMessageBatch() {
       return snapshot;
     },
     onSuccess: (result, { ids, action }) => {
+      if (action === 'delete') {
+        toast.show({ message: t('toast.deleted', { count: result.changed }) });
+        return;
+      }
       if (!(action in TARGET_ROLE)) return;
       // Where the messages are now (from the answer) and where they came from (from their ids): putting them back is
       // one more move. A server that does not say the new ids (no UIDPLUS) leaves no way to find them: no button then.

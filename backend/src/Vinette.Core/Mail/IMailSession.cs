@@ -83,6 +83,22 @@ public interface IMailSession : IAsyncDisposable
     Task DeleteMessagePermanentlyAsync(MessageId id, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Deletes several messages of one folder for good with one command each for marking and removing. There is no way back: callers allow it
+    /// only for the trash. Returns how many were deleted; one that was no longer in the folder is not counted.
+    /// </summary>
+    /// <exception cref="ArgumentException">The messages are not one batch (<see cref="MessageBatch.IsValid"/>).</exception>
+    /// <exception cref="MailFolderNotFoundException">There is no such folder, or it cannot hold messages.</exception>
+    /// <exception cref="UidValidityChangedException">The ids belong to an earlier incarnation of the folder.</exception>
+    Task<int> DeleteMessagesPermanentlyAsync(IReadOnlyList<MessageId> ids, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes every message of a folder for good and returns how many there were. There is no way back: callers allow it only for the trash and
+    /// the spam folder.
+    /// </summary>
+    /// <exception cref="MailFolderNotFoundException">There is no such folder, or it cannot hold messages.</exception>
+    Task<int> EmptyFolderAsync(string folder, CancellationToken cancellationToken);
+
+    /// <summary>
     /// The labels that messages of the inbox carry now (by the names the keywords stand for), without the system ones; the labels of messages in
     /// other folders are not found this way (the user's own list, kept in the settings, has those that were put on in Vinette).
     /// </summary>

@@ -6,7 +6,7 @@ namespace Vinette.Api.Mail;
 
 /// <summary>One action on several messages.</summary>
 /// <param name="Ids">The messages, 1 to 100, all of one folder (identifiers from the list).</param>
-/// <param name="Action"><c>archive</c>, <c>spam</c>, <c>trash</c>, <c>move</c> (with <c>to</c>), <c>read</c>, <c>unread</c>, <c>flag</c> or <c>unflag</c>.</param>
+/// <param name="Action"><c>archive</c>, <c>spam</c>, <c>trash</c>, <c>move</c> (with <c>to</c>), <c>read</c>, <c>unread</c>, <c>flag</c>, <c>unflag</c> or <c>delete</c> (for good; only for messages in the trash, otherwise 409 <c>not_in_trash</c>).</param>
 /// <param name="To">For <c>move</c>: the folder's <c>path</c>.</param>
 public sealed record MessageBatchRequest(IReadOnlyList<string>? Ids, string? Action, string? To);
 
@@ -84,6 +84,24 @@ public static class MessageBatchEndpoints
             return Results.Ok(new MessageBatchResultDto(changed.Count, null, []));
         }
 
+        if (action == "delete")
+        {
+            // For good, and only from the trash: anything else is first moved there, from where it can still be brought back.
+            var deleted = await gateway.ExecuteAsync(
+                credentials,
+                async (session, token) =>
+                {
+                    var folders = FolderRoleGuesser.Complete(await session.GetFoldersAsync(token));
+                    return folders.Any(f => f.Role == FolderRole.Trash && SameFolder(f.Path, ids[0].Folder))
+                        ? await session.DeleteMessagesPermanentlyAsync(ids, token)
+                        : (int?)null;
+                },
+                cancellationToken);
+            return deleted is null
+                ? Problem(StatusCodes.Status409Conflict, "Only messages in the trash can be deleted for good; move them to the trash first.", ErrorCodes.NotInTrash)
+                : Results.Ok(new MessageBatchResultDto(deleted.Value, null, []));
+        }
+
         if (action == "move")
         {
             if (string.IsNullOrWhiteSpace(request.To) || request.To.Length > 1024 || request.To.Any(char.IsControl))
@@ -103,7 +121,7 @@ public static class MessageBatchEndpoints
 
         if (!RoleActions.TryGetValue(action, out var role))
         {
-            return Problem(StatusCodes.Status400BadRequest, "action must be archive, spam, trash, move, read, unread, flag or unflag.", ErrorCodes.BadRequest);
+            return Problem(StatusCodes.Status400BadRequest, "action must be archive, spam, trash, move, read, unread, flag, unflag or delete.", ErrorCodes.BadRequest);
         }
 
         var (folder, result) = await gateway.ExecuteAsync(

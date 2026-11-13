@@ -213,3 +213,22 @@ describe('restore', () => {
     },
   );
 });
+
+describe('applyBatch: deleting for good', () => {
+  it('takes the messages out of every list and out of the count of their folder, and puts them nowhere', () => {
+    const client = setup();
+
+    applyBatch(client, [id(1), id(2)], 'delete');
+
+    expect(rows(client, ['messages', 'INBOX', 'all', true]).map((r) => r.id)).toEqual([
+      id(3),
+      id(4),
+    ]);
+    expect(rows(client, ['messages', 'INBOX', 'unread', true]).map((r) => r.id)).toEqual([id(3)]);
+    expect(counters(client, 'INBOX')).toEqual([8, 3]);
+    // no folder gets them: they are gone
+    expect(counters(client, 'Trash')).toEqual([3, 0]);
+    expect(counters(client, 'Archive')).toEqual([5, 0]);
+    expect(counters(client, 'Junk')).toEqual([2, 1]);
+  });
+});

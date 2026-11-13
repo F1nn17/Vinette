@@ -9,6 +9,7 @@ import {
   useFolders,
   useLayout,
   useMessageBatch,
+  usePurge,
 } from '@/features/mailbox';
 import { labelPath } from '@/features/labels';
 import { ReadingPane } from '@/features/message';
@@ -33,35 +34,44 @@ export function MailboxPage() {
     labelName === undefined ? folderSlug(f) === folder : f.path === openFolder,
   )?.role;
   const batch = useMessageBatch();
+  const purge = usePurge();
   const toList = `${labelName === undefined ? `/mail/${encodeURIComponent(folder)}` : labelPath(labelName)}${search}`;
 
   return (
-    <AppShell
-      messageOpen={messageId !== undefined}
-      nav={<Sidebar address={address ?? ''} folderSlug={folder} labelName={labelName} />}
-      list={
-        <MessageListPane
-          folderSlug={folder}
-          labelName={labelName}
-          messageId={messageId}
-          address={address ?? undefined}
-        />
-      }
-      reader={
-        <ReadingPane
-          messageId={messageId}
-          address={address ?? undefined}
-          onBack={layout === 'mobile' ? () => void navigate(toList) : undefined}
-          folderRole={role}
-          onAction={(action) => {
-            if (messageId === undefined) return;
-            // The screen follows at once (see `useMessageBatch`): the message is no longer in this list afterwards (or is
-            // unread again), so back to the list; if the server refuses, the list gets it back and a toast says so.
-            batch.mutate({ ids: [messageId], action });
-            void navigate(toList);
-          }}
-        />
-      }
-    />
+    <>
+      {purge.dialog}
+      <AppShell
+        messageOpen={messageId !== undefined}
+        nav={<Sidebar address={address ?? ''} folderSlug={folder} labelName={labelName} />}
+        list={
+          <MessageListPane
+            folderSlug={folder}
+            labelName={labelName}
+            messageId={messageId}
+            address={address ?? undefined}
+          />
+        }
+        reader={
+          <ReadingPane
+            messageId={messageId}
+            address={address ?? undefined}
+            onBack={layout === 'mobile' ? () => void navigate(toList) : undefined}
+            folderRole={role}
+            onAction={(action) => {
+              if (messageId === undefined) return;
+              if (action === 'delete') {
+                // for good: asked first; the screen goes back to the list when it is confirmed
+                purge.ask([messageId], () => void navigate(toList));
+                return;
+              }
+              // The screen follows at once (see `useMessageBatch`): the message is no longer in this list afterwards (or is
+              // unread again), so back to the list; if the server refuses, the list gets it back and a toast says so.
+              batch.mutate({ ids: [messageId], action });
+              void navigate(toList);
+            }}
+          />
+        }
+      />
+    </>
   );
 }

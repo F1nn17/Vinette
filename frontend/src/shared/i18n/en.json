@@ -58,7 +58,9 @@
       "spam_other": "{{count}} messages moved to spam",
       "trash_one": "Message moved to the trash",
       "trash_other": "{{count}} messages moved to the trash"
-    }
+    },
+    "deleted_one": "Message deleted for good",
+    "deleted_other": "{{count}} messages deleted for good"
   },
   "common": {
     "close": "Close",
@@ -106,7 +108,8 @@
     "trash": "Delete",
     "read": "Mark as read",
     "limit": "You can select at most {{max}} messages at a time.",
-    "labels": "Labels"
+    "labels": "Labels",
+    "purge": "Delete forever"
   },
   "list": {
     "noSender": "No sender",
@@ -172,7 +175,8 @@
     "flagFailed": "Could not save the mark. Check your connection and try again.",
     "truncated": "This message is very long: only the beginning is shown.",
     "showFull": "Show all",
-    "labels": "Labels"
+    "labels": "Labels",
+    "purge": "Delete forever"
   },
   "labels": {
     "menu": "Labels",
@@ -194,5 +198,19 @@
     "deleteText": "The label will be taken off all messages. The messages themselves stay where they are.",
     "deleteConfirm": "Delete label",
     "empty": "No messages have this label."
+  },
+  "purge": {
+    "title_one": "Delete the message forever?",
+    "title_other": "Delete {{count}} messages forever?",
+    "text_one": "The message will be deleted and cannot be brought back.",
+    "text_other": "The messages will be deleted and cannot be brought back.",
+    "confirm": "Delete forever",
+    "emptyTrash": "Empty the trash",
+    "emptySpam": "Empty spam",
+    "emptyTrashTitle": "Empty the trash?",
+    "emptySpamTitle": "Empty spam?",
+    "emptyText": "All messages in this folder will be deleted forever. This cannot be undone.",
+    "trashEmptied": "The trash is empty",
+    "spamEmptied": "Spam is empty"
   }
 }
