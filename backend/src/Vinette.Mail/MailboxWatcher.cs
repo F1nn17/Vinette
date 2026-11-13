@@ -47,7 +47,7 @@ public sealed class MailboxWatcher(IMailSessionFactory factory, MailboxWatchSett
         string address,
         string sessionId,
         Func<CancellationToken, ValueTask<MailCredentials?>> credentials,
-        Func<MailboxChange, ValueTask> onChange)
+        Func<MailboxEvent, ValueTask> onChange)
     {
         ArgumentException.ThrowIfNullOrEmpty(address);
         ArgumentNullException.ThrowIfNull(credentials);
@@ -229,7 +229,7 @@ public sealed class MailboxWatcher(IMailSessionFactory factory, MailboxWatchSett
         return null;
     }
 
-    private async ValueTask DispatchAsync(Watch watch, MailboxChange change)
+    private async ValueTask DispatchAsync(Watch watch, MailboxEvent change)
     {
         Listener[] snapshot;
         lock (gate)
@@ -277,7 +277,7 @@ public sealed class MailboxWatcher(IMailSessionFactory factory, MailboxWatchSett
         slots.Dispose();
     }
 
-    private sealed record Listener(string SessionId, Func<CancellationToken, ValueTask<MailCredentials?>> Credentials, Func<MailboxChange, ValueTask> OnChange);
+    private sealed record Listener(string SessionId, Func<CancellationToken, ValueTask<MailCredentials?>> Credentials, Func<MailboxEvent, ValueTask> OnChange);
 
     private sealed class Watch(string address)
     {

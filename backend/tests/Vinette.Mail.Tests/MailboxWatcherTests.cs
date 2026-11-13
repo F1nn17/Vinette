@@ -11,7 +11,7 @@ public sealed class MailboxWatcherTests
     {
         private readonly TaskCompletionSource<Exception?> end = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource watching = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private Func<MailboxChange, ValueTask>? deliver;
+        private Func<MailboxEvent, ValueTask>? deliver;
 
         public bool IsConnected { get; private set; } = true;
 
@@ -20,12 +20,12 @@ public sealed class MailboxWatcherTests
         public Task Watching => watching.Task;
 
         /// <summary>The mail server reports a change.</summary>
-        public ValueTask Raise(MailboxChange change) => deliver!(change);
+        public ValueTask Raise(MailboxEvent change) => deliver!(change);
 
         /// <summary>The connection breaks.</summary>
         public void Break() => end.TrySetResult(new IOException("connection lost"));
 
-        public async Task WatchInboxAsync(Func<MailboxChange, ValueTask> onChange, TimeSpan restartAfter, CancellationToken cancellationToken)
+        public async Task WatchInboxAsync(Func<MailboxEvent, ValueTask> onChange, TimeSpan restartAfter, CancellationToken cancellationToken)
         {
             deliver = onChange;
             watching.TrySetResult();
@@ -142,14 +142,14 @@ public sealed class MailboxWatcherTests
         }
     }
 
-    private static readonly MailboxChange Arrived = new("INBOX", MailboxChangeKind.CountChanged);
+    private static readonly MailboxEvent Arrived = new FolderCountersChanged("INBOX", 1, 1);
 
     [Fact]
     public async Task The_First_Listener_Opens_A_Watching_Connection_And_Gets_What_The_Server_Reports()
     {
         var factory = new FakeFactory();
         await using var watcher = new MailboxWatcher(factory, Quick);
-        var heard = new List<MailboxChange>();
+        var heard = new List<MailboxEvent>();
 
         using var _ = watcher.Subscribe("a@x.test", "s1", Credentials("a@x.test", "s1"), c =>
         {

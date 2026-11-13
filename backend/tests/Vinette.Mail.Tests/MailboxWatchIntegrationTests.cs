@@ -8,7 +8,10 @@ using Vinette.TestSupport;
 
 namespace Vinette.Mail.Tests;
 
-/// <summary>Watching the inbox with IMAP IDLE on a real Dovecot: mail that arrives over SMTP, marks, removals, long waits, sharing.</summary>
+/// <summary>
+/// Watching the inbox with IMAP IDLE on a real Dovecot, and what the server's notifications become (VIN-081, VIN-082): mail that
+/// arrives over SMTP, marks, removals, counters, bursts, long waits, sharing.
+/// </summary>
 [Integration]
 [Collection(DovecotFixture.CollectionName)]
 public sealed class MailboxWatchIntegrationTests(DovecotFixture dovecot)
@@ -45,62 +48,139 @@ public sealed class MailboxWatchIntegrationTests(DovecotFixture dovecot)
         await smtp.DisconnectAsync(quit: true, Token);
     }
 
+    /// <summary>Appends many mails with one command (MULTIAPPEND), so that the server announces them together, as a burst of mail does.</summary>
+    private async Task AppendManyAsync(MailAccount to, int count)
+    {
+        using var client = new MailKit.Net.Imap.ImapClient();
+        await client.ConnectAsync(dovecot.Host, dovecot.ImapPort, SecureSocketOptions.None, Token);
+        await client.AuthenticateAsync(to.Address, to.Password, Token);
+        var requests = Enumerable.Range(1, count).Select(i =>
+        {
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress("Burst", "burst@vinette.test"));
+            message.To.Add(MailboxAddress.Parse(to.Address));
+            message.Subject = $"Burst {i}";
+            message.Body = new TextPart("plain") { Text = "Hi" };
+            return (MailKit.IAppendRequest)new MailKit.AppendRequest(message);
+        }).ToList();
+        _ = await client.Inbox.AppendAsync(requests, Token);
+        await client.DisconnectAsync(quit: true, Token);
+    }
+
     private sealed class Recorder
     {
-        public ConcurrentQueue<MailboxChange> Changes { get; } = new();
+        public ConcurrentQueue<MailboxEvent> Events { get; } = new();
 
-        public ValueTask Add(MailboxChange change)
+        public ValueTask Add(MailboxEvent change)
         {
-            Changes.Enqueue(change);
+            Events.Enqueue(change);
             return ValueTask.CompletedTask;
         }
 
-        public async Task WaitForAsync(Func<IEnumerable<MailboxChange>, bool> condition)
+        public IEnumerable<T> Of<T>()
+            where T : MailboxEvent => Events.OfType<T>();
+
+        public async Task WaitForAsync(Func<Recorder, bool> condition)
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(Token);
             timeout.CancelAfter(TimeSpan.FromSeconds(60));
-            while (!condition(Changes))
+            while (!condition(this))
             {
                 await Task.Delay(100, timeout.Token);
             }
         }
     }
 
-    [Fact]
-    public async Task Mail_That_Arrives_Over_SMTP_Is_Reported_While_The_Connection_Idles()
+    /// <summary>Starts watching and waits until the connection has settled into its first wait.</summary>
+    private static async Task<(Recorder Recorder, CancellationTokenSource Stop, Task Watching)> StartAsync(IMailSession session)
     {
-        var account = await AccountAsync();
-        await using var session = await Factory().OpenAsync(Credentials(account), Token);
         var recorder = new Recorder();
-        using var stop = CancellationTokenSource.CreateLinkedTokenSource(Token);
+        var stop = CancellationTokenSource.CreateLinkedTokenSource(Token);
         var watching = session.WatchInboxAsync(recorder.Add, TimeSpan.FromMinutes(25), stop.Token);
-        await Task.Delay(1000, Token); // let the IDLE begin
-
-        await DeliverAsync(account);
-        await recorder.WaitForAsync(c => c.Any(x => x.Kind == MailboxChangeKind.CountChanged));
-        await stop.CancelAsync();
-
-        await watching.WaitAsync(TimeSpan.FromSeconds(30), Token);
-        Assert.All(recorder.Changes, c => Assert.Equal("INBOX", c.Folder));
+        await Task.Delay(1500, Token);
+        return (recorder, stop, watching);
     }
 
     [Fact]
-    public async Task Marks_And_Removals_Made_Elsewhere_Are_Reported()
+    public async Task Mail_That_Arrives_Over_SMTP_Is_Reported_With_Its_Line_Of_The_List_And_The_New_Counters()
+    {
+        var account = await AccountAsync();
+        await using var session = await Factory().OpenAsync(Credentials(account), Token);
+        var (recorder, stop, watching) = await StartAsync(session);
+
+        await DeliverAsync(account);
+        await recorder.WaitForAsync(r => r.Of<MessageArrived>().Any() && r.Of<FolderCountersChanged>().Any());
+        await stop.CancelAsync();
+        await watching.WaitAsync(TimeSpan.FromSeconds(30), Token);
+
+        var arrived = Assert.Single(recorder.Of<MessageArrived>());
+        Assert.Equal("INBOX", arrived.Folder);
+        Assert.Equal("Hello from the world", arrived.Message.Subject);
+        Assert.Equal("anna@vinette.test", arrived.Message.From?.Address);
+        Assert.False(arrived.Message.Seen);
+        Assert.Equal("INBOX", arrived.Message.Id.Folder);
+        var counters = recorder.Of<FolderCountersChanged>().Last();
+        Assert.Equal((1, 1), (counters.Total, counters.Unread));
+    }
+
+    [Fact]
+    public async Task A_Mark_Made_Elsewhere_Is_Reported_For_That_Message_With_The_Counters()
     {
         var account = await AccountAsync(messages: 2);
         await using var session = await Factory().OpenAsync(Credentials(account), Token);
-        var recorder = new Recorder();
-        using var stop = CancellationTokenSource.CreateLinkedTokenSource(Token);
-        var watching = session.WatchInboxAsync(recorder.Add, TimeSpan.FromMinutes(25), stop.Token);
-        await Task.Delay(1000, Token);
+        var (recorder, stop, watching) = await StartAsync(session);
 
-        await dovecot.DoveadmAsync(Token, "flags", "add", "-u", account.Address, "\\Flagged", "mailbox", "INBOX", "uid", "1");
-        await recorder.WaitForAsync(c => c.Any(x => x.Kind == MailboxChangeKind.FlagsChanged));
-        await dovecot.DoveadmAsync(Token, "expunge", "-u", account.Address, "mailbox", "INBOX", "uid", "2");
-        await recorder.WaitForAsync(c => c.Any(x => x.Kind == MailboxChangeKind.Expunged));
+        await dovecot.DoveadmAsync(Token, "flags", "add", "-u", account.Address, "\\Seen \\Flagged Work", "mailbox", "INBOX", "uid", "1");
+        await recorder.WaitForAsync(r => r.Of<MessageMarksChanged>().Any() || r.Of<FolderStale>().Any());
+        await recorder.WaitForAsync(r => r.Of<FolderCountersChanged>().Any());
         await stop.CancelAsync();
-
         await watching.WaitAsync(TimeSpan.FromSeconds(30), Token);
+
+        var marks = Assert.Single(recorder.Of<MessageMarksChanged>());
+        Assert.Equal(1u, marks.Id.Uid);
+        Assert.True(marks.Seen);
+        Assert.True(marks.Flagged);
+        Assert.False(marks.Answered);
+        Assert.Equal(["Work"], marks.Labels);
+        var counters = recorder.Of<FolderCountersChanged>().Last();
+        Assert.Equal((2, 1), (counters.Total, counters.Unread));
+        Assert.Empty(recorder.Of<FolderStale>());
+    }
+
+    [Fact]
+    public async Task A_Removal_Made_Elsewhere_Is_Reported_With_Its_Count_And_The_New_Counters()
+    {
+        var account = await AccountAsync(messages: 3);
+        await using var session = await Factory().OpenAsync(Credentials(account), Token);
+        var (recorder, stop, watching) = await StartAsync(session);
+
+        await dovecot.DoveadmAsync(Token, "expunge", "-u", account.Address, "mailbox", "INBOX", "uid", "2");
+        await recorder.WaitForAsync(r => r.Of<MessagesRemoved>().Any() && r.Of<FolderCountersChanged>().Any());
+        await stop.CancelAsync();
+        await watching.WaitAsync(TimeSpan.FromSeconds(30), Token);
+
+        Assert.Equal(1, Assert.Single(recorder.Of<MessagesRemoved>()).Count);
+        Assert.Equal(2, recorder.Of<FolderCountersChanged>().Last().Total);
+        Assert.Empty(recorder.Of<MessageArrived>());
+    }
+
+    [Fact]
+    public async Task A_Burst_Of_Mail_Is_Reported_One_By_One_Up_To_A_Limit_And_The_Folder_Is_Called_Stale_Beyond_It()
+    {
+        var account = await AccountAsync();
+        await using var session = await Factory().OpenAsync(Credentials(account), Token);
+        var (recorder, stop, watching) = await StartAsync(session);
+
+        await AppendManyAsync(account, 30);
+        await recorder.WaitForAsync(r => r.Of<FolderCountersChanged>().Any(c => c.Total == 30));
+        await stop.CancelAsync();
+        await watching.WaitAsync(TimeSpan.FromSeconds(30), Token);
+
+        var arrived = recorder.Of<MessageArrived>().ToList();
+        Assert.Equal(ImapMailSession.MaxArrivalsReported, arrived.Count);
+        Assert.Equal(arrived.Select(a => a.Message.Id.Uid).Order(), arrived.Select(a => a.Message.Id.Uid)); // oldest of the reported first
+        Assert.Contains(recorder.Events, e => e is FolderStale);
+        Assert.Equal(30u, arrived.Max(a => a.Message.Id.Uid)); // the newest are the ones reported
     }
 
     [Fact]
@@ -116,7 +196,7 @@ public sealed class MailboxWatchIntegrationTests(DovecotFixture dovecot)
         Assert.False(watching.IsCompleted);
 
         await DeliverAsync(account);
-        await recorder.WaitForAsync(c => c.Any(x => x.Kind == MailboxChangeKind.CountChanged));
+        await recorder.WaitForAsync(r => r.Of<MessageArrived>().Any());
         await stop.CancelAsync();
 
         await watching.WaitAsync(TimeSpan.FromSeconds(30), Token);
@@ -136,8 +216,8 @@ public sealed class MailboxWatchIntegrationTests(DovecotFixture dovecot)
         Assert.Equal(1, watcher.ConnectionCount);
 
         await DeliverAsync(account);
-        await phone.WaitForAsync(c => c.Any(x => x.Kind == MailboxChangeKind.CountChanged));
-        await computer.WaitForAsync(c => c.Any(x => x.Kind == MailboxChangeKind.CountChanged));
+        await phone.WaitForAsync(r => r.Of<MessageArrived>().Any());
+        await computer.WaitForAsync(r => r.Of<MessageArrived>().Any());
 
         Assert.Equal(1, watcher.ConnectionCount);
     }
