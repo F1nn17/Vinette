@@ -16,6 +16,15 @@ public sealed class MailUnavailableException : Exception
         : base(message, innerException)
     {
     }
+
+    public MailUnavailableException(string message, Exception innerException, bool messageMayHaveBeenSent)
+        : base(message, innerException) => MessageMayHaveBeenSent = messageMayHaveBeenSent;
+
+    /// <summary>
+    /// For a failed send: the connection broke after the message had been handed over, so the server may have taken it. Sending it
+    /// again could deliver it twice; the user should be told to look in "Sent" before trying again.
+    /// </summary>
+    public bool MessageMayHaveBeenSent { get; }
 }
 
 /// <summary>
