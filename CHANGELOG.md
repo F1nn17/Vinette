@@ -82,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- With the Redis session store, signing in under heavy load could be refused with a wrong "session already exists" error when a slow check aborted the write; a session is now created in one atomic step, and only an id that really exists is reported as a duplicate.
 - After archiving, deleting or marking a message as spam, the list no longer blinks a second time when the mail server reports the same change: the screen already shows it, so it is left alone. Marks that the screen already shows are not applied again either.
 - "Mark as unread" on a message that was already read when it was opened no longer reads it again at once: opening a message reads it only if it was unread when it was opened.
 - An attachment whose base64 data lacks the closing `=` padding is now read to its end (its last, shorter group was dropped before), after the update of the mail library.
