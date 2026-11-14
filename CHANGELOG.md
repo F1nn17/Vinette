@@ -78,6 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Several instances of the application can run behind one address (see the new decision record ADR-0007): no Redis backplane and no sticky routing are needed. The page now opens its live-updates channel as a plain WebSocket without a negotiation request, so any instance can take it; the load balancer only has to pass WebSocket upgrades (a proxy that does not leaves the page without live updates and shows the "No connection" notice). The sessions must be in Redis (`Session:Store=Redis`), and the Data Protection keys and the settings directory must be shared by the instances. Connection limits and the follow-the-inbox connections are counted per instance.
 - The application now runs on .NET 11 (it was .NET 10). The Docker image is built on `dotnet/sdk:11.0` and runs on `dotnet/aspnet:11.0-resolute-chiseled` (Ubuntu 26.04 base); a server without Docker needs the ASP.NET Core 11 runtime. See ADR-0005.
 
 ### Fixed

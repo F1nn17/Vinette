@@ -28,103 +28,11 @@ namespace Vinette.Api.Tests;
 [Collection(DovecotFixture.CollectionName)]
 public sealed class MailHubTests(DovecotFixture dovecot) : IDisposable
 {
-    private const char Separator = '\u001e';
-
     private readonly List<WebApplicationFactory<Program>> factories = [];
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     public void Dispose() => factories.ForEach(f => f.Dispose());
-
-    private sealed class HubSocket(WebSocket socket) : IDisposable
-    {
-        private readonly Queue<JsonElement> frames = new();
-        private readonly byte[] buffer = new byte[16 * 1024];
-        private string partial = string.Empty;
-
-        public WebSocket Socket => socket;
-
-        public async Task SendTextAsync(string text) =>
-            await socket.SendAsync(Encoding.UTF8.GetBytes(text), WebSocketMessageType.Text, true, Token);
-
-        /// <summary>The next frame of the hub that is not a ping, or null if the connection was closed.</summary>
-        public async Task<JsonElement?> NextAsync(TimeSpan within)
-        {
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(Token);
-            timeout.CancelAfter(within);
-            while (true)
-            {
-                while (frames.Count > 0)
-                {
-                    var frame = frames.Dequeue();
-                    if (frame.TryGetProperty("type", out var type) && type.GetInt32() == 6)
-                    {
-                        continue; // ping
-                    }
-
-                    return frame;
-                }
-
-                if (socket.State is not WebSocketState.Open)
-                {
-                    return null;
-                }
-
-                try
-                {
-                    var received = await socket.ReceiveAsync(buffer, timeout.Token);
-                    if (received.MessageType == WebSocketMessageType.Close)
-                    {
-                        return null;
-                    }
-
-                    partial += Encoding.UTF8.GetString(buffer, 0, received.Count);
-                }
-                catch (WebSocketException)
-                {
-                    return null;
-                }
-
-                var parts = partial.Split(Separator);
-                partial = parts[^1];
-                foreach (var part in parts[..^1])
-                {
-                    frames.Enqueue(JsonElement.Parse(part));
-                }
-            }
-        }
-
-        /// <summary>The next event of the channel (<c>mailEvent</c>) of the given kind, within the time; null if none came.</summary>
-        public async Task<JsonElement?> NextEventAsync(string type, TimeSpan within)
-        {
-            var until = DateTime.UtcNow + within;
-            while (DateTime.UtcNow < until)
-            {
-                try
-                {
-                    var frame = await NextAsync(until - DateTime.UtcNow);
-                    if (frame is null)
-                    {
-                        return null;
-                    }
-
-                    if (frame.Value.TryGetProperty("target", out var target) && target.GetString() == "mailEvent"
-                        && frame.Value.GetProperty("arguments")[0].GetProperty("type").GetString() == type)
-                    {
-                        return frame.Value.GetProperty("arguments")[0];
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    return null;
-                }
-            }
-
-            return null;
-        }
-
-        public void Dispose() => socket.Dispose();
-    }
 
     private sealed record User(MailAccount Account, string Cookie, HttpClient Http, string Session);
 
@@ -160,29 +68,8 @@ public sealed class MailHubTests(DovecotFixture dovecot) : IDisposable
         return new User(account, cookie, http, cookie[(SessionCookie.Name.Length + 1)..]);
     }
 
-    private static async Task<HubSocket> ConnectAsync(WebApplicationFactory<Program> web, User user)
-    {
-        using var negotiate = new HttpRequestMessage(HttpMethod.Post, "/hubs/mail/negotiate?negotiateVersion=1");
-        negotiate.Headers.Add("Cookie", user.Cookie);
-        negotiate.Headers.Add("Origin", CsrfClient.Origin); // a browser always sends it, and the hub wants it to be ours
-        var answer = await user.Http.SendAsync(negotiate, Token);
-        answer.EnsureSuccessStatusCode();
-        var token = JsonElement.Parse(await answer.Content.ReadAsStringAsync(Token)).GetProperty("connectionToken").GetString();
-
-        var client = web.Server.CreateWebSocketClient();
-        client.ConfigureRequest = request =>
-        {
-            request.Headers["Cookie"] = user.Cookie;
-            request.Headers["Origin"] = CsrfClient.Origin;
-        };
-        var socket = await client.ConnectAsync(new Uri($"ws://localhost/hubs/mail?id={Uri.EscapeDataString(token!)}"), Token);
-        var hub = new HubSocket(socket);
-        await hub.SendTextAsync($"{{\"protocol\":\"json\",\"version\":1}}{Separator}");
-        var handshake = await hub.NextAsync(TimeSpan.FromSeconds(10));
-        Assert.NotNull(handshake);
-        Assert.False(handshake.Value.TryGetProperty("error", out _));
-        return hub;
-    }
+    private static Task<HubSocket> ConnectAsync(WebApplicationFactory<Program> web, User user, bool negotiate = true) =>
+        HubSocket.ConnectAsync(web, user.Cookie, user.Http, negotiate);
 
     private async Task DeliverAsync(MailAccount to, string subject = "Hello from the world")
     {
@@ -274,6 +161,34 @@ public sealed class MailHubTests(DovecotFixture dovecot) : IDisposable
         Assert.Null(await hub.NextAsync(TimeSpan.FromSeconds(15)));
         var connections = web.Services.GetRequiredService<MailHubConnections>();
         await WaitUntilAsync(() => connections.Count == 0);
+    }
+
+    [Fact]
+    public async Task A_Connection_Opened_At_Once_Without_Negotiation_Works_Like_Any_Other()
+    {
+        // The page connects so (VIN-088): no instance of the application has to be the same one for two requests.
+        var web = await StartAsync();
+        var user = await SignInAsync(web);
+        using var hub = await ConnectAsync(web, user, negotiate: false);
+        await Task.Delay(2000, Token);
+
+        await DeliverAsync(user.Account);
+
+        var arrived = await hub.NextEventAsync("arrived", Long);
+        Assert.NotNull(arrived);
+        Assert.Equal("Hello from the world", arrived.Value.GetProperty("message").GetProperty("subject").GetString());
+    }
+
+    [Fact]
+    public async Task A_WebSocket_Opened_At_Once_Without_A_Session_Is_Refused()
+    {
+        var web = await StartAsync();
+        var client = web.Server.CreateWebSocketClient();
+        client.ConfigureRequest = request => request.Headers["Origin"] = CsrfClient.Origin;
+
+        var failure = await Record.ExceptionAsync(() => client.ConnectAsync(new Uri("ws://localhost/hubs/mail"), Token));
+
+        Assert.NotNull(failure); // 401 on the upgrade request
     }
 
     [Fact]
