@@ -60,4 +60,39 @@ test.describe('real-time', () => {
       timeout: 30_000,
     });
   });
+
+  test('our own removal is not echoed: the list is read once after it, not again when the server reports it', async ({
+    page,
+  }) => {
+    await page.goto('/mail/inbox');
+    const first = page.locator('a[href^="/mail/inbox/"]').first();
+    await expect(first).toBeVisible();
+    const subject = (await inbox(page))[0]?.subject ?? '';
+    await page.waitForTimeout(2500); // the channel and the watch settle
+
+    const shown = page.getByRole('link', { name: new RegExp(subject) });
+    const before = await shown.count(); // other messages may carry the same words
+    let listReads = 0;
+    page.on('request', (request) => {
+      if (/\/api\/v1\/folders\/INBOX\/messages/.test(request.url())) listReads++;
+    });
+    await page.getByRole('checkbox', { name: `Выбрать письмо «${subject}»` }).check();
+    await page
+      .getByRole('toolbar', { name: 'Действия с выбранными письмами' })
+      .getByRole('button', { name: 'Удалить' })
+      .click();
+    const toast = page.getByRole('status').filter({ hasText: 'перенесено в корзину' });
+    await expect(toast).toBeVisible();
+    await page.waitForTimeout(5000); // the server reports the removal within a second or two
+
+    expect(listReads).toBeLessThanOrEqual(1); // the one that follows our own action; the echo adds none
+    await expect(shown).toHaveCount(before - 1);
+
+    await toast.getByRole('button', { name: 'Отменить' }).click(); // put it back
+    await expect
+      .poll(async () => (await inbox(page)).some((i) => i.subject === subject))
+      .toBe(true);
+    // and it is in the list once, not twice
+    await expect(shown).toHaveCount(before, { timeout: 30_000 });
+  });
 });

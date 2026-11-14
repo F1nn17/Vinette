@@ -9,6 +9,7 @@ import { describeApiError } from '@/shared/api/describe-error';
 import { apiPost, type ApiError } from '@/shared/api/client';
 import type { components } from '@/shared/api/schema';
 import { useToast } from '@/shared/toast';
+import { expectRemoval } from '@/features/realtime/echo';
 import { FOLDERS_KEY, type Folder } from './api';
 
 export type BatchAction =
@@ -30,6 +31,8 @@ export interface Snapshot {
   lists: [readonly unknown[], InfiniteData<ListPage> | undefined][];
   details: [readonly unknown[], Detail | undefined][];
   folders: Folder[] | undefined;
+  /** Takes back the expectation of the live channel's report of our own removal (the action failed). */
+  cancelEcho?: () => void;
 }
 
 /** The folder a message id belongs to: the id is `base64url(folder).uidValidity.uid`. */
@@ -171,6 +174,12 @@ export function useMessageBatch() {
       ]);
       const snapshot = takeSnapshot(queryClient);
       applyBatch(queryClient, ids, action);
+      // The mail server will report the removal on the live channel: that report is the echo of this action (VIN-087).
+      const source = folderOfId(ids[0] ?? '');
+      if ((action in TARGET_ROLE || action === 'delete') && source !== null) {
+        snapshot.cancelEcho = expectRemoval(queryClient, source, ids.length);
+      }
+
       return snapshot;
     },
     onSuccess: (result, { ids, action }) => {
@@ -208,6 +217,7 @@ export function useMessageBatch() {
       });
     },
     onError: (error, _variables, snapshot) => {
+      snapshot?.cancelEcho?.();
       if (snapshot) restore(queryClient, snapshot);
       toast.show({ tone: 'error', message: describeApiError(error, t) });
     },
