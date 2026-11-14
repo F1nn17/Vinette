@@ -1,6 +1,7 @@
-import { QueryClient, type InfiniteData } from '@tanstack/react-query';
+import { MutationObserver, QueryClient, type InfiniteData } from '@tanstack/react-query';
 import { FOLDERS_KEY, type Folder } from '@/features/mailbox/api';
 import { applyMailEvent } from './apply-event';
+import { expectRemoval } from './echo';
 import type { MailEvent } from './events';
 
 const item = (n: number, extra: Record<string, unknown> = {}) => ({
@@ -208,5 +209,104 @@ describe.each([
     expect(isStale(client, WORK)).toBe(true);
     expect(isStale(client, ['message', 'SU5CT1g.1.1'])).toBe(true);
     expect(isStale(client, FOLDERS_KEY)).toBe(true);
+  });
+});
+
+describe('applyMailEvent: the echo of our own actions (VIN-087)', () => {
+  const removed = (count: number): MailEvent =>
+    ({ type: 'removed', folder: 'INBOX', count }) as MailEvent;
+  const marksOf = (extra: Record<string, unknown> = {}): MailEvent =>
+    ({
+      type: 'marks',
+      folder: 'INBOX',
+      id: 'SU5CT1g.1.1',
+      seen: false,
+      flagged: false,
+      answered: false,
+      labels: [],
+      ...extra,
+    }) as unknown as MailEvent;
+
+  it('does not read anything again for a removal we asked for ourselves', () => {
+    const client = setup();
+    expectRemoval(client, 'INBOX', 2);
+
+    applyMailEvent(client, removed(2));
+
+    expect(isStale(client, ALL)).toBeFalsy();
+    expect(isStale(client, WORK)).toBeFalsy();
+    expect(isStale(client, ['message', 'SU5CT1g.1.1'])).toBeFalsy();
+    expect(isStale(client, FOLDERS_KEY)).toBeFalsy();
+  });
+
+  it('does read again when more was removed than we asked for (someone else removed messages too)', () => {
+    const client = setup();
+    expectRemoval(client, 'INBOX', 1);
+
+    applyMailEvent(client, removed(2));
+
+    expect(isStale(client, ALL)).toBe(true);
+  });
+
+  it('does read again for a removal nobody here asked for', () => {
+    const client = setup();
+
+    applyMailEvent(client, removed(1));
+
+    expect(isStale(client, ALL)).toBe(true);
+  });
+
+  it('shows no duplicate after archiving: the removed message stays out and the lists are left alone', () => {
+    const client = setup();
+    // the screen has already taken the message out of the list (the optimistic update) and expects the report
+    client.setQueryData(ALL, list(item(2, { seen: true })));
+    expectRemoval(client, 'INBOX', 1);
+
+    applyMailEvent(client, removed(1));
+    applyMailEvent(client, { type: 'counters', folder: 'INBOX', total: 1, unread: 0 } as MailEvent);
+
+    expect(ids(client, ALL)).toEqual(['SU5CT1g.1.2']);
+    expect(isStale(client, ALL)).toBeFalsy();
+  });
+
+  it('changes nothing and reads nothing again for marks the screen already shows', () => {
+    const client = setup();
+    // message 1 is shown unread, unflagged, without labels: exactly what the event says
+
+    applyMailEvent(client, marksOf());
+
+    expect(isStale(client, UNREAD)).toBeFalsy();
+    expect(isStale(client, FLAGGED)).toBeFalsy();
+    expect(rows(client, ALL)[0]).toMatchObject({ seen: false, flagged: false });
+  });
+
+  it('does act on marks that differ from what the screen shows', () => {
+    const client = setup();
+
+    applyMailEvent(client, marksOf({ flagged: true }));
+
+    expect(rows(client, ALL)[0]).toMatchObject({ flagged: true });
+    expect(isStale(client, FLAGGED)).toBe(true);
+  });
+
+  it('does act when only the labels differ', () => {
+    const client = setup();
+
+    applyMailEvent(client, marksOf({ labels: ['Work'] }));
+
+    expect(rows(client, ALL)[0]).toMatchObject({ labels: ['Work'] });
+  });
+
+  it('ignores marks while one of our own actions on messages is running: its end reads everything again', () => {
+    const client = setup();
+    void new MutationObserver(client, {
+      mutationKey: ['message-flags', 'SU5CT1g.1.1'],
+      mutationFn: () => new Promise<void>(() => undefined),
+    }).mutate();
+
+    applyMailEvent(client, marksOf({ flagged: true }));
+
+    expect(rows(client, ALL)[0]).toMatchObject({ flagged: false });
+    expect(isStale(client, FLAGGED)).toBeFalsy();
   });
 });

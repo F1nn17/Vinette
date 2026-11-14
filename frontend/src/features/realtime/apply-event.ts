@@ -1,6 +1,7 @@
 import type { InfiniteData, QueryClient } from '@tanstack/react-query';
 import type { components } from '@/shared/api/schema';
 import { FOLDERS_KEY, type Folder } from '@/features/mailbox/api';
+import { consumeRemoval } from './echo';
 import type { MailEvent } from './events';
 
 type ListPage = components['schemas']['MessageListResponse'];
@@ -10,6 +11,52 @@ const num = (value: unknown) => Number(value) || 0;
 
 /** The keys of the lists of one folder are `['messages', folder, filter, preview]`. */
 const listsOf = (folder: string) => ({ queryKey: ['messages', folder] });
+
+/** Keys of the mutations that act on messages: while one runs, its optimistic state is the truth the screen should keep. */
+const OWN_ACTIONS = ['message-batch', 'message-labels', 'message-flags'];
+
+function isOurOwnActionRunning(queryClient: QueryClient): boolean {
+  return (
+    queryClient.isMutating({
+      predicate: (mutation) => OWN_ACTIONS.includes(String(mutation.options.mutationKey?.[0])),
+    }) > 0
+  );
+}
+
+const sameLabels = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((label, i) => label === b[i]);
+
+/** Whether the screen shows this message (a row of a list or the open message) with other marks than the event says. */
+function differsFromScreen(
+  queryClient: QueryClient,
+  event: Extract<MailEvent, { type: 'marks' }>,
+): boolean {
+  const differs = (shown: {
+    seen: boolean;
+    flagged: boolean;
+    answered: boolean;
+    labels: string[];
+  }) =>
+    shown.seen !== event.seen ||
+    shown.flagged !== event.flagged ||
+    shown.answered !== event.answered ||
+    !sameLabels(shown.labels, event.labels);
+  const rows = queryClient
+    .getQueriesData<InfiniteData<ListPage>>({ queryKey: ['messages'] })
+    .flatMap(([, data]) => data?.pages.flatMap((page) => page.items) ?? [])
+    .filter((item) => item.id === event.id);
+  const details = queryClient
+    .getQueriesData<Detail>({ queryKey: ['message', event.id] })
+    .flatMap(([, message]) => (message ? [message] : []));
+  return [...rows, ...details].some(differs);
+}
+
+/** Everything the screen holds of the mail is read again. */
+function readAgain(queryClient: QueryClient): void {
+  void queryClient.invalidateQueries({ queryKey: ['messages'] });
+  void queryClient.invalidateQueries({ queryKey: ['message'] });
+  void queryClient.invalidateQueries({ queryKey: FOLDERS_KEY });
+}
 
 /**
  * Makes the screen show what the server says happened in a folder, without anyone asking: a message that arrived is put at the
@@ -42,14 +89,20 @@ export function applyMailEvent(queryClient: QueryClient, event: MailEvent): void
       return;
     }
     case 'removed':
+      // Only how many were removed is known, not which. What our own actions removed is already off the screen (VIN-087); for
+      // the rest (another program, another device) the lists and the open message are read again.
+      if (consumeRemoval(queryClient, event.folder, Number(event.count)) > 0)
+        readAgain(queryClient);
+      return;
     case 'stale':
-      // Only how many were removed is known, not which: the lists and the open message are read again.
-      void queryClient.invalidateQueries({ queryKey: ['messages'] });
-      void queryClient.invalidateQueries({ queryKey: ['message'] });
-      void queryClient.invalidateQueries({ queryKey: FOLDERS_KEY });
+      readAgain(queryClient);
       return;
     case 'marks': {
       const { id, seen, flagged, answered, labels } = event;
+      // While our own action on messages is still running, its end reads everything again: the echo has nothing to add.
+      if (isOurOwnActionRunning(queryClient)) return;
+      // The marks the screen already shows (the echo of our own action, which was shown at once) change nothing: no redraw.
+      if (!differsFromScreen(queryClient, event)) return;
       queryClient.setQueriesData<InfiniteData<ListPage>>({ queryKey: ['messages'] }, (data) =>
         data
           ? {
