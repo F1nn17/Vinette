@@ -253,6 +253,26 @@ public sealed class DovecotFixture : IAsyncLifetime
     }
 
     /// <summary>Runs <c>doveadm</c> inside the container, for test set-ups the helpers above do not cover (flags, expunge).</summary>
+    /// <summary>
+    /// How many IMAP connections the mail server has open for a mailbox right now (<c>doveadm who</c>): the connections of the
+    /// application count here, so a test can tell how many it keeps.
+    /// </summary>
+    public async Task<int> ImapConnectionsOfAsync(MailAccount account, CancellationToken cancellationToken)
+    {
+        var result = await Container.ExecAsync(["doveadm", "who", account.Address], cancellationToken);
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"doveadm who failed (exit {result.ExitCode}): {result.Stderr}");
+        }
+
+        // columns: username, number of connections, service, pids, ips
+        return result.Stdout
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(line => line.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .Where(parts => parts.Length >= 3 && parts[0] == account.Address && parts[2] == "imap" && int.TryParse(parts[1], out _))
+            .Sum(parts => int.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     public async Task DoveadmAsync(CancellationToken cancellationToken, params string[] arguments)
     {
         var result = await Container.ExecAsync(["doveadm", .. arguments], cancellationToken);
