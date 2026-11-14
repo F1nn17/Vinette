@@ -15,6 +15,7 @@ using Vinette.Api.Auth;
 using Vinette.Api.Hubs;
 using Vinette.Api.Sessions;
 using Vinette.Core.Mail;
+using Vinette.Mail;
 using Vinette.TestSupport;
 
 namespace Vinette.Api.Tests;
@@ -36,12 +37,12 @@ public sealed class MailHubTests(DovecotFixture dovecot) : IDisposable
 
     private sealed record User(MailAccount Account, string Cookie, HttpClient Http, string Session);
 
-    private async Task<WebApplicationFactory<Program>> StartAsync(TimeSpan? sessionCheck = null)
+    private async Task<WebApplicationFactory<Program>> StartAsync(TimeSpan? sessionCheck = null, string? imapHost = null, int? imapPort = null)
     {
         var web = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
-            b.UseSetting("Imap:Host", dovecot.Host);
-            b.UseSetting("Imap:Port", dovecot.ImapPort.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            b.UseSetting("Imap:Host", imapHost ?? dovecot.Host);
+            b.UseSetting("Imap:Port", (imapPort ?? dovecot.ImapPort).ToString(System.Globalization.CultureInfo.InvariantCulture));
             b.UseSetting("Imap:Security", "None");
             b.UseSetting("Imap:IdleGrace", "00:00:01");
             if (sessionCheck is { } interval)
@@ -59,9 +60,20 @@ public sealed class MailHubTests(DovecotFixture dovecot) : IDisposable
         return web;
     }
 
-    private async Task<User> SignInAsync(WebApplicationFactory<Program> web)
+    private async Task<User> SignInAsync(WebApplicationFactory<Program> web, int messages = 0)
     {
         var account = await dovecot.CreateAccountAsync($"hub{Guid.NewGuid():N}"[..14], Token);
+        for (var i = 0; i < messages; i++)
+        {
+            await dovecot.SaveFixtureAsync(account, "INBOX", "01-plain-ascii.eml", Token);
+        }
+
+        return await SignInAsync(web, account);
+    }
+
+    /// <summary>Another sign-in of a mailbox: a second browser or device, with a session of its own.</summary>
+    private static async Task<User> SignInAsync(WebApplicationFactory<Program> web, MailAccount account)
+    {
         var http = web.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
         var login = await CsrfClient.PostJsonAsync(http, "/api/v1/auth/login", new { address = account.Address, password = account.Password, rememberMe = false }, Token);
         var cookie = login.Headers.GetValues("Set-Cookie").Single(v => v.StartsWith(SessionCookie.Name + "=", StringComparison.Ordinal)).Split(';')[0];
@@ -189,6 +201,105 @@ public sealed class MailHubTests(DovecotFixture dovecot) : IDisposable
         var failure = await Record.ExceptionAsync(() => client.ConnectAsync(new Uri("ws://localhost/hubs/mail"), Token));
 
         Assert.NotNull(failure); // 401 on the upgrade request
+    }
+
+
+    [Fact]
+    public async Task A_New_Mail_Is_Shown_Within_Seconds_Of_Its_Delivery()
+    {
+        var web = await StartAsync();
+        var user = await SignInAsync(web);
+        using var hub = await ConnectAsync(web, user, negotiate: false);
+        await Task.Delay(2000, Token); // the watching connection settles into its wait
+
+        await DeliverAsync(user.Account);
+        var delivered = System.Diagnostics.Stopwatch.StartNew();
+        var arrived = await hub.NextEventAsync("arrived", Long);
+
+        Assert.NotNull(arrived);
+        Assert.True(delivered.Elapsed < TimeSpan.FromSeconds(10), $"The event took {delivered.Elapsed.TotalSeconds:0.0} s.");
+    }
+
+    [Fact]
+    public async Task However_Many_Browsers_Listen_The_Mailbox_Has_One_Watching_Connection()
+    {
+        var web = await StartAsync();
+        var first = await SignInAsync(web);
+        var second = await SignInAsync(web, first.Account); // another device of the same mailbox
+        var watcher = (MailboxWatcher)web.Services.GetRequiredService<IMailboxWatcher>();
+        Assert.Equal(0, await dovecot.ImapConnectionsOfAsync(first.Account, Token));
+
+        using var one = await ConnectAsync(web, first);
+        await WaitUntilAsync(() => watcher.ConnectionCount == 1);
+        var withOne = await dovecot.ImapConnectionsOfAsync(first.Account, Token);
+        using var two = await ConnectAsync(web, first, negotiate: false); // another tab
+        using var three = await ConnectAsync(web, second, negotiate: false); // another device
+        await Task.Delay(3000, Token);
+
+        Assert.Equal(1, withOne); // one connection for the mailbox: the one that watches
+        Assert.Equal(1, watcher.ConnectionCount);
+        Assert.Equal(1, await dovecot.ImapConnectionsOfAsync(first.Account, Token)); // still one, with three browsers listening
+        Assert.Equal(3, web.Services.GetRequiredService<MailHubConnections>().Count);
+    }
+
+    [Fact]
+    public async Task The_Watching_Connection_Is_Closed_When_The_Last_Browser_Leaves()
+    {
+        var web = await StartAsync(); // the connection outlives the last browser by a second ("Imap:IdleGrace")
+        var user = await SignInAsync(web);
+        var watcher = (MailboxWatcher)web.Services.GetRequiredService<IMailboxWatcher>();
+        using (var hub = await ConnectAsync(web, user, negotiate: false))
+        {
+            await WaitUntilAsync(() => watcher.ConnectionCount == 1);
+            await hub.Socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "bye", Token);
+        }
+
+        await WaitUntilAsync(() => watcher.ConnectionCount == 0 && watcher.WatchCount == 0);
+        await WaitUntilAsync(() => dovecot.ImapConnectionsOfAsync(user.Account, Token).GetAwaiter().GetResult() == 0);
+    }
+
+    [Fact]
+    public async Task Marks_And_Removals_Made_Elsewhere_Reach_The_Connection_As_Events()
+    {
+        var web = await StartAsync();
+        var user = await SignInAsync(web, messages: 3);
+        using var hub = await ConnectAsync(web, user, negotiate: false);
+        await Task.Delay(2000, Token);
+
+        await dovecot.DoveadmAsync(Token, "flags", "add", "-u", user.Account.Address, "\\Seen \\Flagged Work", "mailbox", "INBOX", "uid", "1");
+        var marks = await hub.NextEventAsync("marks", Long);
+        await dovecot.DoveadmAsync(Token, "expunge", "-u", user.Account.Address, "mailbox", "INBOX", "uid", "2");
+        var removed = await hub.NextEventAsync("removed", Long);
+
+        Assert.NotNull(marks);
+        Assert.True(marks.Value.GetProperty("seen").GetBoolean());
+        Assert.True(marks.Value.GetProperty("flagged").GetBoolean());
+        Assert.Equal(["Work"], marks.Value.GetProperty("labels").EnumerateArray().Select(l => l.GetString()));
+        Assert.NotNull(removed);
+        Assert.Equal(1, removed.Value.GetProperty("count").GetInt32());
+    }
+
+    [Fact]
+    public async Task What_Happened_While_The_Mail_Connection_Was_Down_Reaches_The_Connection_When_It_Is_Back()
+    {
+        // Between the application and the mail server there is a proxy that can cut the network.
+        await using var proxy = new FlakyProxy(dovecot.Host, dovecot.ImapPort);
+        var web = await StartAsync(imapHost: "127.0.0.1", imapPort: proxy.Port);
+        var user = await SignInAsync(web);
+        var watcher = (MailboxWatcher)web.Services.GetRequiredService<IMailboxWatcher>();
+        using var hub = await ConnectAsync(web, user, negotiate: false);
+        await WaitUntilAsync(() => watcher.ConnectionCount == 1);
+        await Task.Delay(2000, Token);
+
+        proxy.Refuse(true);
+        proxy.CutAll();
+        await WaitUntilAsync(() => watcher.ConnectionCount == 0);
+        await DeliverAsync(user.Account, "While the network was away");
+        proxy.Refuse(false);
+
+        var arrived = await hub.NextEventAsync("arrived", TimeSpan.FromSeconds(90));
+        Assert.NotNull(arrived);
+        Assert.Equal("While the network was away", arrived.Value.GetProperty("message").GetProperty("subject").GetString());
     }
 
     [Fact]
