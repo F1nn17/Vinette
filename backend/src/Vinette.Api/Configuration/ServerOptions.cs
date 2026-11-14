@@ -95,15 +95,34 @@ public sealed class ImapOptions : IValidatableObject
     }
 }
 
-public sealed class SmtpOptions
+/// <summary>The mail server's submission service, where mail is handed in to be sent (signed in with the user's own address and password).</summary>
+public sealed class SmtpOptions : IValidatableObject
 {
     public const string SectionName = "Smtp";
 
     [Required]
     public string Host { get; set; } = "localhost";
 
+    /// <summary>587 with <see cref="ConnectionSecurity.StartTls"/>, or 465 with <see cref="ConnectionSecurity.Tls"/>.</summary>
     [Range(1, 65535)]
     public int Port { get; set; } = 587;
 
     public ConnectionSecurity Security { get; set; } = ConnectionSecurity.StartTls;
+
+    /// <summary>Limit for connecting and for every reply of the submission service.</summary>
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Accept any TLS certificate of the submission service. Dev only (self-signed certificate); keep off in production,
+    /// otherwise passwords can be intercepted.
+    /// </summary>
+    public bool AllowInvalidCertificate { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Timeout <= TimeSpan.Zero)
+        {
+            yield return new ValidationResult("Timeout must be positive.", [nameof(Timeout)]);
+        }
+    }
 }
