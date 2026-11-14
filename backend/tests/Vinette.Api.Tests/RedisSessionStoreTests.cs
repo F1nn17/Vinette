@@ -154,6 +154,32 @@ public sealed class RedisSessionStoreTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Many_Sessions_Added_At_Once_Are_All_Stored_And_None_Is_Reported_As_A_Duplicate()
+    {
+        // Under load a transaction may be aborted without any key existing (a slow check, a busy connection): that must not be
+        // reported as "already exists", and a session that is new must always get stored.
+        var ids = Enumerable.Range(0, 200).Select(i => $"burst-{i}").ToList();
+
+        await Task.WhenAll(ids.Select(id => store.AddAsync(NewSession(id, $"user{id}@vinette.test"), Token)));
+
+        foreach (var id in ids)
+        {
+            Assert.NotNull(await store.GetAsync(id, Token));
+        }
+    }
+
+    [Fact]
+    public async Task Adding_A_Session_Whose_Id_Exists_Is_Still_Refused()
+    {
+        await store.AddAsync(NewSession("twice"), Token);
+
+        var again = await Record.ExceptionAsync(() => store.AddAsync(NewSession("twice", "bob@vinette.test"), Token));
+
+        Assert.IsType<InvalidOperationException>(again);
+        Assert.Equal("alice@vinette.test", (await store.GetAsync("twice", Token))!.Address); // the first one is untouched
+    }
+
+    [Fact]
     public async Task Sessions_Expire_In_Redis_On_Their_Own()
     {
         await store.AddAsync(NewSession("s1"), Token);

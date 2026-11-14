@@ -23,6 +23,16 @@ public sealed class RedisSessionStore(
     private const string Remember = "remember";
     private const string ClientIp = "ip";
 
+    // Creates a session unless its id exists; KEYS: session, address set; ARGV: lifetime in seconds, session id, then field and value pairs.
+    private const string AddScript = """
+        if redis.call('EXISTS', KEYS[1]) == 1 then return 0 end
+        redis.call('HSET', KEYS[1], unpack(ARGV, 3))
+        redis.call('EXPIRE', KEYS[1], ARGV[1])
+        redis.call('SADD', KEYS[2], ARGV[2])
+        redis.call('EXPIRE', KEYS[2], ARGV[1])
+        return 1
+        """;
+
     // Moves "seen" forward only: concurrent requests of one session cannot move it back.
     private const string TouchScript = """
         if redis.call('EXISTS', KEYS[1]) == 0 then return 0 end
@@ -47,16 +57,22 @@ public sealed class RedisSessionStore(
         ArgumentNullException.ThrowIfNull(session);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var key = SessionKey(session.Id);
-        var addressKey = AddressKey(session.Address);
-        var transaction = Database.CreateTransaction();
-        _ = transaction.AddCondition(Condition.KeyNotExists(key));
-        _ = transaction.HashSetAsync(key, ToEntries(session));
-        _ = transaction.KeyExpireAsync(key, keyLifetime);
-        _ = transaction.SetAddAsync(addressKey, session.Id);
-        _ = transaction.KeyExpireAsync(addressKey, keyLifetime);
+        // One script, so that "create unless it exists" is a single answer: 1 (created) or 0 (the id exists). A transaction with a
+        // condition answered "false" for an aborted transaction too (for instance a slow check under load), which was then
+        // reported as a duplicate; here a failure is an exception, and 0 can only mean that the key is there.
+        var entries = ToEntries(session);
+        var arguments = new List<RedisValue> { (long)keyLifetime.TotalSeconds, session.Id };
+        foreach (var entry in entries)
+        {
+            arguments.Add(entry.Name);
+            arguments.Add(entry.Value);
+        }
 
-        if (!await transaction.ExecuteAsync().WaitAsync(cancellationToken).ConfigureAwait(false))
+        var created = await Database
+            .ScriptEvaluateAsync(AddScript, [(RedisKey)SessionKey(session.Id), (RedisKey)AddressKey(session.Address)], [.. arguments])
+            .WaitAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if ((long)created != 1)
         {
             throw new InvalidOperationException("A session with this id already exists.");
         }
