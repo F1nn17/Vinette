@@ -1,4 +1,5 @@
 import {
+  HttpTransportType,
   HubConnectionBuilder,
   HubConnectionState,
   LogLevel,
@@ -36,9 +37,20 @@ const retryPolicy: IRetryPolicy = {
     isRefusal(context.retryReason) ? null : retryDelay(context.previousRetryCount),
 };
 
+/**
+ * WebSockets only, and without the negotiation request (VIN-088): the negotiation and the connection that follows it would have to
+ * reach the same instance of the application, which means "sticky" routing in the load balancer; a plain WebSocket needs none, so
+ * any instance can take it. The price: a proxy that does not pass WebSocket upgrades leaves the page without live updates (the
+ * notice "No connection" says so), where the library's fallbacks would have used long polling.
+ */
+export const HUB_OPTIONS = {
+  skipNegotiation: true,
+  transport: HttpTransportType.WebSockets,
+} as const;
+
 export function createHubConnection(): HubConnection {
   return new HubConnectionBuilder()
-    .withUrl(HUB_URL)
+    .withUrl(HUB_URL, HUB_OPTIONS)
     .withAutomaticReconnect(retryPolicy)
     .configureLogging(LogLevel.None) // nothing of the channel goes to the console
     .build();

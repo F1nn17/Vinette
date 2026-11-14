@@ -1,4 +1,5 @@
-import { isRefusal, retryDelay } from './connection';
+import { HttpTransportType } from '@microsoft/signalr';
+import { HUB_OPTIONS, HUB_URL, isRefusal, retryDelay } from './connection';
 
 describe('isRefusal', () => {
   it('is true for a refused session (401 or 403) however the library words it', () => {
@@ -31,5 +32,13 @@ describe('retryDelay', () => {
   it('spreads every wait by at most 20 percent either way, so that browsers do not come back together', () => {
     expect(retryDelay(2, () => 0)).toBe(3200);
     expect(retryDelay(2, () => 1)).toBe(4800);
+  });
+});
+
+describe('the connection', () => {
+  it('is a plain WebSocket, with no negotiation request, so that no instance of the application needs to be the same one twice', () => {
+    expect(HUB_OPTIONS.skipNegotiation).toBe(true);
+    expect(HUB_OPTIONS.transport).toBe(HttpTransportType.WebSockets);
+    expect(HUB_URL).toBe('/hubs/mail');
   });
 });
