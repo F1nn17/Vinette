@@ -51,6 +51,7 @@ public static class MailServices
             return new SenderVerifier(configured.Length > 0 ? configured : [imap.Host]);
         });
         services.AddSingleton<IMessageParser, MimeMessageParser>();
+        services.AddSingleton<IMessageComposer, MimeMessageComposer>();
         services.AddSingleton<IMessageHtmlSanitizer, MessageHtmlSanitizer>();
         services.AddSingleton<IDnsResolver, SystemDnsResolver>();
         services.AddSingleton<IExternalImageFetcher>(provider => new ExternalImageFetcher(
