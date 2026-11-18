@@ -108,6 +108,7 @@ api.MapMessageBatch();
 api.MapSettings();
 api.MapAttachments();
 api.MapDrafts();
+api.MapRecipientSuggestions();
 app.MapHub<MailHub>("/hubs/mail");
 app.MapBranding();
 
