@@ -112,7 +112,7 @@ public sealed class OutgoingMailServiceTests
             ["AppendMessageAsync"] = args =>
             {
                 order.Add("append");
-                appended.Calls.Add(((string)args[0]!, ((ReadOnlyMemory<byte>)args[1]!).ToArray(), (bool)args[2]!, (DateTimeOffset)args[3]!));
+                appended.Calls.Add(((string)args[0]!, ((ReadOnlyMemory<byte>)args[1]!).ToArray(), (bool)args[2]!, (DateTimeOffset)args[4]!));
                 return append is null ? Task.FromResult<MessageId?>(CopyId) : append();
             },
         });

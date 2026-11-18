@@ -125,7 +125,10 @@ public sealed class MimeMessageParser : IMessageParser
             string.IsNullOrEmpty(html) ? null : html,
             attachments,
             inline,
-            [.. message.Headers.Where(h => h.Id == HeaderId.AuthenticationResults).Select(h => h.Value)]);
+            [.. message.Headers.Where(h => h.Id == HeaderId.AuthenticationResults).Select(h => h.Value)],
+            [.. message.Bcc.Mailboxes.Select(ToAddress)],
+            string.IsNullOrWhiteSpace(message.InReplyTo) ? null : message.InReplyTo,
+            [.. message.References]);
     }
 
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);

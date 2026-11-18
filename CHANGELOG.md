@@ -77,6 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Project scaffold: backend (ASP.NET Core, .NET 10) and frontend (React + Vite) skeletons, build tooling, CI/CD, Docker and systemd deployment, documentation.
 - Attachments can be uploaded for a message that is being written: `POST /api/v1/attachments` (one file, `multipart/form-data`, read as it arrives), `GET /api/v1/attachments` (waiting files and the limits) and `DELETE /api/v1/attachments/{id}` (also cancels a finished upload). Limits per mailbox: 20 MB per file, 25 MB in all, 20 files (`Attachments:MaxFileBytes`, `MaxTotalBytes`, `MaxFiles`); a refused upload leaves nothing behind (`413 attachment_too_large` / `attachments_too_large`, `409 too_many_attachments`). Files wait in `Attachments:Path` (`VINETTE_Attachments__Path`; `/data/attachments` in the Docker image, `/var/lib/vinette/attachments` in the systemd unit) and are removed after `Attachments:Lifetime` (24 h).
+- Drafts: `POST /api/v1/drafts` keeps what is being written in the mailbox's Drafts folder as an ordinary mail flagged as a draft (so other mail programs see it too; no recipient is needed, hidden recipients and the uploaded files are kept) and removes the version it replaces, `GET /api/v1/drafts/{id}` opens one to continue it (its files come back among the uploaded files), `DELETE /api/v1/drafts/{id}` deletes one for good. Only messages of the Drafts folder can be reached this way; a mailbox without a Drafts folder gets `409 no_target_folder` (none is created).
 
 ### Changed
 

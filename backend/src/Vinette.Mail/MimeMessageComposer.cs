@@ -27,7 +27,11 @@ public sealed partial class MimeMessageComposer(TimeProvider? timeProvider = nul
     [GeneratedRegex(@"^[^\s<>@]+@[^\s<>@]+$", RegexOptions.CultureInvariant)]
     private static partial Regex MessageIdForm();
 
-    public ComposedMessage Compose(OutgoingMessage message)
+    public ComposedMessage Compose(OutgoingMessage message) => Build(message, draft: false);
+
+    public ComposedMessage ComposeDraft(OutgoingMessage message) => Build(message, draft: true);
+
+    private ComposedMessage Build(OutgoingMessage message, bool draft)
     {
         ArgumentNullException.ThrowIfNull(message);
 
@@ -39,7 +43,7 @@ public sealed partial class MimeMessageComposer(TimeProvider? timeProvider = nul
             .Select(a => a.Address)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-        if (recipients.Count == 0)
+        if (recipients.Count == 0 && !draft)
         {
             throw new ArgumentException("A message needs at least one recipient.", nameof(message));
         }
@@ -57,7 +61,12 @@ public sealed partial class MimeMessageComposer(TimeProvider? timeProvider = nul
         var mime = new MimeMessage();
         mime.From.Add(from);
         mime.To.AddRange(to);
-        mime.Cc.AddRange(cc); // the hidden recipients are in the envelope only
+        mime.Cc.AddRange(cc); // the hidden recipients are in the envelope only, except in a draft, which is the user's own
+        if (draft)
+        {
+            mime.Bcc.AddRange(bcc);
+        }
+
         mime.Subject = OneLine(message.Subject ?? string.Empty);
         mime.Date = message.Date ?? time.GetUtcNow();
 

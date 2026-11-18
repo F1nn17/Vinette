@@ -12,7 +12,7 @@ namespace Vinette.Api.Attachments;
 /// <param name="FileName">The name the recipient will see (cleaned).</param>
 /// <param name="ContentType">The type it will be sent with.</param>
 /// <param name="Size">Size in bytes.</param>
-public sealed record AttachmentDto(string Id, string FileName, string ContentType, long Size);
+public sealed record UploadedAttachmentDto(string Id, string FileName, string ContentType, long Size);
 
 /// <summary>What may be uploaded, per mailbox.</summary>
 /// <param name="MaxFileBytes">The biggest single file.</param>
@@ -21,7 +21,7 @@ public sealed record AttachmentDto(string Id, string FileName, string ContentTyp
 public sealed record AttachmentLimitsDto(long MaxFileBytes, long MaxTotalBytes, int MaxFiles);
 
 /// <summary>The files that wait, and the limits.</summary>
-public sealed record AttachmentsResponse(IReadOnlyList<AttachmentDto> Items, AttachmentLimitsDto Limits);
+public sealed record AttachmentsResponse(IReadOnlyList<UploadedAttachmentDto> Items, AttachmentLimitsDto Limits);
 
 /// <summary>
 /// Uploading files to attach to a message (VIN-093): <c>POST /attachments</c> takes one file as <c>multipart/form-data</c>, read as it
@@ -38,7 +38,7 @@ public static class AttachmentEndpoints
         api.MapPost("/attachments", UploadAsync)
             .WithName("UploadAttachment")
             .WithTags("Attachments")
-            .Produces<AttachmentDto>(StatusCodes.Status201Created)
+            .Produces<UploadedAttachmentDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status409Conflict)
@@ -57,7 +57,7 @@ public static class AttachmentEndpoints
         return api;
     }
 
-    private static AttachmentDto ToDto(StoredAttachment a) => new(a.Id, a.FileName, a.ContentType, a.Size);
+    private static UploadedAttachmentDto ToDto(StoredAttachment a) => new(a.Id, a.FileName, a.ContentType, a.Size);
 
     private static AttachmentLimitsDto ToDto(AttachmentLimits l) => new(l.MaxFileBytes, l.MaxTotalBytes, l.MaxFiles);
 

@@ -40,6 +40,9 @@ public sealed record InlinePart(string PartId, string ContentId, string ContentT
 /// <param name="Attachments">The attached files, in the order of the message.</param>
 /// <param name="InlineParts">The parts referred to by <c>cid:</c>.</param>
 /// <param name="AuthenticationResults">The values of the Authentication-Results headers, as written (for the sender check).</param>
+/// <param name="Bcc">The Bcc header: only a draft has one (a delivered mail never names its hidden recipients).</param>
+/// <param name="InReplyTo">The In-Reply-To header without angle brackets; null if absent.</param>
+/// <param name="References">The Message-IDs of the References header without angle brackets, oldest first.</param>
 public sealed record ParsedMessage(
     string Subject,
     MailAddressInfo? From,
@@ -51,7 +54,10 @@ public sealed record ParsedMessage(
     string? Html,
     IReadOnlyList<MessageAttachment> Attachments,
     IReadOnlyList<InlinePart> InlineParts,
-    IReadOnlyList<string> AuthenticationResults);
+    IReadOnlyList<string> AuthenticationResults,
+    IReadOnlyList<MailAddressInfo>? Bcc = null,
+    string? InReplyTo = null,
+    IReadOnlyList<string>? References = null);
 
 /// <summary>An attached file with its bytes.</summary>
 /// <param name="Attachment">What the message lists about it: safe name, declared type, size.</param>
