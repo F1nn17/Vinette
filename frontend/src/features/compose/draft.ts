@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiPost } from '@/shared/api/client';
 import type { components } from '@/shared/api/schema';
 import type { ComposeBody } from './editor-text';
@@ -54,6 +54,17 @@ export function buildDraftContent(
 export type DraftStatus =
   { state: 'idle' } | { state: 'saving' } | { state: 'saved'; at: Date } | { state: 'failed' };
 
+export interface DraftAutosave {
+  status: DraftStatus;
+  /**
+   * Stops saving and waits for a save that is running; returns the id of the saved draft (null if there is none). The message is
+   * about to go out or the draft is about to be deleted, and nothing may write the draft again meanwhile.
+   */
+  settle: () => Promise<string | null>;
+  /** Takes saving up again (the send failed and the message goes on being written). */
+  resume: () => void;
+}
+
 /**
  * Keeps the draft of the message on the server (VIN-094) while it is written (VIN-100): saved a moment after the last change, one save at a time
  * (a change made during a save is saved right after it), and at once when the page is hidden or closed or the screen is left, so that closing
@@ -63,12 +74,13 @@ export type DraftStatus =
 export function useDraftAutosave(
   content: DraftContent | null,
   delay = AUTOSAVE_DELAY_MS,
-): DraftStatus {
+): DraftAutosave {
   const [status, setStatus] = useState<DraftStatus>({ state: 'idle' });
   const key = content === null ? '' : JSON.stringify(content);
   const latest = useRef({ content, key });
   const saved = useRef('');
-  const running = useRef(false);
+  const running = useRef<Promise<void> | null>(null);
+  const paused = useRef(false);
   const ids = useRef<{ previousId: string | null; messageId: string | null }>({
     previousId: null,
     messageId: null,
@@ -78,12 +90,15 @@ export function useDraftAutosave(
     latest.current = { content, key };
   });
 
-  // Saves until what is on the server is what is on the screen.
-  const save = useRef(async (keepalive: boolean) => {
-    if (running.current) return; // the running save looks again when it is done
-    running.current = true;
-    try {
-      while (latest.current.content !== null && latest.current.key !== saved.current) {
+  // Saves until what is on the server is what is on the screen; one run at a time, the running one looks again when it is done.
+  const save = useCallback((keepalive: boolean): Promise<void> => {
+    if (running.current) return running.current;
+    const started = (async () => {
+      while (
+        !paused.current &&
+        latest.current.content !== null &&
+        latest.current.key !== saved.current
+      ) {
         const { content: now, key: nowKey } = latest.current;
         setStatus({ state: 'saving' });
         try {
@@ -101,27 +116,30 @@ export function useDraftAutosave(
           return; // the next change tries again
         }
       }
-    } finally {
-      running.current = false;
-    }
-  });
+    })();
+    running.current = started;
+    void started.finally(() => {
+      if (running.current === started) running.current = null;
+    });
+    return started;
+  }, []);
 
   // Saved a moment after the last change.
   useEffect(() => {
     if (key === '' || key === saved.current) return;
-    const timer = setTimeout(() => void save.current(false), delay);
+    const timer = setTimeout(() => void save(false), delay);
     return () => clearTimeout(timer);
-  }, [key, delay]);
+  }, [key, delay, save]);
 
   // Saved at once when the page goes away or the screen is left.
   useEffect(() => {
-    const flush = () => void save.current(true);
+    const flush = () => void save(true);
     const onHide = () => {
       if (document.visibilityState === 'hidden') flush();
     };
     const onLeave = (e: BeforeUnloadEvent) => {
       const unsaved = latest.current.content !== null && latest.current.key !== saved.current;
-      if (unsaved || running.current) e.preventDefault();
+      if (!paused.current && (unsaved || running.current)) e.preventDefault();
     };
     document.addEventListener('visibilitychange', onHide);
     window.addEventListener('pagehide', flush);
@@ -132,7 +150,17 @@ export function useDraftAutosave(
       window.removeEventListener('beforeunload', onLeave);
       flush();
     };
-  }, []);
+  }, [save]);
 
-  return status;
+  const settle = async () => {
+    paused.current = true;
+    while (running.current) await running.current;
+    return ids.current.previousId;
+  };
+  const resume = () => {
+    paused.current = false;
+    void save(false);
+  };
+
+  return { status, settle, resume };
 }

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
+import { ToastProvider } from '@/shared/toast';
 import { resetCsrfToken } from '@/shared/api/client';
 import { FakeXhr } from '@/shared/api/fake-xhr';
 import { ComposeScreen } from './ComposeScreen';
@@ -44,7 +45,9 @@ function open() {
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      <RouterProvider router={router} />
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
     </QueryClientProvider>,
   );
 }

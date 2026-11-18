@@ -78,6 +78,8 @@ export function MessageEditor({ value, onChange }: MessageEditorProps) {
     ],
     content: value.html,
     editorProps: {
+      // Ctrl+Enter sends the message; the editor must not take it for a line break.
+      handleKeyDown: (_view, event) => event.key === 'Enter' && (event.ctrlKey || event.metaKey),
       attributes: {
         role: 'textbox',
         'aria-multiline': 'true',

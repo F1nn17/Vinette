@@ -75,6 +75,24 @@
     "draftSaved": "Draft saved at {{time}}",
     "draftSaving": "Saving the draft…",
     "draftFailed": "Could not save the draft. Check your connection: we will try again at the next change.",
+    "send": "Send",
+    "sending": "Sending…",
+    "sendHint": "Ctrl + Enter to send",
+    "deleteDraft": "Delete draft",
+    "problem": {
+      "noRecipients": "Add at least one recipient.",
+      "invalidAddress": "Some recipient addresses are not valid. Fix or remove them.",
+      "uploading": "Wait until the files are uploaded.",
+      "failedFiles": "Not all files are attached. Remove them from the list or upload them again."
+    },
+    "noSubjectTitle": "Send without a subject?",
+    "noSubjectText": "The message has no subject. It will be harder for the recipient to tell what it is about.",
+    "sent": "Message sent",
+    "sentNoCopy": "The message was sent, but its copy could not be saved in Sent.",
+    "deleteDraftTitle": "Delete the draft?",
+    "deleteDraftText": "The message and its attached files will be deleted. This cannot be undone.",
+    "deleteDraftFailed": "Could not delete the draft. Check your connection and try again.",
+    "draftDeleted": "Draft deleted",
     "form": "Message"
   },
   "shortcuts": {

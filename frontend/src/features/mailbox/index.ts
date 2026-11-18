@@ -8,3 +8,4 @@ export { NavMenuButton } from './NavMenuButton';
 export { useFolders } from './api';
 export { folderOfId, useMessageBatch } from './batch';
 export { usePurge } from './purge';
+export { Confirm } from './Confirm';

@@ -4,29 +4,6 @@ import { useState } from 'react';
 import { EMPTY_BODY, type ComposeBody } from './editor-text';
 import { MessageEditor } from './MessageEditor';
 
-// ProseMirror measures the page while it moves the cursor into view; jsdom has no layout.
-beforeAll(() => {
-  const rect = {
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    toJSON: () => ({}),
-  };
-  Range.prototype.getBoundingClientRect = () => rect as DOMRect;
-  Range.prototype.getClientRects = () =>
-    ({
-      length: 0,
-      item: () => null,
-      [Symbol.iterator]: [][Symbol.iterator],
-    }) as unknown as DOMRectList;
-  document.elementFromPoint = () => null;
-});
-
 function Harness({ initial = EMPTY_BODY, seen }: { initial?: ComposeBody; seen?: ComposeBody[] }) {
   const [value, setValue] = useState(initial);
   return (
