@@ -1,10 +1,8 @@
-import { useTranslation } from 'react-i18next';
+import { useSession } from '@/features/auth';
+import { ComposeScreen } from '@/features/compose';
 
+/** `/compose`: a new message. */
 export function ComposePage() {
-  const { t } = useTranslation();
-  return (
-    <main className="p-8">
-      <h1 className="text-2xl font-semibold">{t('compose.title')}</h1>
-    </main>
-  );
+  const { address } = useSession();
+  return <ComposeScreen address={address ?? ''} />;
 }

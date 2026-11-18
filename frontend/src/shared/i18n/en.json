@@ -34,7 +34,19 @@
     "noMessage": "Select a message to read"
   },
   "compose": {
-    "title": "New message"
+    "title": "New message",
+    "back": "Inbox",
+    "backLabel": "Back to the inbox",
+    "from": "From",
+    "to": "To",
+    "cc": "Cc",
+    "bcc": "Bcc",
+    "subject": "Subject",
+    "addCc": "Add recipients in copy",
+    "addBcc": "Add recipients in hidden copy",
+    "removeCc": "Remove the Cc row",
+    "removeBcc": "Remove the Bcc row",
+    "form": "Message"
   },
   "shortcuts": {
     "title": "Keyboard shortcuts",
