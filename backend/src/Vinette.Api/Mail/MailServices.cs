@@ -53,6 +53,7 @@ public static class MailServices
         services.AddSingleton<IMessageParser, MimeMessageParser>();
         services.AddSingleton<IMessageComposer, MimeMessageComposer>();
         services.AddSingleton<IOutgoingMail, OutgoingMailService>();
+        services.AddSingleton<IDrafts, DraftService>();
         services.AddSingleton<IMessageHtmlSanitizer, MessageHtmlSanitizer>();
         services.AddSingleton<IDnsResolver, SystemDnsResolver>();
         services.AddSingleton<IExternalImageFetcher>(provider => new ExternalImageFetcher(

@@ -65,4 +65,11 @@ public interface IMessageComposer
     /// user typed can add a header (line breaks in a subject or a name are not carried into the mail).
     /// </summary>
     ComposedMessage Compose(OutgoingMessage message);
+
+    /// <summary>
+    /// Builds the mail as a draft to be kept in the drafts folder (not sent): the same checks and encoding, but nobody has to be named
+    /// yet, and the hidden recipients are written into the draft (it is the user's own copy; <see cref="ComposedMessage.Envelope"/> is
+    /// not for sending). Throws <see cref="ArgumentException"/> for what cannot be built.
+    /// </summary>
+    ComposedMessage ComposeDraft(OutgoingMessage message);
 }

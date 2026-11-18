@@ -40,7 +40,7 @@ public sealed partial class OutgoingMailService(
                     var sent = folders.FirstOrDefault(f => f.Role == FolderRole.Sent && f.CanContainMessages);
                     return sent is null
                         ? (SentCopyOutcome.NoSentFolder, (MessageId?)null)
-                        : (SentCopyOutcome.Saved, await session.AppendMessageAsync(sent.Path, composed.Raw, seen: true, sentAt, token).ConfigureAwait(false));
+                        : (SentCopyOutcome.Saved, await session.AppendMessageAsync(sent.Path, composed.Raw, seen: true, draft: false, sentAt, token).ConfigureAwait(false));
                 },
                 timeout.Token,
                 safeToRepeat: false).ConfigureAwait(false);

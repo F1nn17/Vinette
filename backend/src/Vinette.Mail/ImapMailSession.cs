@@ -339,7 +339,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         await folder.ExpungeAsync([uid], cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<MessageId?> AppendMessageAsync(string folderPath, ReadOnlyMemory<byte> message, bool seen, DateTimeOffset sentAt, CancellationToken cancellationToken)
+    public async Task<MessageId?> AppendMessageAsync(string folderPath, ReadOnlyMemory<byte> message, bool seen, bool draft, DateTimeOffset sentAt, CancellationToken cancellationToken)
     {
         IMailFolder folder;
         try
@@ -360,7 +360,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         UniqueId? uid;
         try
         {
-            uid = await folder.AppendAsync(new AppendRequest(parsed, seen ? MessageFlags.Seen : MessageFlags.None, sentAt), cancellationToken).ConfigureAwait(false);
+            uid = await folder.AppendAsync(new AppendRequest(parsed, (seen ? MessageFlags.Seen : MessageFlags.None) | (draft ? MessageFlags.Draft : MessageFlags.None), sentAt), cancellationToken).ConfigureAwait(false);
         }
         catch (ImapCommandException exception) when (exception.Response == ImapCommandResponse.No)
         {

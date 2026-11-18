@@ -143,11 +143,11 @@ public sealed class ProblemDetailsTests
         var (app, client) = await StartAsync();
         await using var _ = app;
 
-        var response = await client.GetAsync("/number?value=abc", TestContext.Current.CancellationToken);
+        var response = await client.GetAsync("/number?value=not-a-number-zq", TestContext.Current.CancellationToken);
         var problem = await ReadProblemAsync(response);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("bad_request", problem.GetProperty("code").GetString());
-        Assert.DoesNotContain("abc", problem.GetRawText(), StringComparison.Ordinal);
+        Assert.DoesNotContain("not-a-number-zq", problem.GetRawText(), StringComparison.Ordinal);
     }
 }
