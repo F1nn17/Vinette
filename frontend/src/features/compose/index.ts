@@ -12,3 +12,6 @@ export { AttachButton } from './AttachButton';
 export { AttachmentCards } from './AttachmentCards';
 export { useAttachments } from './attachments';
 export type { AttachmentItem } from './attachments';
+export { REPLY_MODES, startOf, subjectFor, recipientsFor, threadFor, bodyFor } from './reply';
+export type { Quote, ReplyMode, ReplyStart } from './reply';
+export { useQuote } from './useQuote';

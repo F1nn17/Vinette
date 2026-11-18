@@ -48,11 +48,17 @@ function renderPane(
   messageId: string | null = 'SU5CT1g.1.7',
   address = 'user@example.com',
   onBack?: () => void,
+  onCompose?: (mode: string) => void,
 ) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <ReadingPane messageId={messageId ?? undefined} address={address} onBack={onBack} />
+      <ReadingPane
+        messageId={messageId ?? undefined}
+        address={address}
+        onBack={onBack}
+        onCompose={onCompose}
+      />
     </QueryClientProvider>,
   );
 }
@@ -474,13 +480,28 @@ describe('ReadingPane', () => {
       }
     });
 
-    it('keeps replying and forwarding off until the editor exists', async () => {
+    it('cannot reply or forward where the screen gives no way to', async () => {
       mockApi(() => message());
       renderPane();
 
       const bar = await screen.findByRole('toolbar', { name: 'Действия с письмом' });
       expect(within(bar).getByRole('button', { name: 'Ответить' })).toBeDisabled();
       expect(within(bar).getByRole('button', { name: 'Переслать' })).toBeDisabled();
+    });
+
+    it('starts an answer, an answer to everybody or a forward in the editor', async () => {
+      mockApi(() => message());
+      const asked: string[] = [];
+      renderPane('SU5CT1g.1.7', 'user@example.com', undefined, (mode) => asked.push(mode));
+      await screen.findByRole('heading', { name: 'Layouts, second iteration' }); // the message is loaded: the bar before it has no actions
+      const bar = screen.getByRole('toolbar', { name: 'Действия с письмом' });
+
+      await userEvent.click(within(bar).getByRole('button', { name: 'Ответить' }));
+      await userEvent.click(within(bar).getByRole('button', { name: 'Переслать' }));
+      await userEvent.click(within(bar).getByRole('button', { name: 'Ещё' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Ответить всем' }));
+
+      expect(asked).toEqual(['reply', 'forward', 'replyAll']);
     });
 
     it('cannot archive, mark as spam or delete where the screen gives no way to', async () => {

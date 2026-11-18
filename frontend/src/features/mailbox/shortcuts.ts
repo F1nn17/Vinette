@@ -2,7 +2,16 @@ import { useEffect, useRef } from 'react';
 
 /** What a hot key asks for (DESIGN.md section 5). */
 export type ShortcutName =
-  'next' | 'previous' | 'open' | 'archive' | 'delete' | 'labels' | 'search' | 'compose' | 'help';
+  | 'next'
+  | 'previous'
+  | 'open'
+  | 'reply'
+  | 'archive'
+  | 'delete'
+  | 'labels'
+  | 'search'
+  | 'compose'
+  | 'help';
 
 /** Inputs where the user types text; a box, a radio button or a button is an input too, but nothing is typed into it. */
 const TEXT_FIELD =
@@ -60,6 +69,8 @@ export function shortcutOf(
       return 'next';
     case 'KeyK':
       return 'previous';
+    case 'KeyR':
+      return 'reply';
     case 'KeyE':
       return 'archive';
     case 'KeyC':

@@ -27,6 +27,11 @@ export function buildDraftContent(
   values: ComposeValues,
   body: ComposeBody,
   attachmentIds: string[],
+  /** The conversation the message answers (an answer only). */
+  thread: { inReplyTo: string | null; references: string[] | null } = {
+    inReplyTo: null,
+    references: null,
+  },
 ): DraftContent | null {
   const empty =
     values.to.length === 0 &&
@@ -46,8 +51,8 @@ export function buildDraftContent(
     text: body.plain ? body.text : null,
     html: body.plain || body.html === '' ? null : body.html,
     attachmentIds,
-    inReplyTo: null,
-    references: null,
+    inReplyTo: thread.inReplyTo,
+    references: thread.references,
   };
 }
 

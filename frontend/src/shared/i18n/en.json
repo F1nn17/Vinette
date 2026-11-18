@@ -93,6 +93,12 @@
     "deleteDraftText": "The message and its attached files will be deleted. This cannot be undone.",
     "deleteDraftFailed": "Could not delete the draft. Check your connection and try again.",
     "draftDeleted": "Draft deleted",
+    "loadingMessage": "Opening the message…",
+    "reply": {
+      "wrote": "On {{date}}, {{sender}} wrote:",
+      "forwarded": "---------- Forwarded message ----------",
+      "date": "Date"
+    },
     "form": "Message"
   },
   "shortcuts": {
@@ -101,6 +107,7 @@
     "next": "Next message",
     "previous": "Previous message",
     "open": "Open the message",
+    "reply": "Reply",
     "archive": "Archive",
     "delete": "Delete",
     "labels": "Labels",
@@ -217,6 +224,7 @@
     "actions": "Message actions",
     "reply": "Reply",
     "forward": "Forward",
+    "replyAll": "Reply to all",
     "archive": "Archive",
     "spam": "Mark as spam",
     "delete": "Delete",

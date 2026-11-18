@@ -128,7 +128,8 @@ public sealed class MimeMessageParser : IMessageParser
             [.. message.Headers.Where(h => h.Id == HeaderId.AuthenticationResults).Select(h => h.Value)],
             [.. message.Bcc.Mailboxes.Select(ToAddress)],
             string.IsNullOrWhiteSpace(message.InReplyTo) ? null : message.InReplyTo,
-            [.. message.References]);
+            [.. message.References],
+            [.. message.ReplyTo.Mailboxes.Select(ToAddress)]);
     }
 
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);

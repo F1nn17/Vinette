@@ -9,6 +9,8 @@ import { textToHtml, normalizeLink, type ComposeBody } from './editor-text';
 export interface MessageEditorProps {
   value: ComposeBody;
   onChange: (value: ComposeBody) => void;
+  /** Puts the cursor at the start of the text when the editor appears (an answer: write above the quote). */
+  autoFocus?: boolean;
 }
 
 const buttonClass =
@@ -51,7 +53,7 @@ const bodyOf = (editor: Editor, plain: boolean): ComposeBody => ({
  * `http`, `https` or `mailto` only. "Plain text" drops the formatting and shows a text field; going back to formatting brings the old
  * formatting back if the text was not changed, and otherwise builds paragraphs from the text.
  */
-export function MessageEditor({ value, onChange }: MessageEditorProps) {
+export function MessageEditor({ value, onChange, autoFocus }: MessageEditorProps) {
   const { t } = useTranslation();
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkText, setLinkText] = useState('');
@@ -77,6 +79,7 @@ export function MessageEditor({ value, onChange }: MessageEditorProps) {
       }),
     ],
     content: value.html,
+    autofocus: autoFocus ? 'start' : false,
     editorProps: {
       // Ctrl+Enter sends the message; the editor must not take it for a line break.
       handleKeyDown: (_view, event) => event.key === 'Enter' && (event.ctrlKey || event.metaKey),

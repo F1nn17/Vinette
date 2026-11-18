@@ -190,34 +190,10 @@ public static class DraftEndpoints
         }
 
         var message = opened.Message;
-        var stored = new List<StoredAttachment>(message.Attachments.Count);
-        try
+        var (stored, problem) = await StoredFiles.SaveAllAsync(store, credentials.Address, message.Attachments, cancellationToken);
+        if (problem is not null)
         {
-            foreach (var file in message.Attachments)
-            {
-                using var content = new MemoryStream(file.Content.ToArray(), writable: false);
-                stored.Add(await store.SaveAsync(credentials.Address, file.FileName, file.ContentType, content, cancellationToken));
-            }
-        }
-        catch (Exception exception)
-        {
-            // Not all of the draft's files could be taken: none is left behind (the draft itself stays where it is).
-            foreach (var done in stored)
-            {
-                _ = await store.RemoveAsync(credentials.Address, done.Id, CancellationToken.None);
-            }
-
-            if (exception is AttachmentRefusedException refused)
-            {
-                return refused.Reason switch
-                {
-                    AttachmentRefusal.FileTooLarge => Problem(StatusCodes.Status413PayloadTooLarge, "A file of the draft is too large.", ErrorCodes.AttachmentTooLarge),
-                    AttachmentRefusal.TotalTooLarge => Problem(StatusCodes.Status413PayloadTooLarge, "The files of the draft are too large together.", ErrorCodes.AttachmentsTooLarge),
-                    _ => Problem(StatusCodes.Status409Conflict, "Too many files are attached.", ErrorCodes.TooManyAttachments),
-                };
-            }
-
-            throw;
+            return problem; // none of the draft's files is left behind (the draft itself stays where it is)
         }
 
         var html = string.IsNullOrWhiteSpace(message.Html) ? null : sanitizer.Sanitize(message.Html);

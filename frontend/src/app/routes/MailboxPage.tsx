@@ -62,6 +62,10 @@ export function MailboxPage() {
             folderRole={role}
             labelsFor={labelsFor}
             onLabelsForChange={setLabelsFor}
+            onCompose={(mode) => {
+              if (messageId !== undefined)
+                void navigate(`/compose?${mode}=${encodeURIComponent(messageId)}`);
+            }}
             onAction={(action) => {
               if (messageId === undefined) return;
               if (action === 'delete') {

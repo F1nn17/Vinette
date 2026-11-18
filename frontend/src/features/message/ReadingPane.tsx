@@ -11,7 +11,7 @@ import { AttachmentList } from './AttachmentList';
 import { useSetFlags } from './flags';
 import { ImageTrust } from './ImageTrust';
 import { MessageFrame } from './MessageFrame';
-import { ReaderActionBar, type ReaderAction } from './ReaderActionBar';
+import { ReaderActionBar, type ComposeFrom, type ReaderAction } from './ReaderActionBar';
 import { SenderCheckBadge } from './SenderCheckBadge';
 
 export interface ReadingPaneProps {
@@ -25,6 +25,8 @@ export interface ReadingPaneProps {
   folderRole?: string;
   /** Archives, marks as spam, deletes or marks as unread the open message; the screen decides where to go afterwards. */
   onAction?: (action: ReaderAction) => void;
+  /** Starts an answer or a forward of the open message; the screen decides where the editor opens. */
+  onCompose?: (mode: ComposeFrom) => void;
   /** The message whose "Labels" panel is open, when the screen holds that state (the key `l` opens it from the list); absent: the pane holds it itself. */
   labelsFor?: string | null;
   onLabelsForChange?: (id: string | null) => void;
@@ -176,6 +178,7 @@ export function ReadingPane({
   onBack,
   folderRole,
   onAction,
+  onCompose,
   labelsFor: labelsForProp,
   onLabelsForChange,
 }: ReadingPaneProps) {
@@ -240,6 +243,7 @@ export function ReadingPane({
         onBack={onBack}
         folderRole={folderRole}
         onAction={onAction}
+        onCompose={onCompose}
         flagged={message.flagged}
         labels={{
           open: labelsOpen,

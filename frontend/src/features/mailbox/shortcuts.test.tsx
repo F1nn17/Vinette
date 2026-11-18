@@ -13,6 +13,7 @@ describe('shortcutOf', () => {
     [{ key: 'j', code: 'KeyJ' }, 'next'],
     [{ key: 'k', code: 'KeyK' }, 'previous'],
     [{ key: 'Enter', code: 'Enter' }, 'open'],
+    [{ key: 'r', code: 'KeyR' }, 'reply'],
     [{ key: 'e', code: 'KeyE' }, 'archive'],
     [{ key: '#', code: 'Digit3', shiftKey: true }, 'delete'],
     [{ key: '/', code: 'Slash' }, 'search'],
@@ -27,6 +28,7 @@ describe('shortcutOf', () => {
     expect(press({ key: 'о', code: 'KeyJ' })).toBe('next');
     expect(press({ key: 'л', code: 'KeyK' })).toBe('previous');
     expect(press({ key: 'у', code: 'KeyE' })).toBe('archive');
+    expect(press({ key: 'к', code: 'KeyR' })).toBe('reply');
     expect(press({ key: 'с', code: 'KeyC' })).toBe('compose');
     expect(press({ key: 'д', code: 'KeyL' })).toBe('labels');
     expect(press({ key: '№', code: 'Digit3', shiftKey: true })).toBe('delete');

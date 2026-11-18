@@ -16,6 +16,7 @@ import { ComposeForm } from './ComposeForm';
 import { buildDraftContent, useDraftAutosave, type DraftStatus } from './draft';
 import { EMPTY_BODY, type ComposeBody } from './editor-text';
 import { MessageEditor } from './MessageEditor';
+import type { ReplyStart } from './reply';
 import { sendBlocker } from './send';
 
 type Sent = components['schemas']['SentDto'];
@@ -23,6 +24,8 @@ type Sent = components['schemas']['SentDto'];
 export interface ComposeScreenProps {
   /** The mailbox the message goes from. */
   address: string;
+  /** What the message starts with: an answer or a forward (VIN-102); absent for a new message. */
+  start?: ReplyStart;
 }
 
 /**
@@ -30,17 +33,20 @@ export interface ComposeScreenProps {
  * "Delete draft". Sending first stops the autosave and lets a save that is running finish, so that the draft is not written again after the
  * message is out; if the send fails the autosave goes on and the message stays on the screen with the reason in words.
  */
-export function ComposeScreen({ address }: ComposeScreenProps) {
+export function ComposeScreen({ address, start }: ComposeScreenProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
-  const [values, setValues] = useState<ComposeValues>(EMPTY_COMPOSE);
-  const [body, setBody] = useState<ComposeBody>(EMPTY_BODY);
+  const [values, setValues] = useState<ComposeValues>(start?.values ?? EMPTY_COMPOSE);
+  const [body, setBody] = useState<ComposeBody>(start?.body ?? EMPTY_BODY);
   const attachments = useAttachments();
   const attachmentIds = attachments.items.flatMap((a) =>
     a.status === 'done' && a.id ? [a.id] : [],
   );
-  const content = buildDraftContent(values, body, attachmentIds);
+  const content = buildDraftContent(values, body, attachmentIds, {
+    inReplyTo: start?.inReplyTo ?? null,
+    references: start?.references ?? null,
+  });
   const draft = useDraftAutosave(content);
   const [busy, setBusy] = useState<'sending' | 'deleting' | null>(null);
   const busyRef = useRef(false);
@@ -135,7 +141,7 @@ export function ComposeScreen({ address }: ComposeScreenProps) {
       </header>
       <main className="min-w-0 flex-1 p-7 max-md:p-3" onKeyDown={onKeyDown}>
         <ComposeForm address={address} values={values} onChange={setValues}>
-          <MessageEditor value={body} onChange={setBody} />
+          <MessageEditor value={body} onChange={setBody} autoFocus={start !== undefined} />
           <AttachmentCards items={attachments.items} onRemove={attachments.remove} />
           {problem && (
             <p

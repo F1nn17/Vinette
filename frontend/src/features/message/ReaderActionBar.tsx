@@ -7,6 +7,7 @@ import {
   Forward,
   MailPlus,
   Reply,
+  ReplyAll,
   Tag,
   Trash2,
 } from 'lucide-react';
@@ -14,6 +15,9 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, IconButton } from '@/shared/ui';
 import { MoreMenu } from './MoreMenu';
+
+/** How the message is answered: to the sender, to everybody, or passed on. */
+export type ComposeFrom = 'reply' | 'replyAll' | 'forward';
 
 /** What the buttons that move or mark the open message ask for. */
 export type ReaderAction = 'archive' | 'spam' | 'trash' | 'unread' | 'delete';
@@ -29,13 +33,15 @@ export interface ReaderActionBarProps {
   folderRole?: string;
   /** Archives, marks as spam, deletes (moves to the trash) or marks as unread; without it those buttons cannot be used. */
   onAction?: (action: ReaderAction) => void;
+  /** Starts an answer or a forward of the open message in the editor (VIN-102); without it those buttons cannot be used. */
+  onCompose?: (mode: ComposeFrom) => void;
   /** The "Labels" button and the panel it opens (VIN-078); without it the button is not shown. */
   labels?: { open: boolean; onToggle: () => void; menu: ReactNode };
 }
 
 /**
  * The actions of an open message (DESIGN.md §5). Archive, spam, delete (to the trash), the flag and "More" work (VIN-074);
- * replying and forwarding are in place as in the design and arrive with the editor (VIN-102). On a phone the bar has no
+ * "Reply" and "Forward" open the editor on the message (VIN-102), "Reply to all" is in "More". On a phone the bar has no
  * action buttons: "More" carries them.
  */
 export function ReaderActionBar({
@@ -44,6 +50,7 @@ export function ReaderActionBar({
   onBack,
   folderRole,
   onAction,
+  onCompose,
   labels,
 }: ReaderActionBarProps) {
   const { t } = useTranslation();
@@ -64,7 +71,8 @@ export function ReaderActionBar({
         size="sm"
         className="max-md:h-11"
         icon={<Reply {...icon} size={16} />}
-        disabled
+        disabled={!onCompose}
+        onClick={() => onCompose?.('reply')}
       >
         {t('reader.reply')}
       </Button>
@@ -73,7 +81,8 @@ export function ReaderActionBar({
         size="sm"
         className="max-md:h-11"
         icon={<Forward {...icon} size={16} />}
-        disabled
+        disabled={!onCompose}
+        onClick={() => onCompose?.('forward')}
       >
         {t('reader.forward')}
       </Button>
@@ -137,6 +146,13 @@ export function ReaderActionBar({
       <div className="ml-auto">
         <MoreMenu
           items={[
+            {
+              key: 'replyAll',
+              label: t('reader.replyAll'),
+              icon: <ReplyAll {...icon} />,
+              onSelect: () => onCompose?.('replyAll'),
+              disabled: !onCompose,
+            },
             ...(folderRole !== 'archive'
               ? [
                   {
