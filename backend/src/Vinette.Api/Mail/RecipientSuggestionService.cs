@@ -54,6 +54,9 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
 
         public Task<Index>? Building { get; set; }
 
+        /// <summary>People remembered while the first read was still under way: put in when it ends, so that they are not lost.</summary>
+        public List<MailAddressInfo> Pending { get; } = [];
+
         public long LastUsed { get; set; }
     }
 
@@ -107,28 +110,36 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
 
         lock (entry.Gate)
         {
-            if (entry.Current is not { } current)
+            if (entry.Current is { } current)
             {
-                return;
+                entry.Current = Merge(current, recipients, key);
             }
-
-            var merged = current.Contacts.ToDictionary(c => c.LowerAddress, StringComparer.Ordinal);
-            foreach (var person in recipients)
+            else if (entry.Building is not null)
             {
-                var address = (person.Address ?? string.Empty).Trim();
-                var lower = address.ToLowerInvariant();
-                if (!IsAddress(address) || lower == key)
-                {
-                    continue;
-                }
-
-                merged[lower] = merged.TryGetValue(lower, out var known)
-                    ? Make(string.IsNullOrWhiteSpace(person.Name) ? known.Name : person.Name.Trim(), known.Address, known.Score + SentWeight)
-                    : Make(person.Name?.Trim() ?? string.Empty, address, SentWeight);
+                entry.Pending.AddRange(recipients); // the read that is under way may have started before this message went out
             }
-
-            entry.Current = new Index(current.BuiltAt, [.. merged.Values.OrderByDescending(c => c.Score).Take(MaxContacts)]);
         }
+    }
+
+    /// <summary>The index with the people taken in as if they had just been written to.</summary>
+    private static Index Merge(Index current, IEnumerable<MailAddressInfo> recipients, string ownAddress)
+    {
+        var merged = current.Contacts.ToDictionary(c => c.LowerAddress, StringComparer.Ordinal);
+        foreach (var person in recipients)
+        {
+            var address = (person.Address ?? string.Empty).Trim();
+            var lower = address.ToLowerInvariant();
+            if (!IsAddress(address) || lower == ownAddress)
+            {
+                continue;
+            }
+
+            merged[lower] = merged.TryGetValue(lower, out var known)
+                ? Make(string.IsNullOrWhiteSpace(person.Name) ? known.Name : person.Name.Trim(), known.Address, known.Score + SentWeight)
+                : Make(person.Name?.Trim() ?? string.Empty, address, SentWeight);
+        }
+
+        return new Index(current.BuiltAt, [.. merged.Values.OrderByDescending(c => c.Score).Take(MaxContacts)]);
     }
 
     private Entry Touch(string mailbox)
@@ -148,28 +159,41 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
 
     private Task<Index> BuildAsync(Entry entry, MailCredentials credentials)
     {
+        var own = credentials.Address.ToLowerInvariant();
         // Runs on a thread of its own: the caller holds the lock while it starts this, and the read must not run under it.
-        var task = Task.Run(async () =>
+        return Task.Run(async () =>
         {
-            using var timeout = new CancellationTokenSource(BuildTimeout);
-            var contacts = await ReadAsync(credentials, timeout.Token).ConfigureAwait(false);
-            return new Index(time.GetUtcNow(), contacts);
-        });
-        _ = task.ContinueWith(
-            done =>
+            try
+            {
+                using var timeout = new CancellationTokenSource(BuildTimeout);
+                var contacts = await ReadAsync(credentials, timeout.Token).ConfigureAwait(false);
+                var built = new Index(time.GetUtcNow(), contacts);
+                lock (entry.Gate)
+                {
+                    // What was sent while the mailbox was being read is taken in, and the index is in place before anyone is told it is ready.
+                    if (entry.Pending.Count > 0)
+                    {
+                        built = Merge(built, entry.Pending, own);
+                        entry.Pending.Clear();
+                    }
+
+                    entry.Current = built;
+                    entry.Building = null;
+                }
+
+                return built;
+            }
+            catch
             {
                 lock (entry.Gate)
                 {
-                    if (done.IsCompletedSuccessfully)
-                    {
-                        entry.Current = done.Result;
-                    }
-
                     entry.Building = null; // a failed read is tried again by the next request
+                    entry.Pending.Clear();
                 }
-            },
-            TaskScheduler.Default);
-        return task;
+
+                throw;
+            }
+        });
     }
 
     private async Task RefreshAsync(Entry entry, MailCredentials credentials)

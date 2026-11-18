@@ -137,18 +137,10 @@ public static class DraftEndpoints
         }
 
         var credentials = http.GetMailCredentials(sessions);
-        var files = new List<OutgoingAttachment>();
-        foreach (var id in (request.AttachmentIds ?? []).Distinct(StringComparer.Ordinal))
+        var files = await OutgoingFiles.LoadAsync(store, credentials.Address, request.AttachmentIds, cancellationToken);
+        if (files is null)
         {
-            await using var content = await store.OpenAsync(credentials.Address, id, cancellationToken);
-            if (content is null)
-            {
-                return Problem(StatusCodes.Status400BadRequest, "An attached file is not there (any more).", ErrorCodes.BadRequest);
-            }
-
-            using var buffer = new MemoryStream();
-            await content.Content.CopyToAsync(buffer, cancellationToken);
-            files.Add(new OutgoingAttachment(content.Attachment.FileName, content.Attachment.ContentType, buffer.ToArray()));
+            return Problem(StatusCodes.Status400BadRequest, "An attached file is not there (any more).", ErrorCodes.BadRequest);
         }
 
         var message = new OutgoingMessage(

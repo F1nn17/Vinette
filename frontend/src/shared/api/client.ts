@@ -16,6 +16,8 @@ export class ApiError extends Error {
     message: string,
     /** Seconds until a retry makes sense (Retry-After of a 429), when the server said so. */
     readonly retryAfterSeconds?: number,
+    /** The address a `recipient_rejected` answer names: the one the mail server refused. */
+    readonly address?: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -72,10 +74,12 @@ function getCsrfToken(): Promise<string> {
 
 async function toApiError(response: Response): Promise<ApiError> {
   let code: string | undefined;
+  let address: string | undefined;
   let title = `Request failed: ${response.status}`;
   try {
-    const problem = (await response.json()) as { code?: string; title?: string };
+    const problem = (await response.json()) as { code?: string; title?: string; address?: string };
     code = problem.code;
+    address = typeof problem.address === 'string' ? problem.address : undefined;
     title = problem.title ?? title;
   } catch {
     // not a problem+json body
@@ -87,6 +91,7 @@ async function toApiError(response: Response): Promise<ApiError> {
     response.headers.get('X-Correlation-Id') ?? undefined,
     title,
     Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
+    address,
   );
 }
 

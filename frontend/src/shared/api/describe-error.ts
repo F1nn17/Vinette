@@ -21,7 +21,14 @@ export function describeApiError(error: unknown, t: Translate): string {
       case 'attachment_too_large':
       case 'attachments_too_large':
       case 'too_many_attachments':
+      case 'send_refused':
+      case 'send_too_large':
+      case 'send_uncertain':
         return t(`errors.${error.code}`);
+      case 'recipient_rejected':
+        return error.address
+          ? t('errors.recipient_rejected_named', { address: error.address })
+          : t('errors.recipient_rejected');
       case 'too_many_requests': {
         const minutes = Math.max(1, Math.ceil((error.retryAfterSeconds ?? 60) / 60));
         return t('errors.too_many_requests', { minutes });
