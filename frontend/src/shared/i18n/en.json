@@ -46,6 +46,10 @@
     "addBcc": "Add recipients in hidden copy",
     "removeCc": "Remove the Cc row",
     "removeBcc": "Remove the Bcc row",
+    "invalidAddress": "Not a valid address",
+    "removeRecipient": "Remove {{name}}",
+    "suggestions": "Address suggestions",
+    "recipientList": "Recipients: {{row}}",
     "form": "Message"
   },
   "shortcuts": {

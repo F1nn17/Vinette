@@ -46,6 +46,10 @@
     "addBcc": "Добавить получателей в скрытую копию",
     "removeCc": "Убрать строку «Копия»",
     "removeBcc": "Убрать строку «Скрытая»",
+    "invalidAddress": "Неверный адрес",
+    "removeRecipient": "Убрать: {{name}}",
+    "suggestions": "Подсказки адресов",
+    "recipientList": "Получатели: {{row}}",
     "form": "Письмо"
   },
   "shortcuts": {
