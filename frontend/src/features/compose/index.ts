@@ -8,3 +8,7 @@ export { EMPTY_BODY, normalizeLink, textToHtml } from './editor-text';
 export type { ComposeBody } from './editor-text';
 export { MessageEditor } from './MessageEditor';
 export type { MessageEditorProps } from './MessageEditor';
+export { AttachButton } from './AttachButton';
+export { AttachmentCards } from './AttachmentCards';
+export { useAttachments } from './attachments';
+export type { AttachmentItem } from './attachments';

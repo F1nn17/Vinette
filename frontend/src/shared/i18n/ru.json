@@ -67,6 +67,11 @@
     "linkAddress": "Адрес ссылки",
     "linkApply": "Применить",
     "linkInvalid": "Нужен адрес сайта или адрес почты.",
+    "files": "Прикреплённые файлы",
+    "attach": "Прикрепить файл",
+    "uploading": "Загрузка: {{name}}",
+    "cancelUpload": "Отменить загрузку: {{name}}",
+    "removeFile": "Убрать файл: {{name}}",
     "form": "Письмо"
   },
   "shortcuts": {

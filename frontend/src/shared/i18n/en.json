@@ -67,6 +67,11 @@
     "linkAddress": "Link address",
     "linkApply": "Apply",
     "linkInvalid": "Enter a website or an email address.",
+    "files": "Attached files",
+    "attach": "Attach file",
+    "uploading": "Uploading {{name}}",
+    "cancelUpload": "Cancel uploading {{name}}",
+    "removeFile": "Remove file {{name}}",
     "form": "Message"
   },
   "shortcuts": {
