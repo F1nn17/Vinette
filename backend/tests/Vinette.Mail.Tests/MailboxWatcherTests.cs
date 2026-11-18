@@ -71,6 +71,7 @@ public sealed class MailboxWatcherTests
 
         public Task<LabeledMessages> ListLabeledMessagesAsync(string label, int limit, bool includePreview, CancellationToken cancellationToken) => throw new NotSupportedException();
 
+        public Task<MessageId?> AppendMessageAsync(string folder, ReadOnlyMemory<byte> message, bool seen, DateTimeOffset sentAt, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<int> RenameLabelAsync(string oldName, string? newName, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<MailQuota?> GetQuotaAsync(CancellationToken cancellationToken) => throw new NotSupportedException();

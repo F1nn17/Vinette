@@ -339,6 +339,45 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         await folder.ExpungeAsync([uid], cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<MessageId?> AppendMessageAsync(string folderPath, ReadOnlyMemory<byte> message, bool seen, DateTimeOffset sentAt, CancellationToken cancellationToken)
+    {
+        IMailFolder folder;
+        try
+        {
+            folder = IsInboxPath(folderPath) ? client.Inbox : await client.GetFolderAsync(folderPath, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is FolderNotFoundException or ImapCommandException or InvalidOperationException)
+        {
+            throw new MailFolderNotFoundException("The folder does not exist or cannot hold messages.", exception);
+        }
+
+        MimeKit.MimeMessage parsed;
+        using (var stream = new MemoryStream(message.ToArray(), writable: false))
+        {
+            parsed = await MimeKit.MimeMessage.LoadAsync(stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        UniqueId? uid;
+        try
+        {
+            uid = await folder.AppendAsync(new AppendRequest(parsed, seen ? MessageFlags.Seen : MessageFlags.None, sentAt), cancellationToken).ConfigureAwait(false);
+        }
+        catch (ImapCommandException exception) when (exception.Response == ImapCommandResponse.No)
+        {
+            // NO [TRYCREATE] and the like: the folder is not there (any more), or not usable.
+            throw new MailFolderNotFoundException("The folder does not exist or cannot hold messages.", exception);
+        }
+
+        if (uid is not { } appended)
+        {
+            return null;
+        }
+
+        // The id of a message names the folder's UIDVALIDITY too; the answer to APPEND may not carry it, so the folder is looked at.
+        _ = await folder.OpenAsync(FolderAccess.ReadOnly, cancellationToken).ConfigureAwait(false);
+        return new MessageId(IsInboxPath(folderPath) ? "INBOX" : folderPath, (uint)folder.UidValidity, appended.Id);
+    }
+
     public async Task<int> DeleteMessagesPermanentlyAsync(IReadOnlyList<MessageId> ids, CancellationToken cancellationToken)
     {
         var (folder, present) = await OpenBatchAsync(ids, cancellationToken).ConfigureAwait(false);

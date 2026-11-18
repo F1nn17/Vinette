@@ -127,6 +127,17 @@ public interface IMailSession : IAsyncDisposable
     Task<int> RenameLabelAsync(string oldName, string? newName, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Puts a whole mail into a folder (IMAP APPEND), for instance the copy of a message that was sent. Returns the mail's id in the
+    /// folder, or null if the server does not say what it is (no UIDPLUS). Never repeated by the gateway: a mail appended twice is there twice.
+    /// </summary>
+    /// <param name="folder">The folder's path.</param>
+    /// <param name="message">The whole mail, as it goes on the wire.</param>
+    /// <param name="seen">Mark it read (a sent mail is).</param>
+    /// <param name="sentAt">The date the server keeps for it (when it was sent).</param>
+    /// <exception cref="MailFolderNotFoundException">There is no such folder, or it cannot hold messages.</exception>
+    Task<MessageId?> AppendMessageAsync(string folder, ReadOnlyMemory<byte> message, bool seen, DateTimeOffset sentAt, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Watches the inbox and reports what the server says about it (IMAP IDLE; on a server without it, a check every few seconds),
     /// until <paramref name="cancellationToken"/> is cancelled or the connection breaks (which throws). The server is asked to
     /// end an IDLE and start a new one every <paramref name="restartAfter"/>, as servers drop an IDLE that lasts too long. While it
