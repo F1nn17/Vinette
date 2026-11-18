@@ -33,6 +33,21 @@ describe('describeApiError', () => {
     }
   });
 
+  it('explains why a message could not be sent, naming the address the server refused', () => {
+    for (const code of ['send_refused', 'send_too_large', 'send_uncertain']) {
+      expect(describeApiError(new ApiError(422, code, undefined, 'x'), t)).toBe(`errors.${code}`);
+    }
+    expect(
+      describeApiError(
+        new ApiError(422, 'recipient_rejected', undefined, 'x', undefined, 'nobody@example.org'),
+        t,
+      ),
+    ).toBe('errors.recipient_rejected_named:{"address":"nobody@example.org"}');
+    expect(describeApiError(new ApiError(422, 'recipient_rejected', undefined, 'x'), t)).toBe(
+      'errors.recipient_rejected',
+    );
+  });
+
   it('says there is no connection when the browser could not reach the application', () => {
     expect(describeApiError(new TypeError('Failed to fetch'), t)).toBe('errors.network');
   });

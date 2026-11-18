@@ -321,6 +321,21 @@ public sealed class RecipientSuggestionServiceTests
     }
 
     [Fact]
+    public async Task A_Message_Sent_While_The_First_Read_Is_Under_Way_Is_Not_Lost()
+    {
+        var server = Typical();
+        server.Gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var service = Service(server);
+        var first = service.SuggestAsync(Credentials, "ди", 8, Token);
+
+        service.Remember(Credentials.Address, [Person("Дина", "dina@example.org")]); // the read started before this message went out
+        server.Gate.SetResult();
+
+        Assert.Equal(["dina@example.org"], (await first).Select(a => a.Address));
+        Assert.Equal(["dina@example.org"], await AddressesAsync(service, "ди"));
+    }
+
+    [Fact]
     public async Task Mailboxes_Do_Not_Share_What_Is_Kept()
     {
         var server = Typical();

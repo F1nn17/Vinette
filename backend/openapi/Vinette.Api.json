@@ -1993,6 +1993,86 @@
         }
       }
     },
+    "/api/v1/messages": {
+      "post": {
+        "tags": [
+          "Send"
+        ],
+        "operationId": "SendMessage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/recipients/suggestions": {
       "get": {
         "tags": [
@@ -3399,6 +3479,131 @@
           }
         }
       },
+      "SendRequest": {
+        "required": [
+          "fromName",
+          "to",
+          "cc",
+          "bcc",
+          "subject",
+          "text",
+          "html",
+          "attachmentIds",
+          "inReplyTo",
+          "references",
+          "draftId"
+        ],
+        "type": "object",
+        "properties": {
+          "fromName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "to": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AddressDto"
+            }
+          },
+          "cc": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AddressDto"
+            }
+          },
+          "bcc": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AddressDto"
+            }
+          },
+          "subject": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "html": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attachmentIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "inReplyTo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "references": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "draftId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SentDto": {
+        "required": [
+          "messageId",
+          "copy",
+          "copyId",
+          "draftRemoved"
+        ],
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string"
+          },
+          "copy": {
+            "type": "string"
+          },
+          "copyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "draftRemoved": {
+            "type": "boolean"
+          }
+        }
+      },
       "SettingsDto": {
         "required": [
           "density",
@@ -3582,6 +3787,9 @@
     },
     {
       "name": "Recipients"
+    },
+    {
+      "name": "Send"
     },
     {
       "name": "Settings"

@@ -123,7 +123,12 @@
     "no_target_folder": "This mailbox has no suitable folder (archive, spam or trash). Create one and try again.",
     "attachment_too_large": "This file is too large to attach. Choose a smaller one.",
     "attachments_too_large": "The attached files are too large together. Remove one or send it separately.",
-    "too_many_attachments": "Too many files are attached. Remove one before adding another."
+    "too_many_attachments": "Too many files are attached. Remove one before adding another.",
+    "recipient_rejected": "The mail service did not accept one of the recipients. Check the addresses and send again.",
+    "recipient_rejected_named": "The mail service did not accept {{address}}. Check it and send the message again.",
+    "send_refused": "The mail service refused to send this message. Check the text and the recipients, or try later.",
+    "send_too_large": "The message is too large to send. Remove some of the attachments.",
+    "send_uncertain": "The connection broke while the message was being handed over: it may have gone already. Look in Sent before sending again."
   },
   "folders": {
     "inbox": "Inbox",

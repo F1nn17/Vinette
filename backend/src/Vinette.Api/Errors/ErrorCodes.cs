@@ -25,6 +25,10 @@ public static class ErrorCodes
     public const string AttachmentTooLarge = "attachment_too_large";
     public const string AttachmentsTooLarge = "attachments_too_large";
     public const string TooManyAttachments = "too_many_attachments";
+    public const string RecipientRejected = "recipient_rejected";
+    public const string SendRefused = "send_refused";
+    public const string SendTooLarge = "send_too_large";
+    public const string SendUncertain = "send_uncertain";
     public const string TooManyRequests = "too_many_requests";
     public const string InternalError = "internal_error";
     public const string ServiceUnavailable = "service_unavailable";
