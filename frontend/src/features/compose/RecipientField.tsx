@@ -53,6 +53,8 @@ export function RecipientField({ id, label, value, onChange, autoFocus }: Recipi
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.nativeEvent.isComposing) return;
+    // Ctrl+Enter sends the message: it is not for this field (what is typed here is taken in as the cursor leaves).
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) return;
     switch (e.key) {
       case 'ArrowDown':
         if (open) {

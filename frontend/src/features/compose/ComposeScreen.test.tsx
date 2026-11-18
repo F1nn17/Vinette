@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
+import { ToastProvider } from '@/shared/toast';
 import { ComposeScreen } from './ComposeScreen';
 
 describe('ComposeScreen', () => {
@@ -14,7 +15,9 @@ describe('ComposeScreen', () => {
     );
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <RouterProvider router={router} />
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
       </QueryClientProvider>,
     );
 
@@ -51,7 +54,9 @@ describe('ComposeScreen', () => {
     );
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <RouterProvider router={router} />
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
       </QueryClientProvider>,
     );
 

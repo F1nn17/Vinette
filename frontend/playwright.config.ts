@@ -39,6 +39,10 @@ export default defineConfig({
             // Dovecot delays failed logins (2 s growing to ~15 s per address): fewer attempts to lock, a patient timeout.
             VINETTE_Security__LoginRateLimit__MaxFailuresPerAccount: '3',
             VINETTE_Imap__Timeout: '00:00:40',
+            // Sending goes through the dev mail server's submission service (self-signed certificate).
+            VINETTE_Smtp__Port: '3587',
+            VINETTE_Smtp__Security: 'StartTls',
+            VINETTE_Smtp__AllowInvalidCertificate: 'true',
           },
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,

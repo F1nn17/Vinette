@@ -112,7 +112,7 @@ describe('useDraftAutosave', () => {
 
     expect(saves).toHaveLength(1);
     expect(saves[0]!.body.subject).toBe('Hel');
-    expect(result.current).toEqual({ state: 'saved', at: new Date('2026-11-18T14:41:00Z') });
+    expect(result.current.status).toEqual({ state: 'saved', at: new Date('2026-11-18T14:41:00Z') });
   });
 
   it('saves nothing for an empty message, and nothing again when nothing changed', async () => {
@@ -175,13 +175,13 @@ describe('useDraftAutosave', () => {
       initialProps: { c: draft('One') },
     });
     await act(() => vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS + 10));
-    expect(result.current).toEqual({ state: 'failed' });
+    expect(result.current.status).toEqual({ state: 'failed' });
 
     failing = false;
     rerender({ c: draft('Two') });
     await act(() => vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS + 10));
 
-    expect(result.current.state).toBe('saved');
+    expect(result.current.status.state).toBe('saved');
     expect(saves.at(-1)!.body.subject).toBe('Two');
   });
 
@@ -237,5 +237,59 @@ describe('useDraftAutosave', () => {
     window.dispatchEvent(event);
 
     expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('stops saving when it is settled, waits for the save that is running and tells the id of the draft', async () => {
+    hold = true;
+    const { rerender, result } = renderHook(({ c }) => useDraftAutosave(c), {
+      initialProps: { c: draft('One') },
+    });
+    await act(() => vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS + 10));
+    expect(saves).toHaveLength(1); // running
+
+    let settled: string | null | undefined;
+    await act(async () => {
+      void result.current.settle().then((id) => (settled = id));
+      await vi.advanceTimersByTimeAsync(10);
+    });
+    expect(settled).toBeUndefined(); // still waiting for the running save
+
+    rerender({ c: draft('Two') });
+    hold = false;
+    await act(async () => {
+      release?.();
+      await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS * 2);
+    });
+
+    expect(settled).toBe('id-1');
+    expect(saves).toHaveLength(1); // the change made after settling is not saved
+  });
+
+  it('does not ask before the page is closed once it is settled (the message is out)', async () => {
+    const { result } = renderHook(() => useDraftAutosave(draft('Hi')));
+    await act(async () => {
+      await result.current.settle();
+    });
+    const event = new Event('beforeunload', { cancelable: true });
+
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('takes saving up again when resumed', async () => {
+    const { result } = renderHook(() => useDraftAutosave(draft('Hi')));
+    await act(async () => {
+      await result.current.settle();
+    });
+    await act(() => vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS * 2));
+    expect(saves).toHaveLength(0);
+
+    await act(async () => {
+      result.current.resume();
+      await vi.advanceTimersByTimeAsync(10);
+    });
+
+    expect(saves).toHaveLength(1);
   });
 });
