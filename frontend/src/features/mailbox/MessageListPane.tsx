@@ -190,6 +190,10 @@ export function MessageListPane({
     open: () => {
       if (currentId !== null && currentId !== messageId) openMessage(currentId);
     },
+    // Answers the open message (the selected ones are not answered: an answer is to one message).
+    reply: () => {
+      if (messageId !== undefined) void navigate(`/compose?reply=${encodeURIComponent(messageId)}`);
+    },
     // The same actions as the buttons; they leave a message where it is already (no archive in the archive, no delete in the trash).
     archive: () => keyAction('archive', 'archive'),
     delete: () => keyAction('trash', 'trash'),

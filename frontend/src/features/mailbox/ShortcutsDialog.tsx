@@ -7,6 +7,7 @@ const ROWS: { name: ShortcutName; keys: string[] }[] = [
   { name: 'next', keys: ['j'] },
   { name: 'previous', keys: ['k'] },
   { name: 'open', keys: ['Enter'] },
+  { name: 'reply', keys: ['r'] },
   { name: 'archive', keys: ['e'] },
   { name: 'delete', keys: ['#'] },
   { name: 'labels', keys: ['l'] },

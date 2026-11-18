@@ -303,4 +303,17 @@ public class MimeMessageParserTests
         Assert.Equal("<script>alert(1)</script>", parsed.Subject);
         Assert.Contains("<script>alert(2)</script>", parsed.Html, StringComparison.Ordinal); // raw: the sanitizer comes next
     }
+
+    [Fact]
+    public async Task Reply_To_Is_Read_With_Its_Encoded_Name_And_Is_Empty_Without_One()
+    {
+        var with = Encoding.ASCII.GetBytes("From: a@example.org\r\nReply-To: =?utf-8?B?0JvQuNGH0L3Ri9C5?= <private@example.org>, other@example.org\r\nSubject: s\r\n\r\nbody\r\n");
+        var without = Encoding.ASCII.GetBytes("From: a@example.org\r\nSubject: s\r\n\r\nbody\r\n");
+
+        var parsed = await Parser.ParseAsync(new MemoryStream(with), Token);
+        var none = await Parser.ParseAsync(new MemoryStream(without), Token);
+
+        Assert.Equal([new MailAddressInfo("Личный", "private@example.org"), new MailAddressInfo(string.Empty, "other@example.org")], parsed.ReplyTo);
+        Assert.Empty(none.ReplyTo ?? []);
+    }
 }
