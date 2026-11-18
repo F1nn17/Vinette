@@ -3,6 +3,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 import type { ComposeValues } from './compose-values';
+import { RecipientField } from './RecipientField';
 
 export interface ComposeFormProps {
   /** The mailbox the message goes from. */
@@ -13,7 +14,8 @@ export interface ComposeFormProps {
   children?: ReactNode;
 }
 
-const rowClass = 'flex min-h-[52px] items-center gap-3 border-b border-subtle px-5';
+const rowClass =
+  'flex min-h-[52px] items-center gap-3 border-b border-subtle px-5 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-accent';
 const labelClass = 'w-14 shrink-0 text-secondary text-muted';
 const inputClass =
   'min-w-0 flex-1 bg-transparent py-3 text-base text-ink placeholder:text-muted focus:outline-none';
@@ -28,8 +30,8 @@ export function ComposeForm({ address, values, onChange, children }: ComposeForm
   const { t } = useTranslation();
   const ids = { from: useId(), to: useId(), cc: useId(), bcc: useId(), subject: useId() };
   // A row stays open when it holds something: closing it would hide recipients the user cannot see anymore.
-  const [ccOpen, setCcOpen] = useState(values.cc !== '');
-  const [bccOpen, setBccOpen] = useState(values.bcc !== '');
+  const [ccOpen, setCcOpen] = useState(values.cc.length > 0);
+  const [bccOpen, setBccOpen] = useState(values.bcc.length > 0);
   const set = (patch: Partial<ComposeValues>) => onChange({ ...values, ...patch });
 
   const extraRow = (key: 'cc' | 'bcc', close: () => void, removeLabel: string): ReactNode => (
@@ -37,17 +39,14 @@ export function ComposeForm({ address, values, onChange, children }: ComposeForm
       <label htmlFor={ids[key]} className={labelClass}>
         {t(`compose.${key}`)}
       </label>
-      <input
+      <RecipientField
         id={ids[key]}
-        type="text"
-        inputMode="email"
-        autoComplete="off"
+        label={t(`compose.${key}`)}
         autoFocus
         value={values[key]}
-        onChange={(e) => set({ [key]: e.target.value })}
-        className={inputClass}
+        onChange={(v) => set({ [key]: v })}
       />
-      {values[key] === '' && (
+      {values[key].length === 0 && (
         <button
           type="button"
           aria-label={removeLabel}
@@ -64,7 +63,7 @@ export function ComposeForm({ address, values, onChange, children }: ComposeForm
     <form
       aria-label={t('compose.form')}
       onSubmit={(e) => e.preventDefault()}
-      className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-surface"
+      className="flex min-w-0 flex-col rounded-xl border border-line bg-surface"
     >
       <div className={rowClass}>
         <label htmlFor={ids.from} className={labelClass}>
@@ -79,14 +78,11 @@ export function ComposeForm({ address, values, onChange, children }: ComposeForm
         <label htmlFor={ids.to} className={labelClass}>
           {t('compose.to')}
         </label>
-        <input
+        <RecipientField
           id={ids.to}
-          type="text"
-          inputMode="email"
-          autoComplete="off"
+          label={t('compose.to')}
           value={values.to}
-          onChange={(e) => set({ to: e.target.value })}
-          className={inputClass}
+          onChange={(v) => set({ to: v })}
         />
         {!ccOpen && (
           <button

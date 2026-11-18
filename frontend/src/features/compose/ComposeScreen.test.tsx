@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { ComposeScreen } from './ComposeScreen';
@@ -10,7 +11,11 @@ describe('ComposeScreen', () => {
         initialEntries: ['/compose'],
       },
     );
-    render(<RouterProvider router={router} />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
 
     expect(screen.getByRole('heading', { level: 1, name: 'Новое письмо' })).toBeInTheDocument();
     const back = screen.getByRole('link', { name: 'Назад во Входящие' });

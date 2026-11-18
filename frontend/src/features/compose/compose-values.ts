@@ -1,9 +1,11 @@
-/** What the form holds so far. Recipients are plain text until the recipient chips arrive (VIN-097). */
+import type { Recipient } from './recipients';
+
+/** What the form holds so far. */
 export interface ComposeValues {
-  to: string;
-  cc: string;
-  bcc: string;
+  to: Recipient[];
+  cc: Recipient[];
+  bcc: Recipient[];
   subject: string;
 }
 
-export const EMPTY_COMPOSE: ComposeValues = { to: '', cc: '', bcc: '', subject: '' };
+export const EMPTY_COMPOSE: ComposeValues = { to: [], cc: [], bcc: [], subject: '' };

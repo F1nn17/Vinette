@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
@@ -12,15 +13,18 @@ function Harness({
   onChange?: (v: ComposeValues) => void;
 }) {
   const [values, setValues] = useState(initial);
+  const [client] = useState(() => new QueryClient());
   return (
-    <ComposeForm
-      address="user@example.com"
-      values={values}
-      onChange={(v) => {
-        setValues(v);
-        onChange?.(v);
-      }}
-    />
+    <QueryClientProvider client={client}>
+      <ComposeForm
+        address="user@example.com"
+        values={values}
+        onChange={(v) => {
+          setValues(v);
+          onChange?.(v);
+        }}
+      />
+    </QueryClientProvider>
   );
 }
 
@@ -40,10 +44,15 @@ describe('ComposeForm', () => {
     const seen: ComposeValues[] = [];
     render(<Harness onChange={(v) => seen.push(v)} />);
 
-    await userEvent.type(screen.getByLabelText('Кому'), 'a@x.test');
+    await userEvent.type(screen.getByLabelText('Кому'), 'a@x.test{Enter}');
     await userEvent.type(screen.getByLabelText('Тема'), 'Hi');
 
-    expect(seen.at(-1)).toEqual({ to: 'a@x.test', cc: '', bcc: '', subject: 'Hi' });
+    expect(seen.at(-1)).toEqual({
+      to: [{ name: '', address: 'a@x.test' }],
+      cc: [],
+      bcc: [],
+      subject: 'Hi',
+    });
   });
 
   it('opens the Cc and Bcc rows on demand and puts the cursor in them', async () => {
@@ -75,14 +84,18 @@ describe('ComposeForm', () => {
     ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Добавить получателей в копию' }));
-    await userEvent.type(screen.getByLabelText('Копия'), 'b@x.test');
+    await userEvent.type(screen.getByLabelText('Копия'), 'b@x.test{Enter}');
     expect(screen.queryByRole('button', { name: 'Убрать строку «Копия»' })).not.toBeInTheDocument();
   });
 
   it('opens with a row already open when it holds recipients (a restored draft)', () => {
-    render(<Harness initial={{ ...EMPTY_COMPOSE, bcc: 'hidden@x.test' }} />);
+    render(
+      <Harness initial={{ ...EMPTY_COMPOSE, bcc: [{ name: '', address: 'hidden@x.test' }] }} />,
+    );
 
-    expect(screen.getByLabelText('Скрытая')).toHaveValue('hidden@x.test');
+    expect(screen.getByRole('list', { name: 'Получатели: Скрытая' })).toHaveTextContent(
+      'hidden@x.test',
+    );
     expect(
       screen.queryByRole('button', { name: 'Добавить получателей в скрытую копию' }),
     ).not.toBeInTheDocument();
