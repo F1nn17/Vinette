@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { EMPTY_COMPOSE, type ComposeValues } from './compose-values';
 import { ComposeForm } from './ComposeForm';
+import { EMPTY_BODY, type ComposeBody } from './editor-text';
+import { MessageEditor } from './MessageEditor';
 
 export interface ComposeScreenProps {
   /** The mailbox the message goes from. */
@@ -14,6 +16,7 @@ export interface ComposeScreenProps {
 export function ComposeScreen({ address }: ComposeScreenProps) {
   const { t } = useTranslation();
   const [values, setValues] = useState<ComposeValues>(EMPTY_COMPOSE);
+  const [body, setBody] = useState<ComposeBody>(EMPTY_BODY);
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
@@ -30,7 +33,9 @@ export function ComposeScreen({ address }: ComposeScreenProps) {
         <h1 className="text-logo font-semibold text-ink">{t('compose.title')}</h1>
       </header>
       <main className="min-w-0 flex-1 p-7 max-md:p-3">
-        <ComposeForm address={address} values={values} onChange={setValues} />
+        <ComposeForm address={address} values={values} onChange={setValues}>
+          <MessageEditor value={body} onChange={setBody} />
+        </ComposeForm>
       </main>
     </div>
   );
