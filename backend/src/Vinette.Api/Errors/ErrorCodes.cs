@@ -22,6 +22,9 @@ public static class ErrorCodes
     public const string NoTargetFolder = "no_target_folder";
     public const string NotInTrash = "not_in_trash";
     public const string PayloadTooLarge = "payload_too_large";
+    public const string AttachmentTooLarge = "attachment_too_large";
+    public const string AttachmentsTooLarge = "attachments_too_large";
+    public const string TooManyAttachments = "too_many_attachments";
     public const string TooManyRequests = "too_many_requests";
     public const string InternalError = "internal_error";
     public const string ServiceUnavailable = "service_unavailable";

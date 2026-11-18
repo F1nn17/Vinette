@@ -76,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI primitives (Button, IconButton, Chip, LabelTag, Avatar, Badge, TextField, TextArea, Select, Checkbox, ProgressBar, Logo) with tests and a dev-only `/dev/ui` catalogue.
 
 - Project scaffold: backend (ASP.NET Core, .NET 10) and frontend (React + Vite) skeletons, build tooling, CI/CD, Docker and systemd deployment, documentation.
+- Attachments can be uploaded for a message that is being written: `POST /api/v1/attachments` (one file, `multipart/form-data`, read as it arrives), `GET /api/v1/attachments` (waiting files and the limits) and `DELETE /api/v1/attachments/{id}` (also cancels a finished upload). Limits per mailbox: 20 MB per file, 25 MB in all, 20 files (`Attachments:MaxFileBytes`, `MaxTotalBytes`, `MaxFiles`); a refused upload leaves nothing behind (`413 attachment_too_large` / `attachments_too_large`, `409 too_many_attachments`). Files wait in `Attachments:Path` (`VINETTE_Attachments__Path`; `/data/attachments` in the Docker image, `/var/lib/vinette/attachments` in the systemd unit) and are removed after `Attachments:Lifetime` (24 h).
 
 ### Changed
 

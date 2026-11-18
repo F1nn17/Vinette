@@ -18,6 +18,7 @@ Environment=ASPNETCORE_ENVIRONMENT=Production
 Environment=VINETTE_CONFIG=/etc/vinette/appsettings.json
 Environment=VINETTE_DataProtection__KeysPath=/var/lib/vinette/keys
 Environment=VINETTE_Settings__Path=/var/lib/vinette/settings
+Environment=VINETTE_Attachments__Path=/var/lib/vinette/attachments
 
 # Hardening
 NoNewPrivileges=true

@@ -27,6 +27,12 @@ describe('describeApiError', () => {
     );
   });
 
+  it('explains the limits on attached files', () => {
+    for (const code of ['attachment_too_large', 'attachments_too_large', 'too_many_attachments']) {
+      expect(describeApiError(new ApiError(413, code, undefined, 'x'), t)).toBe(`errors.${code}`);
+    }
+  });
+
   it('says there is no connection when the browser could not reach the application', () => {
     expect(describeApiError(new TypeError('Failed to fetch'), t)).toBe('errors.network');
   });

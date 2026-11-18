@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.DataProtection;
+using Vinette.Api.Attachments;
 using Vinette.Api.Auth;
 using Vinette.Api.Configuration;
 using Vinette.Api.Endpoints;
@@ -47,6 +48,7 @@ builder.Services.AddVinetteMail();
 builder.Services.AddVinetteMetrics(builder.Configuration);
 builder.Services.AddVinetteSessions();
 builder.Services.AddVinetteSettings();
+builder.Services.AddVinetteAttachments();
 builder.Services.AddVinetteAuthentication();
 builder.Services.AddVinetteForwardedHeaders();
 builder.Services.AddVinetteCsrf();
@@ -104,6 +106,7 @@ api.MapMessageActions();
 api.MapLabels();
 api.MapMessageBatch();
 api.MapSettings();
+api.MapAttachments();
 app.MapHub<MailHub>("/hubs/mail");
 app.MapBranding();
 

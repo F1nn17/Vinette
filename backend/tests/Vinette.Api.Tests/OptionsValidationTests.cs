@@ -35,6 +35,41 @@ public class OptionsValidationTests
         StartupFailure.AssertOptionsInvalid(b => b.UseSetting(key, value));
     }
 
+    [Theory]
+    [InlineData("Attachments:MaxFileBytes", "0")]
+    [InlineData("Attachments:MaxFileBytes", "3000000000")]
+    [InlineData("Attachments:MaxTotalBytes", "0")]
+    [InlineData("Attachments:MaxFiles", "0")]
+    [InlineData("Attachments:MaxFiles", "5000")]
+    [InlineData("Attachments:Lifetime", "00:00:10")]
+    public void Attachment_Limits_Outside_Their_Range_Fail_Startup(string key, string value)
+    {
+        StartupFailure.AssertOptionsInvalid(b => b.UseSetting(key, value));
+    }
+
+    [Fact]
+    public void The_Total_Of_The_Attachments_May_Not_Be_Less_Than_One_File()
+    {
+        StartupFailure.AssertOptionsInvalid(b =>
+        {
+            b.UseSetting("Attachments:MaxFileBytes", "5000000");
+            b.UseSetting("Attachments:MaxTotalBytes", "1000000");
+        });
+    }
+
+    [Fact]
+    public void Attachments_Are_Held_To_Twenty_Megabytes_A_File_Twenty_Five_Together_And_Twenty_Files_For_A_Day_By_Default()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+
+        var options = factory.Services.GetRequiredService<IOptions<AttachmentsOptions>>().Value;
+
+        Assert.Equal(20L * 1024 * 1024, options.MaxFileBytes);
+        Assert.Equal(25L * 1024 * 1024, options.MaxTotalBytes);
+        Assert.Equal(20, options.MaxFiles);
+        Assert.Equal(TimeSpan.FromHours(24), options.Lifetime);
+    }
+
     [Fact]
     public void External_Images_Are_Fetched_From_Public_Addresses_On_Web_Ports_By_Default()
     {

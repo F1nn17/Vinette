@@ -79,7 +79,10 @@
     "unknown": "Something went wrong. Try again.",
     "not_found": "This message or folder is gone: it may have been deleted or moved. Refresh the list.",
     "payload_too_large": "This message is too large to be shown here.",
-    "no_target_folder": "This mailbox has no suitable folder (archive, spam or trash). Create one and try again."
+    "no_target_folder": "This mailbox has no suitable folder (archive, spam or trash). Create one and try again.",
+    "attachment_too_large": "This file is too large to attach. Choose a smaller one.",
+    "attachments_too_large": "The attached files are too large together. Remove one or send it separately.",
+    "too_many_attachments": "Too many files are attached. Remove one before adding another."
   },
   "folders": {
     "inbox": "Inbox",
