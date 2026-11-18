@@ -18,6 +18,9 @@ export function describeApiError(error: unknown, t: Translate): string {
       case 'not_found':
       case 'payload_too_large':
       case 'no_target_folder':
+      case 'attachment_too_large':
+      case 'attachments_too_large':
+      case 'too_many_attachments':
         return t(`errors.${error.code}`);
       case 'too_many_requests': {
         const minutes = Math.max(1, Math.ceil((error.retryAfterSeconds ?? 60) / 60));
