@@ -1,6 +1,5 @@
 import { Navigate, type RouteObject } from 'react-router';
 import { RedirectIfSignedIn, RequireAuth } from '@/features/auth';
-import { ComposePage } from './routes/ComposePage';
 import { LoginPage } from './routes/LoginPage';
 import { MailboxPage } from './routes/MailboxPage';
 import { RealtimeLayout } from './routes/RealtimeLayout';
@@ -22,7 +21,11 @@ export const appRoutes: RouteObject[] = [
           { path: '/mail/:folder/:messageId?', element: <MailboxPage /> },
           // The messages of a label from all folders. `@label` cannot be a folder: the folder in the address is always encoded.
           { path: '/mail/@label/:name/:messageId?', element: <MailboxPage /> },
-          { path: '/compose', element: <ComposePage /> },
+          // The editor is heavy and only the compose screen needs it: it is loaded when the screen is first opened.
+          {
+            path: '/compose',
+            lazy: async () => ({ Component: (await import('./routes/ComposePage')).ComposePage }),
+          },
         ],
       },
     ],

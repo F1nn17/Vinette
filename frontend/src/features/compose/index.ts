@@ -4,3 +4,7 @@ export { ComposeForm } from './ComposeForm';
 export type { ComposeFormProps } from './ComposeForm';
 export { ComposeScreen } from './ComposeScreen';
 export type { ComposeScreenProps } from './ComposeScreen';
+export { EMPTY_BODY, normalizeLink, textToHtml } from './editor-text';
+export type { ComposeBody } from './editor-text';
+export { MessageEditor } from './MessageEditor';
+export type { MessageEditorProps } from './MessageEditor';
