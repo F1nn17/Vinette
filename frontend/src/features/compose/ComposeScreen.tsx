@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { EMPTY_COMPOSE, type ComposeValues } from './compose-values';
+import { AttachButton } from './AttachButton';
+import { AttachmentCards } from './AttachmentCards';
+import { useAttachments } from './attachments';
 import { ComposeForm } from './ComposeForm';
 import { EMPTY_BODY, type ComposeBody } from './editor-text';
 import { MessageEditor } from './MessageEditor';
@@ -17,6 +20,7 @@ export function ComposeScreen({ address }: ComposeScreenProps) {
   const { t } = useTranslation();
   const [values, setValues] = useState<ComposeValues>(EMPTY_COMPOSE);
   const [body, setBody] = useState<ComposeBody>(EMPTY_BODY);
+  const attachments = useAttachments();
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
@@ -35,6 +39,10 @@ export function ComposeScreen({ address }: ComposeScreenProps) {
       <main className="min-w-0 flex-1 p-7 max-md:p-3">
         <ComposeForm address={address} values={values} onChange={setValues}>
           <MessageEditor value={body} onChange={setBody} />
+          <AttachmentCards items={attachments.items} onRemove={attachments.remove} />
+          <div className="flex min-h-[68px] items-center gap-2 rounded-b-xl border-t border-subtle bg-surface-2 px-5 py-3">
+            <AttachButton onFiles={attachments.add} />
+          </div>
         </ComposeForm>
       </main>
     </div>

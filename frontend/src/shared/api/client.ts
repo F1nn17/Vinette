@@ -128,6 +128,11 @@ export async function apiRequest<T>(
     }
   }
 
+  return settle<T>(response, path, changesState);
+}
+
+/** Turns the answer into the result, or into the `ApiError` it carries (and tells the handlers what the error means for the whole app). */
+async function settle<T>(response: Response, path: string, changesState: boolean): Promise<T> {
   if (!response.ok) {
     const error = await toApiError(response);
     if (response.status === 401 && path !== '/api/v1/auth/login') unauthorizedHandler?.(error.code);
@@ -137,6 +142,83 @@ export async function apiRequest<T>(
   if (changesState && path.startsWith('/api/v1/auth/')) resetCsrfToken(); // sign-in/out changes the user
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+interface UploadOptions {
+  /** Called with the share of the file sent so far, 0 to 1. */
+  onProgress?: (fraction: number) => void;
+  signal?: AbortSignal;
+}
+
+/** The headers of an XMLHttpRequest answer, as `Headers`. */
+function headersOf(xhr: XMLHttpRequest): Headers {
+  const headers = new Headers();
+  for (const line of xhr.getAllResponseHeaders().trim().split(/\r?\n/)) {
+    const colon = line.indexOf(':');
+    if (colon > 0) headers.append(line.slice(0, colon).trim(), line.slice(colon + 1).trim());
+  }
+  return headers;
+}
+
+/**
+ * Sends one file as `multipart/form-data` (field `file`) and reports how much has gone. `fetch` cannot report the progress of what it
+ * sends, so this uses XMLHttpRequest; the anti-forgery token, the stale-token retry and the errors are the same as in `apiRequest`.
+ * Aborting through `signal` rejects with an `AbortError`.
+ */
+export async function apiUpload<T>(
+  path: string,
+  file: File,
+  { onProgress, signal }: UploadOptions = {},
+): Promise<T> {
+  const send = async (): Promise<Response> => {
+    const token = await getCsrfToken();
+    return new Promise<Response>((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(new DOMException('Aborted', 'AbortError'));
+        return;
+      }
+      const xhr = new XMLHttpRequest();
+      const abort = () => xhr.abort();
+      signal?.addEventListener('abort', abort, { once: true });
+      const done = () => signal?.removeEventListener('abort', abort);
+      xhr.open('POST', path);
+      xhr.setRequestHeader(CSRF_HEADER, token);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && e.total > 0) onProgress?.(e.loaded / e.total);
+      };
+      xhr.onload = () => {
+        done();
+        const empty = xhr.status === 204 || xhr.status === 205;
+        resolve(
+          new Response(empty ? null : xhr.responseText, {
+            status: xhr.status,
+            headers: headersOf(xhr),
+          }),
+        );
+      };
+      xhr.onerror = () => {
+        done();
+        reject(new TypeError('Network error'));
+      };
+      xhr.onabort = () => {
+        done();
+        reject(new DOMException('Aborted', 'AbortError'));
+      };
+      const form = new FormData();
+      form.append('file', file, file.name);
+      xhr.send(form);
+    });
+  };
+
+  let response = await send();
+  if (response.status === 403) {
+    const error = await toApiError(response.clone());
+    if (error.code === 'csrf_failed') {
+      resetCsrfToken();
+      response = await send();
+    }
+  }
+  return settle<T>(response, path, true);
 }
 
 export const apiGet = <T>(path: string, signal?: AbortSignal) =>
