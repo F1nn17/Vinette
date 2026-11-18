@@ -72,6 +72,9 @@
     "uploading": "Uploading {{name}}",
     "cancelUpload": "Cancel uploading {{name}}",
     "removeFile": "Remove file {{name}}",
+    "draftSaved": "Draft saved at {{time}}",
+    "draftSaving": "Saving the draft…",
+    "draftFailed": "Could not save the draft. Check your connection: we will try again at the next change.",
     "form": "Message"
   },
   "shortcuts": {

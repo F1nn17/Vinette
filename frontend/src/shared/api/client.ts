@@ -93,6 +93,8 @@ async function toApiError(response: Response): Promise<ApiError> {
 interface RequestOptions {
   body?: unknown;
   signal?: AbortSignal;
+  /** Lets the request finish after the page is closed (small bodies only: browsers cap them at 64 KB). */
+  keepalive?: boolean;
 }
 
 /**
@@ -102,7 +104,7 @@ interface RequestOptions {
 export async function apiRequest<T>(
   method: string,
   path: string,
-  { body, signal }: RequestOptions = {},
+  { body, signal, keepalive }: RequestOptions = {},
 ): Promise<T> {
   const changesState = !SAFE_METHODS.has(method.toUpperCase());
 
@@ -116,6 +118,7 @@ export async function apiRequest<T>(
       body: body === undefined ? undefined : JSON.stringify(body),
       credentials: 'same-origin',
       signal,
+      keepalive,
     });
   };
 
@@ -224,7 +227,11 @@ export async function apiUpload<T>(
 export const apiGet = <T>(path: string, signal?: AbortSignal) =>
   apiRequest<T>('GET', path, { signal });
 
-export const apiPost = <T>(path: string, body?: unknown, signal?: AbortSignal) =>
-  apiRequest<T>('POST', path, { body, signal });
+export const apiPost = <T>(
+  path: string,
+  body?: unknown,
+  signal?: AbortSignal,
+  keepalive?: boolean,
+) => apiRequest<T>('POST', path, { body, signal, keepalive });
 
 export const getHealth = (signal?: AbortSignal) => apiGet<HealthResponse>('/api/v1/health', signal);
