@@ -19,7 +19,7 @@ Vinette — self-hosted веб-клиент почты для Postfix + Dovecot 
 
 1. Возьми первую незакрытую задачу текущей вехи (или ту, что назвал владелец) и отметь её `[~]` в ROADMAP.md. Проверь, что зависимости закрыты.
 2. **Перед созданием ветки обнови `main`:** `git fetch origin`, затем создавай ветку от свежего `origin/main` — `git switch -c feat/VIN-012-short-name origin/main` (также `fix/…`, `docs/…`, `refactor/…`). Не ветвись от другой рабочей ветки и от устаревшего локального `main`. Если ветка нужна поверх ещё не влитой — спроси владельца.
-3. До кода напиши план из 3–7 пунктов. Если в плане есть пункт из раздела 3 — остановись и спроси владельца.
+3. Сначала сориентируйся по графу кода, если он есть (см. «Навигация по коду» в разделе 4), а не перебирай файлы. До кода напиши план из 3–7 пунктов. Если в плане есть пункт из раздела 3 — остановись и спроси владельца.
 4. Реализуй небольшими коммитами, сразу с тестами.
 5. Прогони `make check`. Не сдавай работу с красным `make check`.
 6. Обнови CHANGELOG, секция `[Unreleased]` (раздел 7).
@@ -104,6 +104,49 @@ GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRE
 
 - Образ: `make docker`; запуск — [deploy/docker/compose.yaml](deploy/docker/compose.yaml); порт 8080, non-root, ключи Data Protection в томе `/data`.
 - Голое железо: [deploy/systemd/vinette.service](deploy/systemd/vinette.service); пользователь `vinette`, конфиг `/etc/vinette`, данные `/var/lib/vinette`.
+
+### Навигация по коду (graphify)
+
+Необязательный локальный инструмент: граф символов и вызовов проекта ([graphify](https://github.com/Graphify-Labs/graphify), PyPI-пакет `graphifyy` с двумя `y`, лицензия Apache-2.0/MIT). Он нужен, чтобы быстро найти, где что лежит и кто кого вызывает, не читая десятки файлов. В поставку и в зависимости проекта он не входит, граф в git не коммитится.
+
+```bash
+uv tool install graphifyy                       # один раз; нужен Python 3.11+ и uv
+export PATH="$PATH:$HOME/.local/bin"            # если программа не находится
+cat >> .git/info/exclude <<'EOF'                # локально, в git не попадает
+graphify-out
+.graphifyignore
+.graphify_root
+EOF
+cat > .graphifyignore <<'EOF'                   # что графу не нужно
+node_modules
+bin
+obj
+dist
+test-results
+playwright-report
+.git
+.claude
+*.png
+frontend/src/shared/api/schema.d.ts
+backend/openapi
+EOF
+export GRAPHIFY_BACKEND=none GRAPHIFY_QUERY_LOG_DISABLE=1
+graphify update .                               # построить или обновить граф: офлайн, без ключей, около минуты
+```
+
+Искать так, из корня репозитория:
+
+- `graphify explain "ComposeScreen"` — узел, файл и строка, кто его вызывает и кого вызывает;
+- `graphify path "A" "B"` (с `--undirected`, если направленного пути нет) — как два символа связаны;
+- `graphify-out/GRAPH_REPORT.md` — крупные группы кода (сообщества) и коммит, по которому построен граф; сравни его с `git rev-parse HEAD`.
+
+Правила:
+
+- Граф устаревает: после своих правок и перед работой над задачей обнови его (`graphify update .`).
+- Граф не видит границу фронтенд ↔ бэкенд: вызовы API ищи по строке адреса (`/api/v1/messages`) и по `schema.d.ts`/OpenAPI. Файлы без символов (часть e2e) он тоже пропускает. Граф подсказывает, где смотреть, а не заменяет чтение кода: перед правкой открой сам файл.
+- Не запускай `graphify install`, `graphify hook install` и `graphify claude install`: они ставят хуки в настройки ассистента (в строгом режиме хуки могут блокировать чтение и поиск) и git-хуки.
+- Не запускай `graphify extract` и `graphify add` и не задавай ключи LLM для graphify: они отправляют содержимое файлов провайдеру. Код разбирается локально, и этого достаточно.
+- Не коммить `graphify-out/` и `.graphifyignore` без согласия владельца.
 
 ### Конфигурация
 
