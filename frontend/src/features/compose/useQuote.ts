@@ -1,13 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/shared/api/client';
 import type { Quote, ReplyMode } from './reply';
 
 /**
- * The message to answer or forward (`GET /messages/{id}/quote`). A forward asks for the message's files to be put among the uploaded ones,
- * which must happen once, so the answer is kept and never read again behind the user's back.
+ * How the message to answer or forward is read (`GET /messages/{id}/quote`). A forward asks for the message's files to be put among the
+ * uploaded ones, which must happen once, so the answer is kept and never read again behind the user's back.
  */
-export function useQuote(mode: ReplyMode, id: string) {
-  return useQuery({
+export function quoteQuery(mode: ReplyMode, id: string) {
+  return queryOptions({
     queryKey: ['quote', mode === 'forward' ? 'forward' : 'answer', id],
     queryFn: ({ signal }) =>
       apiGet<Quote>(
@@ -19,4 +19,8 @@ export function useQuote(mode: ReplyMode, id: string) {
     refetchOnReconnect: false,
     retry: false,
   });
+}
+
+export function useQuote(mode: ReplyMode, id: string) {
+  return useQuery(quoteQuery(mode, id));
 }

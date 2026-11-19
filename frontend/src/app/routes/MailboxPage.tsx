@@ -13,6 +13,7 @@ import {
   usePurge,
 } from '@/features/mailbox';
 import { labelPath } from '@/features/labels';
+import { QuickReply } from '@/features/compose';
 import { ReadingPane } from '@/features/message';
 
 /**
@@ -62,6 +63,13 @@ export function MailboxPage() {
             folderRole={role}
             labelsFor={labelsFor}
             onLabelsForChange={setLabelsFor}
+            quickReply={(message) => (
+              <QuickReply
+                messageId={message.id}
+                senderName={message.senderName}
+                address={address ?? ''}
+              />
+            )}
             onCompose={(mode) => {
               if (messageId !== undefined)
                 void navigate(`/compose?${mode}=${encodeURIComponent(messageId)}`);
