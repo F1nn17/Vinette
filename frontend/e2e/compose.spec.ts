@@ -59,12 +59,12 @@ test.describe('writing and sending', () => {
     await page.getByRole('button', { name: 'Написать' }).first().click();
     await expect(page).toHaveURL(/\/compose/);
 
-    await page.getByLabel('Кому').fill(accounts.alice.address);
+    await page.getByRole('combobox', { name: 'Кому', exact: true }).fill(accounts.alice.address);
     await page.keyboard.press('Enter');
     await expect(page.getByRole('list', { name: 'Получатели: Кому' })).toContainText(
       accounts.alice.address,
     );
-    await page.getByLabel('Тема').fill(SUBJECT);
+    await page.getByLabel('Тема', { exact: true }).fill(SUBJECT);
     await page.getByRole('textbox', { name: 'Текст письма' }).click();
     await page.keyboard.type('Смотри вложение. Привет!');
     await expect(page.getByText(/Черновик сохранён в \d/)).toBeVisible({ timeout: 15_000 });
