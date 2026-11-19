@@ -778,6 +778,7 @@ export interface components {
                 [key: string]: string;
             };
             trustedImageSenders: string[];
+            signatures: components["schemas"]["SignatureDto"][];
         };
         SettingsPatch: {
             density: null | string;
@@ -787,6 +788,20 @@ export interface components {
             };
             trustImagesFrom?: null | string;
             untrustImagesFrom?: null | string;
+            signatures?: null | components["schemas"]["SignatureInput"][];
+        };
+        SignatureDto: {
+            id: string;
+            name: string;
+            text: string;
+            default: boolean;
+        };
+        SignatureInput: {
+            id: null | string;
+            name: null | string;
+            text: null | string;
+            /** @default false */
+            default: boolean;
         };
         StaleEventDto: {
             type?: string;

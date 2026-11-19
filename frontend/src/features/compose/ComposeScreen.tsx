@@ -6,7 +6,8 @@ import { apiPost, apiRequest } from '@/shared/api/client';
 import { describeApiError } from '@/shared/api/describe-error';
 import type { components } from '@/shared/api/schema';
 import { Confirm } from '@/features/mailbox';
-import { Button } from '@/shared/ui';
+import { SignaturesEditor, useSignatures } from '@/features/settings';
+import { Button, Dialog } from '@/shared/ui';
 import { useToast } from '@/shared/toast';
 import { EMPTY_COMPOSE, type ComposeValues } from './compose-values';
 import { AttachButton } from './AttachButton';
@@ -18,6 +19,8 @@ import { EMPTY_BODY, type ComposeBody } from './editor-text';
 import { MessageEditor } from './MessageEditor';
 import type { ReplyStart } from './reply';
 import { sendBlocker } from './send';
+import { SignatureCard } from './SignatureCard';
+import { withSignature } from './signature';
 
 type Sent = components['schemas']['SentDto'];
 
@@ -52,6 +55,12 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
   const busyRef = useRef(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [question, setQuestion] = useState<'subject' | 'delete' | null>(null);
+  const signatures = useSignatures();
+  // null: the user has not chosen, so the default signature goes under the message; an empty id is "without a signature".
+  const [picked, setPicked] = useState<string | null>(null);
+  const signatureId = picked ?? signatures.defaultSignature?.id ?? '';
+  const signature = signatures.list.find((s) => s.id === signatureId) ?? null;
+  const [managing, setManaging] = useState(false);
 
   const send = async (subjectChecked = false) => {
     if (busyRef.current) return;
@@ -69,7 +78,10 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
     setProblem(null);
     try {
       const draftId = await draft.settle();
-      const sent = await apiPost<Sent>('/api/v1/messages', { ...content, draftId });
+      const sent = await apiPost<Sent>('/api/v1/messages', {
+        ...withSignature(content as NonNullable<typeof content>, signature),
+        draftId,
+      });
       toast.show({
         message: t(sent.copy === 'saved' ? 'compose.sent' : 'compose.sentNoCopy'),
       });
@@ -139,7 +151,10 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
         <h1 className="text-logo font-semibold text-ink">{t('compose.title')}</h1>
         <DraftState status={draft.status} />
       </header>
-      <main className="min-w-0 flex-1 p-7 max-md:p-3" onKeyDown={onKeyDown}>
+      <main
+        className="grid min-w-0 flex-1 content-start items-start gap-5 p-7 max-md:p-3 lg:grid-cols-[minmax(0,1fr)_320px]"
+        onKeyDown={onKeyDown}
+      >
         <ComposeForm address={address} values={values} onChange={setValues}>
           <MessageEditor value={body} onChange={setBody} autoFocus={start !== undefined} />
           <AttachmentCards items={attachments.items} onRemove={attachments.remove} />
@@ -174,7 +189,24 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
             </button>
           </div>
         </ComposeForm>
+        <aside aria-label={t('compose.options')} className="flex flex-col gap-5">
+          <SignatureCard
+            signatures={signatures.list}
+            selectedId={signatureId}
+            onSelect={setPicked}
+            onManage={() => setManaging(true)}
+          />
+        </aside>
       </main>
+      <Dialog
+        open={managing}
+        onClose={() => setManaging(false)}
+        title={t('signatures.title')}
+        closeLabel={t('common.close')}
+        className="max-w-xl"
+      >
+        <SignaturesEditor onSaved={() => setManaging(false)} onCancel={() => setManaging(false)} />
+      </Dialog>
       {question === 'subject' && (
         <Confirm
           title={t('compose.noSubjectTitle')}

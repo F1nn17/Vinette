@@ -3783,7 +3783,8 @@
           "density",
           "language",
           "labelColors",
-          "trustedImageSenders"
+          "trustedImageSenders",
+          "signatures"
         ],
         "type": "object",
         "properties": {
@@ -3806,6 +3807,12 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "signatures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SignatureDto"
             }
           }
         }
@@ -3850,6 +3857,70 @@
               "null",
               "string"
             ]
+          },
+          "signatures": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SignatureInput"
+            }
+          }
+        }
+      },
+      "SignatureDto": {
+        "required": [
+          "id",
+          "name",
+          "text",
+          "default"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "default": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SignatureInput": {
+        "required": [
+          "id",
+          "name",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "default": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

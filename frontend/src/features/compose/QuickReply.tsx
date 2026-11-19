@@ -6,10 +6,12 @@ import { useNavigate } from 'react-router';
 import { apiPost } from '@/shared/api/client';
 import { describeApiError } from '@/shared/api/describe-error';
 import type { components } from '@/shared/api/schema';
+import { useSignatures } from '@/features/settings';
 import { Button } from '@/shared/ui';
 import { useToast } from '@/shared/toast';
 import { sendBlocker } from './send';
 import { startOf, withTypedText } from './reply';
+import { htmlWithSignature } from './signature';
 import { quoteQuery } from './useQuote';
 
 type Sent = components['schemas']['SentDto'];
@@ -33,6 +35,7 @@ export function QuickReply({ messageId, senderName, address }: QuickReplyProps) 
   const navigate = useNavigate();
   const toast = useToast();
   const queryClient = useQueryClient();
+  const signatures = useSignatures();
   const fieldId = useId();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -59,7 +62,7 @@ export function QuickReply({ messageId, senderName, address }: QuickReplyProps) 
         bcc: [],
         subject: start.values.subject,
         text: null,
-        html: start.body.html,
+        html: htmlWithSignature(start.body.html, signatures.defaultSignature), // the default signature goes under a quick reply too
         attachmentIds: [],
         inReplyTo: start.inReplyTo,
         references: start.references,
