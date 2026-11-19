@@ -99,6 +99,15 @@
       "forwarded": "---------- Forwarded message ----------",
       "date": "Date"
     },
+    "options": "Message options",
+    "signature": {
+      "title": "Signature",
+      "without": "No signature",
+      "preview": "Signature under the message",
+      "none": "No signatures yet.",
+      "create": "Create a signature",
+      "manage": "Manage signatures"
+    },
     "form": "Message"
   },
   "quickReply": {
@@ -106,6 +115,21 @@
     "placeholder": "Reply to {{name}}",
     "openEditor": "Open in editor",
     "noRecipient": "Could not tell who to reply to. Open the message in the editor and add a recipient."
+  },
+  "signatures": {
+    "title": "Signatures",
+    "list": "List of signatures",
+    "add": "New signature",
+    "unnamed": "Untitled",
+    "defaultMark": "default",
+    "none": "No signatures yet. Create the first one.",
+    "name": "Name",
+    "text": "Signature text",
+    "makeDefault": "Put under new messages",
+    "preview": "How it will look",
+    "delete": "Delete signature",
+    "nameNeeded": "Every signature needs a name.",
+    "save": "Save"
   },
   "shortcuts": {
     "title": "Keyboard shortcuts",

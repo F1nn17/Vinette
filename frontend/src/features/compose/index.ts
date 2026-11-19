@@ -24,3 +24,5 @@ export {
 export type { Quote, ReplyMode, ReplyStart } from './reply';
 export { quoteQuery, useQuote } from './useQuote';
 export { QuickReply } from './QuickReply';
+export { withSignature } from './signature';
+export { SignatureCard } from './SignatureCard';

@@ -32,12 +32,14 @@ interface Call {
 let calls: Call[];
 let quoteAnswer: () => Response;
 let sendAnswer: () => Response;
+let signatures: { id: string; name: string; text: string; default: boolean }[];
 
 beforeEach(() => {
   resetCsrfToken();
   calls = [];
   quoteAnswer = () => json(QUOTE);
   sendAnswer = () => json({ messageId: 'x', copy: 'saved', copyId: 'c', draftRemoved: true });
+  signatures = [];
   vi.stubGlobal(
     'fetch',
     vi.fn((input: string, init?: RequestInit) => {
@@ -52,6 +54,16 @@ beforeEach(() => {
       });
       if (url === '/api/v1/csrf') return Promise.resolve(json({ token: 't' }));
       if (url.includes('/quote')) return Promise.resolve(quoteAnswer());
+      if (url === '/api/v1/settings')
+        return Promise.resolve(
+          json({
+            density: 'comfortable',
+            language: null,
+            labelColors: {},
+            trustedImageSenders: [],
+            signatures,
+          }),
+        );
       if (url === '/api/v1/messages') return Promise.resolve(sendAnswer());
       return Promise.resolve(new Response(null, { status: 204 }));
     }),
@@ -98,7 +110,7 @@ describe('quick reply', () => {
 
     expect(field()).toHaveAttribute('placeholder', 'Ответить: Анна Смирнова');
     expect(screen.getByRole('button', { name: 'Отправить' })).toBeDisabled();
-    expect(calls).toHaveLength(0); // the message is not read before an answer is sent
+    expect(calls.some((c) => c.url.includes('/quote'))).toBe(false); // the message is not read before an answer is sent
   });
 
   it('sends the answer to the sender, into the conversation, with the original quoted', async () => {
@@ -183,5 +195,24 @@ describe('quick reply', () => {
     expect(router.state.location.pathname).toBe('/compose');
     expect(router.state.location.search).toBe('?reply=SU5CT1g.1.7');
     expect(router.state.location.state).toEqual({ typed: 'Начало ответа' });
+  });
+
+  it('puts the default signature under the answer, once, as escaped text', async () => {
+    signatures = [
+      { id: 's1', name: 'Work', text: 'Regards,<br>Alice', default: true },
+      { id: 's2', name: 'Home', text: 'Cheers', default: false },
+    ];
+    open();
+    await userEvent.type(field(), 'Ок');
+    await waitFor(() => expect(calls.some((c) => c.url === '/api/v1/settings')).toBe(true));
+    await new Promise((r) => setTimeout(r, 50)); // the settings are in
+
+    await userEvent.click(screen.getByRole('button', { name: 'Отправить' }));
+
+    await waitFor(() => expect(sends()).toHaveLength(1));
+    const html = String(sends()[0]!.body!.html);
+    expect(html.endsWith('<p></p><p>Regards,&lt;br&gt;Alice</p>')).toBe(true);
+    expect(html.split('Regards').length).toBe(2);
+    expect(html).not.toContain('Cheers');
   });
 });

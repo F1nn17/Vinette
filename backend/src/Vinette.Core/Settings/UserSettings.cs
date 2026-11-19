@@ -10,6 +10,12 @@ public enum ListDensity
     Compact,
 }
 
+/// <summary>A signature the user wrote: a name to choose it by and the text that goes under a message. Plain text, several lines.</summary>
+/// <param name="Id">Opaque id (assigned by the server), by which a message and the default refer to it.</param>
+/// <param name="Name">The name in the list of signatures ("Work").</param>
+/// <param name="Text">The text of the signature; line breaks are kept.</param>
+public sealed record Signature(string Id, string Name, string Text);
+
 /// <summary>
 /// What a user chose in the interface and what does not belong in the mailbox itself: list density, language, colors of
 /// labels. One document per mailbox. New settings are added as new properties with a default, so documents written by an
@@ -28,6 +34,15 @@ public sealed record UserSettings
 
     /// <summary>The colors of the design's palette a label can have (DESIGN.md, "Метки").</summary>
     public static IReadOnlyList<string> LabelPalette { get; } = ["work", "bills", "personal"];
+
+    /// <summary>The most signatures a user can have.</summary>
+    public const int MaxSignatures = 20;
+
+    /// <summary>The longest name of a signature, in UTF-16 units.</summary>
+    public const int MaxSignatureNameLength = 60;
+
+    /// <summary>The longest text of a signature, in UTF-16 units.</summary>
+    public const int MaxSignatureTextLength = 2000;
 
     /// <summary>The longest label name or color, in UTF-16 units.</summary>
     public const int MaxTextLength = 64;
@@ -49,6 +64,12 @@ public sealed record UserSettings
     /// through the messages that carry it). Sorted, without repeats (names are compared without regard to case).
     /// </summary>
     public IReadOnlyList<string> Labels { get; init; } = [];
+
+    /// <summary>The signatures the user wrote, in the order they are listed.</summary>
+    public IReadOnlyList<Signature> Signatures { get; init; } = [];
+
+    /// <summary>The id of the signature put under new messages unless another is chosen; null if none is.</summary>
+    public string? DefaultSignatureId { get; init; }
 
     /// <summary>The chosen color of a label (a key of <see cref="LabelPalette"/>), or null if it has none; the name is compared without regard to case.</summary>
     public string? ColorOf(string label) =>
@@ -144,6 +165,26 @@ public sealed record UserSettings
         else if (LabelColors.Any(p => !IsText(p.Key) || !IsText(p.Value)))
         {
             problem = $"Label names and colors must be text of 1 to {MaxTextLength} characters without control characters.";
+        }
+        else if (Signatures.Count > MaxSignatures)
+        {
+            problem = $"At most {MaxSignatures} signatures can be kept.";
+        }
+        else if (Signatures.Any(g => g.Id.Length is 0 or > 64 || g.Name.Trim().Length is 0 || g.Name.Length > MaxSignatureNameLength || g.Name.Any(char.IsControl)))
+        {
+            problem = $"A signature needs a name of 1 to {MaxSignatureNameLength} characters without control characters.";
+        }
+        else if (Signatures.Any(g => g.Text.Length > MaxSignatureTextLength || g.Text.Any(c => char.IsControl(c) && c is not ('\n' or '\r' or '\t'))))
+        {
+            problem = $"The text of a signature can have at most {MaxSignatureTextLength} characters, without control characters other than line breaks.";
+        }
+        else if (Signatures.Select(g => g.Id).Distinct(StringComparer.Ordinal).Count() != Signatures.Count)
+        {
+            problem = "Two signatures have the same id.";
+        }
+        else if (DefaultSignatureId is { } chosen && !Signatures.Any(g => g.Id == chosen))
+        {
+            problem = "The default signature is not among the signatures.";
         }
 
         return problem is null;

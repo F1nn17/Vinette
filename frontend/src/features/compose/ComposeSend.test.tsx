@@ -17,10 +17,12 @@ interface Call {
 
 let calls: Call[];
 let sendAnswer: () => Response;
+let signatures: { id: string; name: string; text: string; default: boolean }[];
 
 beforeEach(() => {
   resetCsrfToken();
   calls = [];
+  signatures = [];
   sendAnswer = () => json({ messageId: 'm', copy: 'saved', copyId: 'c', draftRemoved: true });
   vi.stubGlobal(
     'fetch',
@@ -49,6 +51,16 @@ beforeEach(() => {
           }),
         );
       if (input === '/api/v1/messages') return Promise.resolve(sendAnswer());
+      if (input === '/api/v1/settings')
+        return Promise.resolve(
+          json({
+            density: 'comfortable',
+            language: null,
+            labelColors: {},
+            trustedImageSenders: [],
+            signatures,
+          }),
+        );
       return Promise.resolve(new Response(null, { status: 204 }));
     }),
   );
@@ -226,5 +238,98 @@ describe('deleting the draft', () => {
       expect.objectContaining({ url: '/api/v1/drafts/d1', method: 'DELETE' }),
     );
     expect(sends()).toHaveLength(0);
+  });
+});
+
+describe('the signature', () => {
+  beforeEach(() => {
+    signatures = [
+      { id: 's1', name: 'Work', text: 'Regards,\nAlice', default: true },
+      { id: 's2', name: 'Home', text: 'Cheers', default: false },
+    ];
+  });
+
+  it('shows the default one chosen, with a preview, beside the editor', async () => {
+    open();
+
+    const card = await screen.findByRole('region', { name: 'Подпись' });
+    await waitFor(() => expect(within(card).getByLabelText('Подпись')).toHaveValue('s1'));
+    expect(within(card).getByRole('group', { name: 'Подпись под письмом' })).toHaveTextContent(
+      'Regards, Alice',
+    );
+    expect(screen.getByRole('complementary', { name: 'Параметры письма' })).toContainElement(card);
+  });
+
+  it('goes under the message when it is sent, once, and is not in the text being written or in the draft', async () => {
+    open();
+    await fill();
+    await screen.findByText(/Черновик сохранён в \d/, {}, { timeout: 4000 });
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'Подпись' })).toHaveValue('s1'),
+    );
+    const draft = calls.filter((c) => c.url === '/api/v1/drafts').at(-1)!.body!;
+    expect(String(draft.html)).not.toContain('Regards');
+    expect(screen.getByRole('textbox', { name: 'Текст письма' })).not.toHaveTextContent('Regards');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Отправить' }));
+
+    await waitFor(() => expect(sends()).toHaveLength(1));
+    const html = String(sends()[0]!.body!.html);
+    expect(html.endsWith('<p></p><p>Regards,</p><p>Alice</p>')).toBe(true);
+    expect(html.split('Regards').length).toBe(2);
+  });
+
+  it('can be another one, or none, for this message only', async () => {
+    open();
+    await fill();
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'Подпись' })).toHaveValue('s1'),
+    );
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Подпись' }), 's2');
+    expect(screen.getByRole('group', { name: 'Подпись под письмом' })).toHaveTextContent('Cheers');
+    await userEvent.click(screen.getByRole('button', { name: 'Отправить' }));
+    await waitFor(() => expect(sends()).toHaveLength(1));
+    expect(String(sends()[0]!.body!.html)).toContain('Cheers');
+    expect(String(sends()[0]!.body!.html)).not.toContain('Regards');
+  });
+
+  it('is left out when the user chose none', async () => {
+    open();
+    await fill();
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'Подпись' })).toHaveValue('s1'),
+    );
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Подпись' }), '');
+    expect(screen.queryByRole('group', { name: 'Подпись под письмом' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Отправить' }));
+
+    await waitFor(() => expect(sends()).toHaveLength(1));
+    expect(String(sends()[0]!.body!.html)).not.toMatch(/Regards|Cheers/);
+  });
+
+  it('offers to make the first one when there are none, and opens the window for it', async () => {
+    signatures = [];
+    open();
+
+    const card = await screen.findByRole('region', { name: 'Подпись' });
+    expect(within(card).getByText('Подписей пока нет.')).toBeInTheDocument();
+    await userEvent.click(within(card).getByRole('button', { name: 'Создать подпись' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Подписи' });
+    expect(within(dialog).getByRole('button', { name: 'Новая подпись' })).toBeInTheDocument();
+  });
+
+  it('opens the window to manage them, and the new list is in the choice when it is saved', async () => {
+    open();
+    const card = await screen.findByRole('region', { name: 'Подпись' });
+    await waitFor(() => expect(within(card).getByLabelText('Подпись')).toHaveValue('s1'));
+
+    await userEvent.click(within(card).getByRole('button', { name: 'Управлять подписями' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Подписи' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Отмена' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Подписи' })).not.toBeInTheDocument();
   });
 });
