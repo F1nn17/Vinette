@@ -101,6 +101,12 @@
     },
     "form": "Message"
   },
+  "quickReply": {
+    "title": "Quick reply",
+    "placeholder": "Reply to {{name}}",
+    "openEditor": "Open in editor",
+    "noRecipient": "Could not tell who to reply to. Open the message in the editor and add a recipient."
+  },
   "shortcuts": {
     "title": "Keyboard shortcuts",
     "note": "Actions apply to the selected messages, or to the open one if nothing is selected.",

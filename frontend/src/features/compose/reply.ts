@@ -147,3 +147,19 @@ export function startOf(
     ...threadFor(quote, mode),
   };
 }
+
+/**
+ * The start of an answer with what the user has already typed (in the quick reply) put in the empty line above the quote, so that
+ * opening the editor loses nothing. The text is only ever escaped.
+ */
+export function withTypedText(start: ReplyStart, typed: string): ReplyStart {
+  if (typed.trim() === '') return start;
+  return {
+    ...start,
+    body: {
+      ...start.body,
+      html: start.body.html.replace('<p></p>', textToHtml(typed)),
+      text: `${typed}${start.body.text}`,
+    },
+  };
+}

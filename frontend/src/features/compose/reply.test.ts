@@ -1,5 +1,13 @@
 import type { TFunction } from 'i18next';
-import { bodyFor, recipientsFor, startOf, subjectFor, threadFor, type Quote } from './reply';
+import {
+  bodyFor,
+  recipientsFor,
+  startOf,
+  subjectFor,
+  threadFor,
+  withTypedText,
+  type Quote,
+} from './reply';
 
 // Shows the key and the values it was given: the words themselves are the dictionary's.
 const t = ((key: string, options?: Record<string, string>) =>
@@ -169,5 +177,28 @@ describe('startOf', () => {
     expect(start.values.bcc).toEqual([]);
     expect(start.inReplyTo).toBe('m3@example.org');
     expect(start.references).toHaveLength(3);
+  });
+});
+
+describe('withTypedText', () => {
+  it('puts what was typed in the empty line above the quote, as escaped paragraphs', () => {
+    const start = startOf(quote(), 'reply', me, t, 'en');
+
+    const typed = withTypedText(start, 'One <i>line</i>\nTwo');
+
+    expect(
+      typed.body.html.startsWith(
+        '<p>One &lt;i&gt;line&lt;/i&gt;</p><p>Two</p><p>compose.reply.wrote',
+      ),
+    ).toBe(true);
+    expect(typed.body.html).toContain('<blockquote>');
+    expect(typed.body.text.startsWith('One <i>line</i>\nTwo')).toBe(true);
+    expect(typed.values).toEqual(start.values);
+  });
+
+  it('changes nothing for blank text', () => {
+    const start = startOf(quote(), 'reply', me, t, 'en');
+
+    expect(withTypedText(start, '  \n ')).toBe(start);
   });
 });

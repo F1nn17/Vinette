@@ -1,5 +1,5 @@
 import { ImageOff, MailOpen } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MessageLabelsMenu } from '@/features/labels';
 import { useSettings } from '@/features/settings';
@@ -27,6 +27,8 @@ export interface ReadingPaneProps {
   onAction?: (action: ReaderAction) => void;
   /** Starts an answer or a forward of the open message; the screen decides where the editor opens. */
   onCompose?: (mode: ComposeFrom) => void;
+  /** The quick reply shown under the message (not in the drafts folder); the screen supplies it, so that this pane knows nothing of how it answers. */
+  quickReply?: (message: { id: string; senderName: string }) => ReactNode;
   /** The message whose "Labels" panel is open, when the screen holds that state (the key `l` opens it from the list); absent: the pane holds it itself. */
   labelsFor?: string | null;
   onLabelsForChange?: (id: string | null) => void;
@@ -179,6 +181,7 @@ export function ReadingPane({
   folderRole,
   onAction,
   onCompose,
+  quickReply,
   labelsFor: labelsForProp,
   onLabelsForChange,
 }: ReadingPaneProps) {
@@ -308,6 +311,11 @@ export function ReadingPane({
             )}
           </div>
           <AttachmentList messageId={message.id} attachments={message.attachments} />
+          {folderRole !== 'drafts' &&
+            quickReply?.({
+              id: message.id,
+              senderName: message.from?.name || message.from?.address || '',
+            })}
         </div>
       </div>
     </article>

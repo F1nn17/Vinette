@@ -1,7 +1,14 @@
-import { Link, useSearchParams } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useSession } from '@/features/auth';
-import { ComposeScreen, REPLY_MODES, startOf, useQuote, type ReplyMode } from '@/features/compose';
+import {
+  ComposeScreen,
+  REPLY_MODES,
+  startOf,
+  useQuote,
+  withTypedText,
+  type ReplyMode,
+} from '@/features/compose';
 import { describeApiError } from '@/shared/api/describe-error';
 
 /** `/compose`: a new message; `/compose?reply=<id>`, `?replyAll=<id>` and `?forward=<id>` start from the message with that id. */
@@ -18,6 +25,8 @@ export function ComposePage() {
 function Answer({ mode, id, address }: { mode: ReplyMode; id: string; address: string }) {
   const { t, i18n } = useTranslation();
   const quote = useQuote(mode, id);
+  // What was typed in the quick reply before it was opened here: it goes above the quote, so that nothing is lost.
+  const typed = (useLocation().state as { typed?: unknown } | null)?.typed;
   if (quote.isPending) {
     return (
       <main role="status" className="p-8 text-muted">
@@ -39,7 +48,10 @@ function Answer({ mode, id, address }: { mode: ReplyMode; id: string; address: s
     <ComposeScreen
       key={`${mode}-${id}`}
       address={address}
-      start={startOf(quote.data, mode, address, t, i18n.language)}
+      start={withTypedText(
+        startOf(quote.data, mode, address, t, i18n.language),
+        typeof typed === 'string' ? typed : '',
+      )}
     />
   );
 }

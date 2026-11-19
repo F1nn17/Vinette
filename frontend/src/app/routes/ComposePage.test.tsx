@@ -91,13 +91,13 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
-function open(search: string) {
+function open(search: string, state?: unknown) {
   const router = createMemoryRouter(
     [
       { path: '/compose', element: <ComposePage /> },
       { path: '/mail/inbox', element: <p>inbox-screen</p> },
     ],
-    { initialEntries: [`/compose${search}`] },
+    { initialEntries: [{ pathname: '/compose', search, state }] },
   );
   render(
     <SessionContext.Provider value={session}>
@@ -135,6 +135,16 @@ describe('answering and forwarding', () => {
     expect(calls.find((c) => c.url.includes('/quote'))!.url).toBe(
       '/api/v1/messages/SU5CT1g.1.7/quote',
     );
+  });
+
+  it('puts what was typed in the quick reply above the quote', async () => {
+    open('?reply=SU5CT1g.1.7', { typed: 'Начало <b>ответа</b>' });
+
+    const editor = await screen.findByRole('textbox', { name: 'Текст письма' });
+    expect(editor).toHaveTextContent('Начало <b>ответа</b>'); // text, not markup
+    expect(editor.querySelector('b')).toBeNull();
+    expect(editor.firstElementChild).toHaveTextContent('Начало <b>ответа</b>');
+    expect(editor.querySelector('blockquote')).toHaveTextContent('Привет, смотри файл.');
   });
 
   it('starts a reply to everybody with the other recipients in "Cc", and sends it into the conversation', async () => {

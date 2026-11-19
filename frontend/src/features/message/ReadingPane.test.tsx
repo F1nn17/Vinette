@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { ReadingPane, type ReadingPaneProps } from './ReadingPane';
 
@@ -49,6 +50,8 @@ function renderPane(
   address = 'user@example.com',
   onBack?: () => void,
   onCompose?: (mode: string) => void,
+  quickReply?: (m: { id: string; senderName: string }) => ReactNode,
+  folderRole?: string,
 ) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
@@ -58,6 +61,8 @@ function renderPane(
         address={address}
         onBack={onBack}
         onCompose={onCompose}
+        quickReply={quickReply}
+        folderRole={folderRole}
       />
     </QueryClientProvider>,
   );
@@ -66,6 +71,33 @@ function renderPane(
 afterEach(() => vi.unstubAllGlobals());
 
 describe('ReadingPane', () => {
+  it('shows the quick reply under the message, told whom it answers, and not in the drafts folder', async () => {
+    mockApi(() => message());
+    const slot = (m: { id: string; senderName: string }) => (
+      <p>
+        quick-{m.id}-{m.senderName}
+      </p>
+    );
+    renderPane('SU5CT1g.1.7', 'user@example.com', undefined, undefined, slot);
+
+    expect(await screen.findByText('quick-SU5CT1g.1.7-Anna Smirnova')).toBeInTheDocument();
+  });
+
+  it('offers no quick reply for a draft', async () => {
+    mockApi(() => message());
+    renderPane(
+      'SU5CT1g.1.7',
+      'user@example.com',
+      undefined,
+      undefined,
+      () => <p>quick</p>,
+      'drafts',
+    );
+    await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+
+    expect(screen.queryByText('quick')).not.toBeInTheDocument();
+  });
+
   it('asks for the message by its id and shows the subject, sender, recipient and date', async () => {
     const urls = mockApi(() => message());
     renderPane();
