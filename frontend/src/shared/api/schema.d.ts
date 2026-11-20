@@ -436,6 +436,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recipients/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["LookupRecipients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -738,6 +754,15 @@ export interface components {
             text: null | string;
             html: null | string;
             attachments: components["schemas"]["UploadedAttachmentDto"][];
+        };
+        RecipientLookupItem: {
+            address: string;
+            known: boolean;
+            /** Format: date-time */
+            lastMail: null | string;
+        };
+        RecipientLookupResponse: {
+            items: components["schemas"]["RecipientLookupItem"][];
         };
         RecipientSuggestionsResponse: {
             items: components["schemas"]["AddressDto"][];
@@ -2613,6 +2638,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecipientSuggestionsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LookupRecipients: {
+        parameters: {
+            query: {
+                address: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipientLookupResponse"];
                 };
             };
             /** @description Bad Request */

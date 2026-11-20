@@ -78,6 +78,9 @@ public sealed class SendApiTests : IDisposable
         public Task<IReadOnlyList<MailAddressInfo>> SuggestAsync(MailCredentials credentials, string query, int count, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<MailAddressInfo>>([]);
 
+        public Task<IReadOnlyList<KnownRecipient>> LookupAsync(MailCredentials credentials, IReadOnlyList<string> addresses, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<KnownRecipient>>([.. addresses.Select(a => new KnownRecipient(a, null))]);
+
         public void Remember(string mailbox, IEnumerable<MailAddressInfo> recipients) => Remembered.Add((mailbox, [.. recipients]));
     }
 

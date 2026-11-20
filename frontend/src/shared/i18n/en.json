@@ -99,6 +99,14 @@
       "forwarded": "---------- Forwarded message ----------",
       "date": "Date"
     },
+    "people": {
+      "title": "Recipients",
+      "none": "No recipients yet.",
+      "lastToday": "Last mail today",
+      "lastYesterday": "Last mail yesterday",
+      "lastOn": "Last mail {{date}}",
+      "unknown": "Not in the address book"
+    },
     "options": "Message options",
     "signature": {
       "title": "Signature",
