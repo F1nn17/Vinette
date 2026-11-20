@@ -127,6 +127,7 @@ public static class DraftEndpoints
         SessionService sessions,
         IDrafts drafts,
         IAttachmentStore store,
+        IMessageHtmlSanitizer sanitizer,
         CancellationToken cancellationToken)
     {
         MessageId? previous = null;
@@ -147,6 +148,11 @@ public static class DraftEndpoints
             return Problem(StatusCodes.Status400BadRequest, "An attached file is not there (any more).", ErrorCodes.BadRequest);
         }
 
+        if (OutgoingHtml.Clean(request.Html, sanitizer, out var html) is { } refused)
+        {
+            return refused;
+        }
+
         var message = new OutgoingMessage(
             new MailAddressInfo(request.FromName ?? string.Empty, credentials.Address),
             [.. (request.To ?? []).Select(ToInfo)],
@@ -154,7 +160,7 @@ public static class DraftEndpoints
             [.. (request.Bcc ?? []).Select(ToInfo)],
             request.Subject ?? string.Empty,
             request.Text,
-            request.Html,
+            html,
             files,
             request.InReplyTo,
             request.References,

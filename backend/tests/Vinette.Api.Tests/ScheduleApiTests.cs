@@ -318,4 +318,33 @@ public sealed class ScheduleApiTests : IDisposable
         Assert.Equal(1, alices.GetProperty("items").GetArrayLength());
         Assert.Empty(gateway.Appended);
     }
+
+    [Fact]
+    public async Task The_Html_Of_A_Message_Put_Off_Is_Cleaned_Before_It_Is_Kept_And_Too_Deep_Markup_Is_Refused()
+    {
+        var user = await SignInAsync();
+        var when = DateTimeOffset.UtcNow.AddHours(1);
+
+        var (status, _) = await ScheduleAsync(user, new
+        {
+            sendAt = when,
+            to = new[] { new { name = "", address = "anna@example.org" } },
+            subject = "s",
+            html = "<p style=\"color:red\" onclick=\"alert(1)\">Hi</p><script>alert(1)</script>",
+        });
+        var (deep, _) = await ScheduleAsync(user, new
+        {
+            sendAt = when,
+            to = new[] { new { name = "", address = "anna@example.org" } },
+            subject = "s",
+            html = string.Concat(Enumerable.Repeat("<div>", 500)),
+        });
+
+        Assert.Equal(HttpStatusCode.Created, status);
+        Assert.Equal(HttpStatusCode.BadRequest, deep);
+        var mail = string.Join(Environment.NewLine, Directory.EnumerateFiles(Path.Combine(directory, "queue"), " *.eml").Select(File.ReadAllText));
+        Assert.DoesNotContain("<script", mail, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("onclick", mail, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("color:red", mail, StringComparison.OrdinalIgnoreCase);
+    }
 }

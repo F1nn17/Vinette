@@ -109,6 +109,7 @@ public static class ScheduleEndpoints
         ScheduledMailService scheduled,
         IDrafts drafts,
         IAttachmentStore store,
+        IMessageHtmlSanitizer sanitizer,
         ILoggerFactory loggers,
         CancellationToken cancellationToken)
     {
@@ -135,10 +136,16 @@ public static class ScheduleEndpoints
             return Problem(StatusCodes.Status400BadRequest, "An attached file is not there (any more).", ErrorCodes.BadRequest);
         }
 
+        if (OutgoingHtml.Clean(request.Html, sanitizer, out var html) is { } badHtml)
+        {
+            return badHtml;
+        }
+
         var message = SendEndpoints.ToMessage(
             new SendRequest(request.FromName, request.To, request.Cc, request.Bcc, request.Subject, request.Text, request.Html, request.AttachmentIds, request.InReplyTo, request.References, request.DraftId, request.RequestReceipt),
             credentials,
-            files);
+            files,
+            html);
         ScheduledMail item;
         try
         {

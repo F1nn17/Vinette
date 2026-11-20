@@ -387,4 +387,37 @@ public sealed class SendApiTests : IDisposable
         Assert.Empty(outgoing.Sent);
         Assert.Equal(1, await WaitingFilesAsync(alice));
     }
+
+    [Fact]
+    public async Task The_Html_Is_Cleaned_On_The_Server_Before_It_Is_Sent_Whatever_The_Client_Sent()
+    {
+        var user = await SignInAsync();
+
+        var (status, _) = await SendAsync(user, new
+        {
+            to = new[] { new { name = "", address = "anna@example.org" } },
+            subject = "s",
+            html = "<p class=\"MsoNormal\" style=\"color:red\" onclick=\"alert(1)\">Hi <b>there</b></p><script>alert(1)</script><img src=\"https://tracker.example/p.gif\"><a href=\"javascript:alert(1)\">x</a>",
+        });
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Equal("<p>Hi <b>there</b></p><a>x</a>", Assert.Single(outgoing.Sent).Html);
+    }
+
+    [Fact]
+    public async Task Markup_Nested_Beyond_Reason_Is_A_Bad_Request_And_Nothing_Is_Sent()
+    {
+        var user = await SignInAsync();
+
+        var (status, body) = await SendAsync(user, new
+        {
+            to = new[] { new { name = "", address = "anna@example.org" } },
+            subject = "s",
+            html = string.Concat(Enumerable.Repeat("<div>", 500)),
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, status);
+        Assert.Equal("bad_request", body.GetProperty("code").GetString());
+        Assert.Empty(outgoing.Sent);
+    }
 }
