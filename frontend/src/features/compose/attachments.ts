@@ -171,5 +171,5 @@ export function useAttachments() {
     );
   }, []);
 
-  return { items, add, remove, limits };
+  return { items, add, remove, limits, loading: list.isPending };
 }

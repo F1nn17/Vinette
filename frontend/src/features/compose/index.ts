@@ -29,3 +29,6 @@ export { SignatureCard } from './SignatureCard';
 export { lastMailCaption } from './captions';
 export { RecipientsCard } from './RecipientsCard';
 export { useRecipientLookup } from './lookup';
+export { startOfDraft } from './draftStart';
+export type { OpenedDraft } from './draftStart';
+export { useDraft } from './useDraft';

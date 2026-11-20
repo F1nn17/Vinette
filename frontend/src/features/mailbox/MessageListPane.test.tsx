@@ -26,6 +26,7 @@ const folder = (path: string, role: string, extra: Record<string, unknown> = {})
 const FOLDERS = [
   folder('INBOX', 'inbox', { unread: 4 }),
   folder('Sent', 'sent'),
+  folder('Drafts', 'drafts'),
   folder('Archive', 'archive'),
   folder('Trash', 'trash'),
   folder('Работа/Отчёты', 'other', { name: 'Отчёты' }),
@@ -1137,6 +1138,15 @@ describe('keyboard shortcuts', () => {
 
     expect(router.state.location.pathname).toBe('/compose');
     expect(router.state.location.search).toBe('?reply=SU5CT1g.1.2');
+  });
+
+  it('r goes on with the open draft instead of replying to it', async () => {
+    const { user, router } = await ready(3, '/mail/drafts/RHJhZnRz.1.2', 'drafts', 'RHJhZnRz.1.2');
+
+    await user.keyboard('r');
+
+    expect(router.state.location.pathname).toBe('/compose');
+    expect(router.state.location.search).toBe('?draft=RHJhZnRz.1.2');
   });
 
   it('keys are silent while the user types in the search field', async () => {

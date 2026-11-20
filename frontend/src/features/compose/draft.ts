@@ -82,16 +82,18 @@ export interface DraftAutosave {
 export function useDraftAutosave(
   content: DraftContent | null,
   delay = AUTOSAVE_DELAY_MS,
+  /** The draft this screen was opened from (VIN-139): what is on the screen is what it holds, and each save replaces it. */
+  opened?: { id: string; messageId: string | null },
 ): DraftAutosave {
   const [status, setStatus] = useState<DraftStatus>({ state: 'idle' });
   const key = content === null ? '' : JSON.stringify(content);
   const latest = useRef({ content, key });
-  const saved = useRef('');
+  const saved = useRef(opened ? key : ''); // an opened draft needs no save until something changes
   const running = useRef<Promise<void> | null>(null);
   const paused = useRef(false);
   const ids = useRef<{ previousId: string | null; messageId: string | null }>({
-    previousId: null,
-    messageId: null,
+    previousId: opened?.id ?? null,
+    messageId: opened?.messageId ?? null,
   });
 
   useEffect(() => {

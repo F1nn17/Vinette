@@ -192,7 +192,10 @@ export function MessageListPane({
     },
     // Answers the open message (the selected ones are not answered: an answer is to one message).
     reply: () => {
-      if (messageId !== undefined) void navigate(`/compose?reply=${encodeURIComponent(messageId)}`);
+      if (messageId === undefined) return;
+      // A draft is not answered but gone on with (VIN-139).
+      const mode = folder?.role === 'drafts' ? 'draft' : 'reply';
+      void navigate(`/compose?${mode}=${encodeURIComponent(messageId)}`);
     },
     // The same actions as the buttons; they leave a message where it is already (no archive in the archive, no delete in the trash).
     archive: () => keyAction('archive', 'archive'),

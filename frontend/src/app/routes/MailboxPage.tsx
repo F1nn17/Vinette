@@ -70,6 +70,10 @@ export function MailboxPage() {
                 address={address ?? ''}
               />
             )}
+            onEdit={() => {
+              if (messageId !== undefined)
+                void navigate(`/compose?draft=${encodeURIComponent(messageId)}`);
+            }}
             onCompose={(mode) => {
               if (messageId !== undefined)
                 void navigate(`/compose?${mode}=${encodeURIComponent(messageId)}`);

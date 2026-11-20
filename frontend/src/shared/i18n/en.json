@@ -287,6 +287,7 @@
     "actions": "Message actions",
     "reply": "Reply",
     "forward": "Forward",
+    "edit": "Edit",
     "replyAll": "Reply to all",
     "archive": "Archive",
     "spam": "Mark as spam",

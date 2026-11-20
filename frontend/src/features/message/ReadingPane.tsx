@@ -28,6 +28,8 @@ export interface ReadingPaneProps {
   onAction?: (action: ReaderAction) => void;
   /** Starts an answer or a forward of the open message; the screen decides where the editor opens. */
   onCompose?: (mode: ComposeFrom) => void;
+  /** Opens the open draft in the editor (only in the drafts folder). */
+  onEdit?: () => void;
   /** The quick reply shown under the message (not in the drafts folder); the screen supplies it, so that this pane knows nothing of how it answers. */
   quickReply?: (message: { id: string; senderName: string }) => ReactNode;
   /** The message whose "Labels" panel is open, when the screen holds that state (the key `l` opens it from the list); absent: the pane holds it itself. */
@@ -184,6 +186,7 @@ export function ReadingPane({
   folderRole,
   onAction,
   onCompose,
+  onEdit,
   quickReply,
   labelsFor: labelsForProp,
   onLabelsForChange,
@@ -250,6 +253,7 @@ export function ReadingPane({
         folderRole={folderRole}
         onAction={onAction}
         onCompose={onCompose}
+        onEdit={onEdit}
         flagged={message.flagged}
         labels={{
           open: labelsOpen,

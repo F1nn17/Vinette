@@ -131,6 +131,12 @@ export interface ReplyStart {
   body: ComposeBody;
   inReplyTo: string | null;
   references: string[] | null;
+  /** Ask for a read receipt (a draft that was opened remembers it). */
+  receipt?: boolean;
+  /** The draft the screen was opened from (VIN-139): the autosave replaces it instead of making another. */
+  draft?: { id: string; messageId: string | null };
+  /** The ids of the draft's files among the uploaded ones, until the list of uploads is read (so that opening a draft is not a change of it). */
+  attachmentIds?: string[];
 }
 
 export function startOf(
