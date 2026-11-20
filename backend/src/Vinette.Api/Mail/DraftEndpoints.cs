@@ -19,6 +19,7 @@ namespace Vinette.Api.Mail;
 /// <param name="AttachmentIds">The ids of uploaded files (<c>POST /attachments</c>) that belong to the draft.</param>
 /// <param name="InReplyTo">The Message-ID of the message this is a reply to.</param>
 /// <param name="References">The Message-IDs of the conversation so far.</param>
+/// <param name="RequestReceipt">Ask for a read receipt when the message is sent (kept in the draft).</param>
 public sealed record DraftRequest(
     string? PreviousId,
     string? MessageId,
@@ -31,7 +32,8 @@ public sealed record DraftRequest(
     string? Html,
     IReadOnlyList<string>? AttachmentIds,
     string? InReplyTo,
-    IReadOnlyList<string>? References);
+    IReadOnlyList<string>? References,
+    bool RequestReceipt = false);
 
 /// <summary>A draft that was kept.</summary>
 /// <param name="Id">The draft's id now (the earlier one is gone); absent if the mail server does not say what it is.</param>
@@ -54,6 +56,7 @@ public sealed record DraftSavedDto(string? Id, string MessageId, DateTimeOffset 
 /// <param name="InReplyTo">The Message-ID of the message this is a reply to.</param>
 /// <param name="References">The Message-IDs of the conversation so far.</param>
 /// <param name="Date">When the draft was last kept; absent if unknown.</param>
+/// <param name="RequestReceipt">The draft asks for a read receipt.</param>
 public sealed record DraftDto(
     string Id,
     string? MessageId,
@@ -67,7 +70,8 @@ public sealed record DraftDto(
     IReadOnlyList<Attachments.UploadedAttachmentDto> Attachments,
     string? InReplyTo,
     IReadOnlyList<string> References,
-    DateTimeOffset? Date);
+    DateTimeOffset? Date,
+    bool RequestReceipt = false);
 
 /// <summary>
 /// Drafts (VIN-094): <c>POST /drafts</c> keeps a draft in the mailbox's drafts folder (and removes the version it replaces),
@@ -154,7 +158,8 @@ public static class DraftEndpoints
             files,
             request.InReplyTo,
             request.References,
-            request.MessageId);
+            request.MessageId,
+            RequestReceipt: request.RequestReceipt);
         try
         {
             var saved = await drafts.SaveAsync(credentials, message, previous, cancellationToken);
@@ -210,7 +215,8 @@ public static class DraftEndpoints
             [.. stored.Select(a => new Attachments.UploadedAttachmentDto(a.Id, a.FileName, a.ContentType, a.Size))],
             message.InReplyTo,
             message.References ?? [],
-            message.Date));
+            message.Date,
+            message.RequestReceipt));
     }
 
     /// <summary>Deletes the draft for good; 404 if it is not in the drafts folder (any more).</summary>

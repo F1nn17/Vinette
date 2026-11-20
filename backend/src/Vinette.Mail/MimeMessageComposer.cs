@@ -69,6 +69,11 @@ public sealed partial class MimeMessageComposer(TimeProvider? timeProvider = nul
 
         mime.Subject = OneLine(message.Subject ?? string.Empty);
         mime.Date = message.Date ?? time.GetUtcNow();
+        if (message.RequestReceipt)
+        {
+            // Asks the reader's mail program for a read receipt, sent to the sender (and to nobody else).
+            mime.Headers.Add(HeaderId.DispositionNotificationTo, from.ToString(true));
+        }
 
         var id = message.MessageId is null ? null : MessageIdOf(message.MessageId);
         if (message.MessageId is not null && id is null)
@@ -85,6 +90,52 @@ public sealed partial class MimeMessageComposer(TimeProvider? timeProvider = nul
         using var stream = new MemoryStream();
         mime.WriteTo(Wire, stream);
         return new ComposedMessage(stream.ToArray(), new OutgoingEnvelope(from.Address, recipients), id);
+    }
+
+    public ComposedMessage ComposeReceipt(ReceiptRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var from = Address(request.From);
+        var to = Address(request.To);
+        var subject = OneLine(request.OriginalSubject ?? string.Empty);
+        var mime = new MimeMessage();
+        mime.From.Add(from);
+        mime.To.Add(to);
+        mime.Subject = "Read: " + (subject.Length > 200 ? subject[..200] : subject);
+        mime.Date = time.GetUtcNow();
+        var id = MimeUtils.GenerateMessageId(from.Domain);
+        mime.MessageId = id;
+        var original = request.OriginalMessageId is null ? null : MessageIdOf(request.OriginalMessageId);
+        if (original is not null)
+        {
+            mime.InReplyTo = original;
+            mime.References.Add(original);
+        }
+
+        var sent = request.OriginalDate is { } date ? $" on {date.UtcDateTime:yyyy-MM-dd HH:mm} UTC" : string.Empty;
+        var report = new MultipartReport("disposition-notification")
+        {
+            new TextPart("plain")
+            {
+                Text = $"The message sent to {from.Address}{sent} with the subject \"{subject}\" has been displayed. This is no guarantee that the message has been read or understood.",
+            },
+        };
+        var notification = new MessageDispositionNotification();
+        notification.Fields.Add("Reporting-UA", "Vinette");
+        notification.Fields.Add("Final-Recipient", "rfc822; " + from.Address);
+        if (original is not null)
+        {
+            notification.Fields.Add("Original-Message-ID", "<" + original + ">");
+        }
+
+        notification.Fields.Add("Disposition", "manual-action/MDN-sent-manually; displayed");
+        report.Add(notification);
+        mime.Body = report;
+        mime.Prepare(EncodingConstraint.SevenBit);
+
+        using var stream = new MemoryStream();
+        mime.WriteTo(Wire, stream);
+        return new ComposedMessage(stream.ToArray(), new OutgoingEnvelope(from.Address, [to.Address]), id);
     }
 
     private static MailboxAddress Address(MailAddressInfo person)

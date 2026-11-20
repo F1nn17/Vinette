@@ -389,3 +389,45 @@ describe('the recipients card', () => {
     expect(calls.some((c) => c.url.startsWith('/api/v1/recipients/lookup'))).toBe(false);
   });
 });
+
+describe('the read receipt box', () => {
+  it('is off by default, and a message goes without asking for a receipt', async () => {
+    open();
+    const box = await screen.findByRole('checkbox', { name: 'Запросить уведомление о прочтении' });
+    expect(box).not.toBeChecked();
+    await fill();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Отправить' }));
+
+    await waitFor(() => expect(sends()).toHaveLength(1));
+    expect(sends()[0]!.body).toMatchObject({ requestReceipt: false });
+  });
+
+  it('asks for a receipt when it is ticked, in the draft too', async () => {
+    open();
+    await userEvent.click(
+      await screen.findByRole('checkbox', { name: 'Запросить уведомление о прочтении' }),
+    );
+    await fill();
+    await screen.findByText(/Черновик сохранён в \d/, {}, { timeout: 4000 });
+
+    expect(calls.filter((c) => c.url === '/api/v1/drafts').at(-1)!.body).toMatchObject({
+      requestReceipt: true,
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Отправить' }));
+
+    await waitFor(() => expect(sends()).toHaveLength(1));
+    expect(sends()[0]!.body).toMatchObject({ requestReceipt: true });
+  });
+
+  it('is not a message worth a draft on its own', async () => {
+    open();
+
+    await userEvent.click(
+      await screen.findByRole('checkbox', { name: 'Запросить уведомление о прочтении' }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 1800));
+
+    expect(calls.some((c) => c.url === '/api/v1/drafts')).toBe(false);
+  });
+});

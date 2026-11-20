@@ -107,6 +107,7 @@
       "lastOn": "Last mail {{date}}",
       "unknown": "Not in the address book"
     },
+    "receipt": "Request a read receipt",
     "options": "Message options",
     "signature": {
       "title": "Signature",
@@ -259,6 +260,13 @@
     }
   },
   "reader": {
+    "receipt": {
+      "title": "Read receipt request",
+      "question": "The sender asks you to confirm that you have read the message. The confirmation tells them when you opened it.",
+      "send": "Send confirmation",
+      "decline": "Do not send",
+      "sentToast": "Confirmation sent"
+    },
     "actions": "Message actions",
     "reply": "Reply",
     "forward": "Forward",

@@ -108,7 +108,8 @@ public sealed class DraftService(IMessageComposer composer, IMessageParser parse
             parsed.InReplyTo,
             parsed.References,
             parsed.MessageId,
-            parsed.Date);
+            parsed.Date,
+            parsed.ReceiptTo is not null);
         return new OpenedDraft(id, message);
     }
 

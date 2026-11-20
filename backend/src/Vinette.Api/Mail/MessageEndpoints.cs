@@ -42,6 +42,7 @@ public sealed record AttachmentDto(string PartId, string FileName, string Conten
 /// <param name="ImagesShown">How many of the pictures from the web were loaded into the body (only after <c>images=true</c>).</param>
 /// <param name="Sender">What our mail server's checks say about the sender.</param>
 /// <param name="Attachments">The attached files.</param>
+/// <param name="ReceiptRequested">The sender asks for a read receipt and the reader has not answered yet: the reader is asked (<c>POST /messages/{id}/receipt</c>); nothing is sent unless the reader says so.</param>
 public sealed record MessageDetailDto(
     string Id,
     string Subject,
@@ -64,7 +65,8 @@ public sealed record MessageDetailDto(
     bool HasExternalImages,
     bool ImagesTrusted,
     SenderDto Sender,
-    IReadOnlyList<AttachmentDto> Attachments);
+    IReadOnlyList<AttachmentDto> Attachments,
+    bool ReceiptRequested);
 
 /// <summary>The outcome of the sender check.</summary>
 /// <param name="Verdict"><c>verified</c>: the domain in the From line passed our server's checks; <c>suspicious</c>: the checks failed (show a warning); <c>unknown</c>: nothing reliable to say (show nothing).</param>
@@ -251,7 +253,8 @@ public static partial class MessageEndpoints
             result.CanShowImages > 0,
             trusted,
             ToDto(sender),
-            [.. parsed.Attachments.Select(a => new AttachmentDto(a.PartId, a.FileName, a.ContentType, a.Size, a.IsMessage))]));
+            [.. parsed.Attachments.Select(a => new AttachmentDto(a.PartId, a.FileName, a.ContentType, a.Size, a.IsMessage))],
+            ReceiptEndpoints.Requester(parsed, source) is not null));
     }
 
     private static SenderDto ToDto(SenderCheck check) => new(

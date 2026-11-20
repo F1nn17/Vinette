@@ -44,6 +44,7 @@ public sealed record InlinePart(string PartId, string ContentId, string ContentT
 /// <param name="InReplyTo">The In-Reply-To header without angle brackets; null if absent.</param>
 /// <param name="References">The Message-IDs of the References header without angle brackets, oldest first.</param>
 /// <param name="ReplyTo">The Reply-To header: where the sender asks answers to go; empty if absent.</param>
+/// <param name="ReceiptTo">The first address of the Disposition-Notification-To header: where the sender asks a read receipt to be sent (RFC 8098); null if the message asks for none.</param>
 public sealed record ParsedMessage(
     string Subject,
     MailAddressInfo? From,
@@ -59,7 +60,8 @@ public sealed record ParsedMessage(
     IReadOnlyList<MailAddressInfo>? Bcc = null,
     string? InReplyTo = null,
     IReadOnlyList<string>? References = null,
-    IReadOnlyList<MailAddressInfo>? ReplyTo = null);
+    IReadOnlyList<MailAddressInfo>? ReplyTo = null,
+    MailAddressInfo? ReceiptTo = null);
 
 /// <summary>An attached file with its bytes.</summary>
 /// <param name="Attachment">What the message lists about it: safe name, declared type, size.</param>

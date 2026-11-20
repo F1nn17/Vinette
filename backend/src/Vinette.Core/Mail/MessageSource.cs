@@ -8,7 +8,8 @@ namespace Vinette.Core.Mail;
 /// <param name="Answered">Replied to.</param>
 /// <param name="Draft">A draft.</param>
 /// <param name="Labels">The message's own keywords (labels), without the system ones.</param>
-public sealed record MessageSource(MessageId Id, byte[] Content, bool Seen, bool Flagged, bool Answered, bool Draft, IReadOnlyList<string> Labels);
+/// <param name="ReceiptSent">The message carries the standard keyword <c>$MDNSent</c> (RFC 3503): the reader has already answered its request for a read receipt (or declined it).</param>
+public sealed record MessageSource(MessageId Id, byte[] Content, bool Seen, bool Flagged, bool Answered, bool Draft, IReadOnlyList<string> Labels, bool ReceiptSent = false);
 
 /// <summary>A change of a message's flags; only what is set changes.</summary>
 /// <param name="Seen">Read (true) or unread (false); null leaves it as it is.</param>

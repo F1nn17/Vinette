@@ -404,6 +404,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/messages/{id}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AnswerReceiptRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/messages/{id}/quote": {
         parameters: {
             query?: never;
@@ -573,6 +589,8 @@ export interface components {
             references: string[];
             /** Format: date-time */
             date: null | string;
+            /** @default false */
+            requestReceipt: boolean;
         };
         DraftRequest: {
             previousId: null | string;
@@ -587,6 +605,8 @@ export interface components {
             attachmentIds: null | string[];
             inReplyTo: null | string;
             references: null | string[];
+            /** @default false */
+            requestReceipt: boolean;
         };
         DraftSavedDto: {
             id: null | string;
@@ -682,6 +702,7 @@ export interface components {
             imagesTrusted: boolean;
             sender: components["schemas"]["SenderDto"];
             attachments: components["schemas"]["AttachmentDto"][];
+            receiptRequested: boolean;
         };
         MessageFlagsDto: {
             seen: boolean;
@@ -755,6 +776,9 @@ export interface components {
             html: null | string;
             attachments: components["schemas"]["UploadedAttachmentDto"][];
         };
+        ReceiptDecision: {
+            send: boolean;
+        };
         RecipientLookupItem: {
             address: string;
             known: boolean;
@@ -789,6 +813,8 @@ export interface components {
             inReplyTo: null | string;
             references: null | string[];
             draftId: null | string;
+            /** @default false */
+            requestReceipt: boolean;
         };
         SentDto: {
             messageId: string;
@@ -2523,6 +2549,75 @@ export interface operations {
             };
             /** @description Payload Too Large */
             413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AnswerReceiptRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["ReceiptDecision"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

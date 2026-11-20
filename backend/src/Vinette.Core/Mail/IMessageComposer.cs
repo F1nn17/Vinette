@@ -19,6 +19,7 @@ public sealed record OutgoingAttachment(string FileName, string ContentType, Rea
 /// <param name="References">The Message-IDs of the conversation so far, oldest first; the reply's <paramref name="InReplyTo"/> is added at the end if it is missing.</param>
 /// <param name="MessageId">A Message-ID to keep (a draft saved again keeps its own); a new one is made if absent.</param>
 /// <param name="Date">When the message was written; now if absent.</param>
+/// <param name="RequestReceipt">Ask the recipients' mail programs for a read receipt (a Disposition-Notification-To header naming the sender, RFC 8098). Off by default.</param>
 public sealed record OutgoingMessage(
     MailAddressInfo From,
     IReadOnlyList<MailAddressInfo> To,
@@ -31,7 +32,16 @@ public sealed record OutgoingMessage(
     string? InReplyTo = null,
     IReadOnlyList<string>? References = null,
     string? MessageId = null,
-    DateTimeOffset? Date = null);
+    DateTimeOffset? Date = null,
+    bool RequestReceipt = false);
+
+/// <summary>A read receipt to send: the reader of a message tells its sender that it was displayed (RFC 8098).</summary>
+/// <param name="From">The mailbox that read the message.</param>
+/// <param name="To">Where the message asked the receipt to go (the sender).</param>
+/// <param name="OriginalMessageId">The Message-ID of the message that was read, if it has one.</param>
+/// <param name="OriginalSubject">Its subject.</param>
+/// <param name="OriginalDate">When it was sent, if known.</param>
+public sealed record ReceiptRequest(MailAddressInfo From, MailAddressInfo To, string? OriginalMessageId, string OriginalSubject, DateTimeOffset? OriginalDate);
 
 /// <summary>A message built into a mail, ready to be sent or kept as a draft.</summary>
 /// <param name="Raw">The whole mail as it goes on the wire (RFC 5322, seven-bit safe).</param>
@@ -72,4 +82,10 @@ public interface IMessageComposer
     /// not for sending). Throws <see cref="ArgumentException"/> for what cannot be built.
     /// </summary>
     ComposedMessage ComposeDraft(OutgoingMessage message);
+
+    /// <summary>
+    /// Builds a read receipt (a <c>multipart/report</c> with a <c>message/disposition-notification</c>, RFC 8098) from the reader to the sender,
+    /// "displayed", sent by hand. Throws <see cref="ArgumentException"/> if an address is not an address.
+    /// </summary>
+    ComposedMessage ComposeReceipt(ReceiptRequest request);
 }

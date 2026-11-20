@@ -10,6 +10,7 @@ import { useMessage, verdictOf, type MessageDetail } from './api';
 import { AttachmentList } from './AttachmentList';
 import { useSetFlags } from './flags';
 import { ImageTrust } from './ImageTrust';
+import { ReceiptRequest } from './ReceiptRequest';
 import { MessageFrame } from './MessageFrame';
 import { ReaderActionBar, type ComposeFrom, type ReaderAction } from './ReaderActionBar';
 import { SenderCheckBadge } from './SenderCheckBadge';
@@ -145,6 +146,8 @@ function Header({ message, address, imagesAsked, imagesLoading, onShowImages }: 
       </div>
 
       <SenderCheckBadge verdict={verdict} />
+
+      <ReceiptRequest message={message} />
 
       {blocked > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-md bg-bg px-4 py-3 text-secondary text-text-2">
