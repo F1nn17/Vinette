@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronDown, ChevronLeft, Send, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +7,7 @@ import { apiPost, apiRequest } from '@/shared/api/client';
 import { describeApiError } from '@/shared/api/describe-error';
 import type { components } from '@/shared/api/schema';
 import { Confirm } from '@/features/mailbox';
+import { SCHEDULED_KEY } from '@/features/scheduled/api';
 import { SignaturesEditor, useSignatures } from '@/features/settings';
 import { Button, Dialog } from '@/shared/ui';
 import { useToast } from '@/shared/toast';
@@ -44,6 +46,7 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
+  const queryClient = useQueryClient();
   const [values, setValues] = useState<ComposeValues>(start?.values ?? EMPTY_COMPOSE);
   const [body, setBody] = useState<ComposeBody>(start?.body ?? EMPTY_BODY);
   const attachments = useAttachments();
@@ -98,6 +101,8 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
           sendAt: sendAt.toISOString(),
           draftId,
         });
+        // The list and the counter of "Scheduled" must show the message at once, not at the next refresh.
+        void queryClient.invalidateQueries({ queryKey: SCHEDULED_KEY });
         toast.show({
           message: t('compose.schedule.queued', { when: formatWhen(sendAt, i18n.language) }),
           action: { label: t('toast.undo'), onSelect: () => void cancelQueued(queued.item.id) },
@@ -123,6 +128,7 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
   const cancelQueued = async (id: string) => {
     try {
       await apiRequest<void>('DELETE', `/api/v1/scheduled/${encodeURIComponent(id)}`);
+      void queryClient.invalidateQueries({ queryKey: SCHEDULED_KEY });
       toast.show({ message: t('compose.schedule.cancelled') });
     } catch (error) {
       toast.show({ message: describeApiError(error, t), tone: 'error' });
