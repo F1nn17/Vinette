@@ -26,3 +26,6 @@ export { quoteQuery, useQuote } from './useQuote';
 export { QuickReply } from './QuickReply';
 export { withSignature } from './signature';
 export { SignatureCard } from './SignatureCard';
+export { lastMailCaption } from './captions';
+export { RecipientsCard } from './RecipientsCard';
+export { useRecipientLookup } from './lookup';

@@ -13,6 +13,11 @@ public static class SuggestionLimits
     public const int MaxQueryLength = 100;
 }
 
+/// <summary>What is known of one address among the people the mailbox deals with.</summary>
+/// <param name="Address">The address, as asked.</param>
+/// <param name="LastMail">When the newest message with this person (written to or received from) is dated; null if the person is not among the mailbox's correspondents.</param>
+public sealed record KnownRecipient(string Address, DateTimeOffset? LastMail);
+
 /// <summary>
 /// Addresses to offer while the user types a recipient: the people the mailbox has written to (the "Sent" folder) and received from (the
 /// inbox), the ones written to and the recent ones first. Learned from the newest mail only, and remembered per mailbox for a while, so that
@@ -29,6 +34,12 @@ public interface IRecipientSuggestions
     /// <param name="query">What has been typed so far; may be empty.</param>
     /// <param name="count">How many at most, 1 to <see cref="SuggestionLimits.MaxCount"/>.</param>
     Task<IReadOnlyList<MailAddressInfo>> SuggestAsync(MailCredentials credentials, string query, int count, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// For each address, in the order given, whether the mailbox deals with that person and when the newest message with them is dated. Learned
+    /// from the same newest mail as the suggestions, so a person whose mail is older than that is reported as not known.
+    /// </summary>
+    Task<IReadOnlyList<KnownRecipient>> LookupAsync(MailCredentials credentials, IReadOnlyList<string> addresses, CancellationToken cancellationToken);
 
     /// <summary>Takes addresses a message has just gone to into the remembered ones of the mailbox (no wait for the next refresh).</summary>
     void Remember(string mailbox, IEnumerable<MailAddressInfo> recipients);

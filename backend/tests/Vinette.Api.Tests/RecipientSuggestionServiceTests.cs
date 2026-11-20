@@ -352,4 +352,32 @@ public sealed class RecipientSuggestionServiceTests
     [InlineData(-1)]
     public async Task A_Count_Below_One_Is_Refused(int count) =>
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Service(Typical()).SuggestAsync(Credentials, string.Empty, count, Token));
+
+    [Fact]
+    public async Task A_Lookup_Tells_When_The_Newest_Message_With_A_Person_Is_Dated_And_That_Strangers_Are_Not_Known()
+    {
+        var service = Service(Typical());
+
+        var found = await service.LookupAsync(Credentials, ["ANNA@example.org", "stranger@example.org", "karl@example.org", "clara@example.org"], Token);
+
+        Assert.Equal(["ANNA@example.org", "stranger@example.org", "karl@example.org", "clara@example.org"], found.Select(k => k.Address)); // as asked
+        Assert.Equal(Now.AddDays(-2), found[0].LastMail); // the newest of the messages written to her
+        Assert.Null(found[1].LastMail);
+        Assert.Equal(Now.AddDays(-10), found[2].LastMail); // heard from: the newest of two
+        Assert.Equal(Now.AddDays(-1), found[3].LastMail);
+    }
+
+    [Fact]
+    public async Task A_Lookup_Uses_What_Is_Kept_And_A_Person_Written_To_Just_Now_Is_Known_From_Now()
+    {
+        var server = Typical();
+        var service = Service(server);
+        _ = await service.SuggestAsync(Credentials, string.Empty, 8, Token);
+
+        service.Remember(Credentials.Address, [Person("Дина", "dina@example.org")]);
+        var found = await service.LookupAsync(Credentials, ["dina@example.org"], Token);
+
+        Assert.Equal(Now, found[0].LastMail);
+        Assert.Equal(1, server.Commands); // the mailbox was read once, for the suggestions and for the lookup
+    }
 }

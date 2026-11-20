@@ -37,7 +37,7 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
     private readonly TimeProvider time = timeProvider ?? TimeProvider.System;
     private readonly ConcurrentDictionary<string, Entry> entries = new(StringComparer.Ordinal);
 
-    private sealed record Contact(string Name, string Address, double Score, string LowerAddress, string LowerName, string[] Words);
+    private sealed record Contact(string Name, string Address, double Score, DateTimeOffset LastMail, string LowerAddress, string LowerName, string[] Words);
 
     private sealed class Index(DateTimeOffset builtAt, Contact[] contacts)
     {
@@ -72,6 +72,23 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
         }
 
         var mailbox = credentials.Address.ToLowerInvariant();
+        var index = await IndexOfAsync(credentials, mailbox, cancellationToken).ConfigureAwait(false);
+        return Match(index, mailbox, text, count);
+    }
+
+    public async Task<IReadOnlyList<KnownRecipient>> LookupAsync(MailCredentials credentials, IReadOnlyList<string> addresses, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(credentials);
+        ArgumentNullException.ThrowIfNull(addresses);
+        var mailbox = credentials.Address.ToLowerInvariant();
+        var index = await IndexOfAsync(credentials, mailbox, cancellationToken).ConfigureAwait(false);
+        var known = index.Contacts.ToDictionary(c => c.LowerAddress, c => c.LastMail, StringComparer.Ordinal);
+        return [.. addresses.Select(a => new KnownRecipient(a, known.TryGetValue(a.Trim().ToLowerInvariant(), out var last) ? last : null))];
+    }
+
+    /// <summary>What is known of the mailbox's correspondents: from memory, read first if there is nothing yet, refreshed in the background when old.</summary>
+    private async Task<Index> IndexOfAsync(MailCredentials credentials, string mailbox, CancellationToken cancellationToken)
+    {
         var entry = Touch(mailbox);
         Index? index;
         Task<Index>? waiting = null;
@@ -94,8 +111,7 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
         }
 
         // The read belongs to the mailbox, not to this request: a request that is given up on stops waiting, the read goes on for the next one.
-        index ??= await waiting!.WaitAsync(cancellationToken).ConfigureAwait(false);
-        return Match(index, mailbox, text, count);
+        return index ?? await waiting!.WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public void Remember(string mailbox, IEnumerable<MailAddressInfo> recipients)
@@ -112,7 +128,7 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
         {
             if (entry.Current is { } current)
             {
-                entry.Current = Merge(current, recipients, key);
+                entry.Current = Merge(current, recipients, key, time.GetUtcNow());
             }
             else if (entry.Building is not null)
             {
@@ -122,7 +138,7 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
     }
 
     /// <summary>The index with the people taken in as if they had just been written to.</summary>
-    private static Index Merge(Index current, IEnumerable<MailAddressInfo> recipients, string ownAddress)
+    private static Index Merge(Index current, IEnumerable<MailAddressInfo> recipients, string ownAddress, DateTimeOffset now)
     {
         var merged = current.Contacts.ToDictionary(c => c.LowerAddress, StringComparer.Ordinal);
         foreach (var person in recipients)
@@ -135,8 +151,8 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
             }
 
             merged[lower] = merged.TryGetValue(lower, out var known)
-                ? Make(string.IsNullOrWhiteSpace(person.Name) ? known.Name : person.Name.Trim(), known.Address, known.Score + SentWeight)
-                : Make(person.Name?.Trim() ?? string.Empty, address, SentWeight);
+                ? Make(string.IsNullOrWhiteSpace(person.Name) ? known.Name : person.Name.Trim(), known.Address, known.Score + SentWeight, now)
+                : Make(person.Name?.Trim() ?? string.Empty, address, SentWeight, now);
         }
 
         return new Index(current.BuiltAt, [.. merged.Values.OrderByDescending(c => c.Score).Take(MaxContacts)]);
@@ -173,7 +189,7 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
                     // What was sent while the mailbox was being read is taken in, and the index is in place before anyone is told it is ready.
                     if (entry.Pending.Count > 0)
                     {
-                        built = Merge(built, entry.Pending, own);
+                        built = Merge(built, entry.Pending, own, time.GetUtcNow());
                         entry.Pending.Clear();
                     }
 
@@ -233,7 +249,7 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
                 return found.Values
                     .OrderByDescending(t => t.Score)
                     .Take(MaxContacts)
-                    .Select(t => Make(t.Name, t.Address, t.Score))
+                    .Select(t => Make(t.Name, t.Address, t.Score, t.LastMail))
                     .ToArray();
             },
             cancellationToken).ConfigureAwait(false);
@@ -248,6 +264,9 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
         public DateTimeOffset NameDate { get; set; } = DateTimeOffset.MinValue;
 
         public double Score { get; set; }
+
+        /// <summary>The date of the newest message the address was found in.</summary>
+        public DateTimeOffset LastMail { get; set; } = DateTimeOffset.MinValue;
     }
 
     private static async Task ScanAsync(IMailSession session, string folder, bool recipients, double weight, string own, DateTimeOffset now, Dictionary<string, Tally> found, CancellationToken cancellationToken)
@@ -285,6 +304,11 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
                     }
 
                     tally.Score += weight * decay;
+                    if (message.Date > tally.LastMail)
+                    {
+                        tally.LastMail = message.Date;
+                    }
+
                     if (!string.IsNullOrWhiteSpace(person.Name) && message.Date >= tally.NameDate)
                     {
                         tally.Name = person.Name.Trim(); // the name the person was last seen under
@@ -306,10 +330,10 @@ public sealed partial class RecipientSuggestionService(IMailGateway gateway, ILo
     private static bool IsAddress(string address) =>
         address.Length is > 3 and <= 254 && address.Count(c => c == '@') == 1 && !address.StartsWith('@') && !address.EndsWith('@') && !address.Any(c => char.IsControl(c) || char.IsWhiteSpace(c));
 
-    private static Contact Make(string name, string address, double score)
+    private static Contact Make(string name, string address, double score, DateTimeOffset lastMail)
     {
         var lowerName = name.ToLowerInvariant();
-        return new Contact(name, address, score, address.ToLowerInvariant(), lowerName, lowerName.Split(WordSeparators, StringSplitOptions.RemoveEmptyEntries));
+        return new Contact(name, address, score, lastMail, address.ToLowerInvariant(), lowerName, lowerName.Split(WordSeparators, StringSplitOptions.RemoveEmptyEntries));
     }
 
     /// <summary>0: the text starts the address or the name; 1: it starts words of the name (or every word typed starts some word); 2: it is somewhere inside; -1: no match.</summary>

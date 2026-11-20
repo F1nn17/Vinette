@@ -17,12 +17,14 @@ interface Call {
 
 let calls: Call[];
 let sendAnswer: () => Response;
+let lookup: { address: string; known: boolean; lastMail: string | null }[];
 let signatures: { id: string; name: string; text: string; default: boolean }[];
 
 beforeEach(() => {
   resetCsrfToken();
   calls = [];
   signatures = [];
+  lookup = [];
   sendAnswer = () => json({ messageId: 'm', copy: 'saved', copyId: 'c', draftRemoved: true });
   vi.stubGlobal(
     'fetch',
@@ -51,6 +53,8 @@ beforeEach(() => {
           }),
         );
       if (input === '/api/v1/messages') return Promise.resolve(sendAnswer());
+      if (String(input).startsWith('/api/v1/recipients/lookup'))
+        return Promise.resolve(json({ items: lookup }));
       if (input === '/api/v1/settings')
         return Promise.resolve(
           json({
@@ -331,5 +335,57 @@ describe('the signature', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Отмена' }));
 
     expect(screen.queryByRole('dialog', { name: 'Подписи' })).not.toBeInTheDocument();
+  });
+});
+
+describe('the recipients card', () => {
+  it('says there is nobody yet, then lists the people of the message with what the mailbox knows of each', async () => {
+    const today = new Date().toISOString();
+    lookup = [
+      { address: 'anna@example.org', known: true, lastMail: today },
+      { address: 'new@example.org', known: false, lastMail: null },
+    ];
+    open();
+    const card = await screen.findByRole('region', { name: 'Получатели' });
+    expect(within(card).getByText('Получателей пока нет.')).toBeInTheDocument();
+
+    await userEvent.type(screen.getByRole('combobox', { name: 'Кому' }), 'anna@example.org{Enter}');
+    await userEvent.type(screen.getByRole('combobox', { name: 'Кому' }), 'new@example.org{Enter}');
+
+    const people = within(card).getAllByRole('listitem');
+    expect(people).toHaveLength(2);
+    await waitFor(() => expect(people[0]).toHaveTextContent('Последнее письмо сегодня'));
+    expect(people[0]).toHaveTextContent('anna@example.org');
+    expect(people[1]).toHaveTextContent('new@example.org');
+    expect(people[1]).toHaveTextContent('Нет в адресной книге');
+    expect(
+      calls.some((c) =>
+        c.url.startsWith(
+          '/api/v1/recipients/lookup?address=anna%40example.org&address=new%40example.org',
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it('leaves out a recipient that is not an address, and takes a person off when the chip is removed', async () => {
+    lookup = [{ address: 'anna@example.org', known: false, lastMail: null }];
+    open();
+    const card = await screen.findByRole('region', { name: 'Получатели' });
+
+    await userEvent.type(screen.getByRole('combobox', { name: 'Кому' }), 'anna@example.org{Enter}');
+    await userEvent.type(screen.getByRole('combobox', { name: 'Кому' }), 'broken{Enter}');
+    expect(within(card).getAllByRole('listitem')).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Убрать: anna@example.org' }));
+    await waitFor(() =>
+      expect(within(card).getByText('Получателей пока нет.')).toBeInTheDocument(),
+    );
+  });
+
+  it('asks nothing while there is nobody', async () => {
+    open();
+    await screen.findByRole('region', { name: 'Получатели' });
+
+    expect(calls.some((c) => c.url.startsWith('/api/v1/recipients/lookup'))).toBe(false);
   });
 });

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Vinette.Api.Auth;
+using Vinette.Api.Mail;
 using Vinette.Core.Authentication;
 using Vinette.Core.Mail;
 
@@ -37,6 +38,16 @@ public sealed class RecipientSuggestionApiTests : IDisposable
 
             Asked.Add((credentials.Address, query, count));
             return Task.FromResult<IReadOnlyList<MailAddressInfo>>([new MailAddressInfo("Анна", "anna@example.org"), new MailAddressInfo("", "boris@example.org")]);
+        }
+
+        public Dictionary<string, DateTimeOffset> Known { get; } = [];
+
+        public List<string[]> Looked { get; } = [];
+
+        public Task<IReadOnlyList<KnownRecipient>> LookupAsync(MailCredentials credentials, IReadOnlyList<string> addresses, CancellationToken cancellationToken)
+        {
+            Looked.Add([.. addresses]);
+            return Task.FromResult<IReadOnlyList<KnownRecipient>>([.. addresses.Select(a => new KnownRecipient(a, Known.TryGetValue(a, out var last) ? last : null))]);
         }
 
         public void Remember(string mailbox, IEnumerable<MailAddressInfo> recipients)
@@ -138,5 +149,53 @@ public sealed class RecipientSuggestionApiTests : IDisposable
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, status);
         Assert.Equal("mail_unavailable", body.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task What_Is_Known_Of_The_Addresses_Comes_Back_In_The_Order_Asked_Without_Repeats()
+    {
+        suggestions.Known["anna@example.org"] = new DateTimeOffset(2026, 11, 17, 9, 0, 0, TimeSpan.Zero);
+
+        var (status, body) = await GetAsync("/api/v1/recipients/lookup?address=anna@example.org&address=stranger@example.org&address=ANNA@example.org");
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Equal(["anna@example.org", "stranger@example.org"], Assert.Single(suggestions.Looked));
+        var items = body.GetProperty("items");
+        Assert.Equal(2, items.GetArrayLength());
+        Assert.True(items[0].GetProperty("known").GetBoolean());
+        Assert.Equal("2026-11-17T09:00:00+00:00", items[0].GetProperty("lastMail").GetString());
+        Assert.False(items[1].GetProperty("known").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, items[1].GetProperty("lastMail").ValueKind);
+    }
+
+    [Fact]
+    public async Task Asking_About_Nobody_Is_An_Empty_Answer_Without_Reading_The_Mailbox()
+    {
+        var (status, body) = await GetAsync("/api/v1/recipients/lookup");
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Equal(0, body.GetProperty("items").GetArrayLength());
+        Assert.Empty(suggestions.Looked);
+    }
+
+    [Fact]
+    public async Task Too_Many_Addresses_Or_One_That_Is_Too_Long_Is_A_Bad_Request()
+    {
+        var many = string.Join("&", Enumerable.Range(0, RecipientSuggestionEndpoints.MaxLookupAddresses + 1).Select(i => $"address=a{i}@example.org"));
+
+        var (tooMany, _) = await GetAsync("/api/v1/recipients/lookup?" + many);
+        var (tooLong, _) = await GetAsync("/api/v1/recipients/lookup?address=" + new string('a', 255));
+
+        Assert.Equal(HttpStatusCode.BadRequest, tooMany);
+        Assert.Equal(HttpStatusCode.BadRequest, tooLong);
+        Assert.Empty(suggestions.Looked);
+    }
+
+    [Fact]
+    public async Task A_Lookup_Needs_A_Session()
+    {
+        var (status, _) = await GetAsync("/api/v1/recipients/lookup?address=a@example.org", signedIn: false);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, status);
     }
 }

@@ -19,6 +19,7 @@ import { EMPTY_BODY, type ComposeBody } from './editor-text';
 import { MessageEditor } from './MessageEditor';
 import type { ReplyStart } from './reply';
 import { sendBlocker } from './send';
+import { RecipientsCard } from './RecipientsCard';
 import { SignatureCard } from './SignatureCard';
 import { withSignature } from './signature';
 
@@ -190,6 +191,7 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
           </div>
         </ComposeForm>
         <aside aria-label={t('compose.options')} className="flex flex-col gap-5">
+          <RecipientsCard recipients={[...values.to, ...values.cc, ...values.bcc]} />
           <SignatureCard
             signatures={signatures.list}
             selectedId={signatureId}
