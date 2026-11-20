@@ -310,4 +310,30 @@ public sealed class DraftApiTests : IDisposable
         Assert.Equal(HttpStatusCode.NotFound, noFolder);
         Assert.Equal([SavedId, SavedId], drafts.Deleted);
     }
+
+    [Fact]
+    public async Task The_Html_Of_A_Draft_Is_Cleaned_On_The_Server_Too()
+    {
+        var user = await SignInAsync();
+
+        var (status, _) = await SaveAsync(user, new
+        {
+            to = new[] { new { name = "", address = "anna@example.org" } },
+            subject = "s",
+            html = "<p style=\"color:red\">Hi</p><script>alert(1)</script>",
+        });
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Equal("<p>Hi</p>", Assert.Single(drafts.Saved).Message.Html);
+    }
+
+    [Fact]
+    public async Task A_Draft_With_No_Usable_Html_Keeps_None()
+    {
+        var user = await SignInAsync();
+
+        _ = await SaveAsync(user, new { subject = "s", text = "plain", html = "<script>alert(1)</script>" });
+
+        Assert.Null(Assert.Single(drafts.Saved).Message.Html);
+    }
 }

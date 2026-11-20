@@ -21,6 +21,15 @@ public sealed partial class MessageHtmlSanitizer : IMessageHtmlSanitizer
         "tbody", "td", "tfoot", "th", "thead", "tr", "tt", "u", "ul", "var", "wbr",
     ];
 
+    // What the editor can make, and a little of what a person may paste: nothing else leaves in a message (VIN-108).
+    private static readonly string[] OutgoingTags =
+    [
+        "a", "b", "blockquote", "br", "code", "div", "em", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "li", "ol", "p", "pre", "s",
+        "span", "strike", "strong", "sub", "sup", "u", "ul",
+    ];
+
+    private static readonly string[] OutgoingAttributes = ["href", "rel", "start", "target"];
+
     private static readonly string[] Attributes =
     [
         "align", "alt", "bgcolor", "border", "cellpadding", "cellspacing", "class", "color", "colspan", "dir", "face", "height",
@@ -87,6 +96,59 @@ public sealed partial class MessageHtmlSanitizer : IMessageHtmlSanitizer
         var clean = sanitizer.Sanitize(input);
         clean = DropActiveStyleParts(clean, () => blocked++);
         return new SanitizedHtml(clean, blocked, truncated, false, external);
+    }
+
+    public SanitizedHtml SanitizeOutgoing(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return SanitizedHtml.Empty;
+        }
+
+        var truncated = html.Length > IMessageHtmlSanitizer.MaxInputLength;
+        var input = truncated ? html[..IMessageHtmlSanitizer.MaxInputLength] : html;
+        if (TooDeep(input))
+        {
+            return new SanitizedHtml(string.Empty, 0, truncated, true);
+        }
+
+        var sanitizer = new HtmlSanitizer(new HtmlSanitizerOptions
+        {
+            AllowedTags = new HashSet<string>(OutgoingTags, StringComparer.OrdinalIgnoreCase),
+            AllowedAttributes = new HashSet<string>(OutgoingAttributes, StringComparer.OrdinalIgnoreCase),
+            AllowedCssProperties = new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            AllowedSchemes = new HashSet<string>(["http", "https", "mailto"], StringComparer.OrdinalIgnoreCase),
+            AllowedAtRules = new HashSet<AngleSharp.Css.Dom.CssRuleType>(),
+            UriAttributes = new HashSet<string>(["href", "src", "cite", "background", "action", "formaction", "poster", "data", "srcset"], StringComparer.OrdinalIgnoreCase),
+        })
+        {
+            KeepChildNodes = false,
+            AllowDataAttributes = false,
+            AllowCssCustomProperties = false,
+        };
+        sanitizer.FilterUrl += (_, e) =>
+        {
+            var url = e.OriginalUrl.Trim();
+            // Only a link, and only to the web or to an address: not a place inside the message, not a telephone, not a path.
+            e.SanitizedUrl = e.Tag.LocalName == "a" && (IsWebAddress(url) || url.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase)) ? url : null;
+        };
+        sanitizer.PostProcessNode += (_, e) =>
+        {
+            if (e.Node is IElement element)
+            {
+                if (element.LocalName == "a" && element.HasAttribute("href"))
+                {
+                    element.SetAttribute("target", "_blank");
+                    element.SetAttribute("rel", "noopener noreferrer");
+                }
+                else
+                {
+                    element.RemoveAttribute("target");
+                    element.RemoveAttribute("rel");
+                }
+            }
+        };
+        return new SanitizedHtml(sanitizer.Sanitize(input), 0, truncated, false);
     }
 
     private static HtmlSanitizer Build(Action blockedExternal, Func<string, string?>? resolveContentId, Func<string, string?>? resolveExternalImage, List<string> externalImages)

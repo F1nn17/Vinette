@@ -62,4 +62,14 @@ public interface IMessageHtmlSanitizer
     /// blocked. The addresses asked for are in <see cref="SanitizedHtml.ExternalImages"/> either way.
     /// </summary>
     SanitizedHtml Sanitize(string? html, Func<string, string?>? resolveContentId, int maxInputLength, Func<string, string?>? resolveExternalImage);
+
+    /// <summary>
+    /// Cleans the HTML of a message that is about to be <b>sent</b> (VIN-108): the same cleaning as for a message that is shown (scripts, active
+    /// content, event handlers, loads from outside), and on top of that only what the editor can make: paragraphs, line breaks, bold, italic,
+    /// underline, lists, quotes, code and links to the web or to an address (<c>http</c>, <c>https</c>, <c>mailto</c>). No styles, classes,
+    /// pictures or tables: what a paste from Word or a page brings along does not leave in a message, and neither does what a client that is
+    /// not ours sends. Never throws for any input; <see cref="SanitizedHtml.Rejected"/> for markup nested beyond <see cref="MaxNesting"/> and
+    /// <see cref="SanitizedHtml.Truncated"/> for markup longer than <see cref="MaxInputLength"/> (the caller refuses both: a message is not cut).
+    /// </summary>
+    SanitizedHtml SanitizeOutgoing(string? html);
 }

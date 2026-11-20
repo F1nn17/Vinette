@@ -86,6 +86,7 @@ public static partial class SendEndpoints
         IDrafts drafts,
         IAttachmentStore store,
         IRecipientSuggestions suggestions,
+        IMessageHtmlSanitizer sanitizer,
         ILoggerFactory loggers,
         CancellationToken cancellationToken)
     {
@@ -107,7 +108,12 @@ public static partial class SendEndpoints
             return Problem(StatusCodes.Status400BadRequest, "An attached file is not there (any more).", ErrorCodes.BadRequest);
         }
 
-        var message = ToMessage(request, credentials, files);
+        if (OutgoingHtml.Clean(request.Html, sanitizer, out var html) is { } refused)
+        {
+            return refused;
+        }
+
+        var message = ToMessage(request, credentials, files, html);
 
         SendOutcome outcome;
         try
@@ -135,7 +141,7 @@ public static partial class SendEndpoints
     }
 
     /// <summary>The message as the user wrote it, from the mailbox that is signed in.</summary>
-    internal static OutgoingMessage ToMessage(SendRequest request, MailCredentials credentials, List<OutgoingAttachment> files) =>
+    internal static OutgoingMessage ToMessage(SendRequest request, MailCredentials credentials, List<OutgoingAttachment> files, string? cleanHtml) =>
         new(
             new MailAddressInfo(request.FromName ?? string.Empty, credentials.Address),
             [.. (request.To ?? []).Select(ToInfo)],
@@ -143,7 +149,7 @@ public static partial class SendEndpoints
             [.. (request.Bcc ?? []).Select(ToInfo)],
             request.Subject ?? string.Empty,
             request.Text,
-            request.Html,
+            cleanHtml,
             files,
             request.InReplyTo,
             request.References,
