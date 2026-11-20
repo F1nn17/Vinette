@@ -292,4 +292,47 @@ describe('useDraftAutosave', () => {
 
     expect(saves).toHaveLength(1);
   });
+
+  it('goes on with a draft that was opened: no save until something changes, then it replaces that draft by its id', async () => {
+    const { rerender } = renderHook(
+      ({ c }) => useDraftAutosave(c, undefined, { id: 'opened-1', messageId: 'm-open' }),
+      {
+        initialProps: { c: draft('Opened') },
+      },
+    );
+    await act(() => vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS * 2));
+    expect(saves).toHaveLength(0);
+
+    rerender({ c: draft('Opened!') });
+    await act(() => vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS + 10));
+
+    expect(saves.map((s) => [s.body.subject, s.body.previousId, s.body.messageId])).toEqual([
+      ['Opened!', 'opened-1', 'm-open'],
+    ]);
+  });
+
+  it('settles with the id of the opened draft even when nothing was changed, so that it can be deleted or replaced by a send', async () => {
+    const { result } = renderHook(() =>
+      useDraftAutosave(draft('Opened'), undefined, { id: 'opened-1', messageId: null }),
+    );
+
+    let id: string | null | undefined;
+    await act(async () => {
+      id = await result.current.settle();
+    });
+
+    expect(id).toBe('opened-1');
+    expect(saves).toHaveLength(0);
+  });
+
+  it('does not ask before the page is closed for a draft that was opened and not touched', () => {
+    renderHook(() =>
+      useDraftAutosave(draft('Opened'), undefined, { id: 'opened-1', messageId: null }),
+    );
+    const event = new Event('beforeunload', { cancelable: true });
+
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+  });
 });

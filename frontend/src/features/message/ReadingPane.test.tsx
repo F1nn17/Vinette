@@ -52,6 +52,7 @@ function renderPane(
   onCompose?: (mode: string) => void,
   quickReply?: (m: { id: string; senderName: string }) => ReactNode,
   folderRole?: string,
+  onEdit?: () => void,
 ) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
@@ -63,6 +64,7 @@ function renderPane(
         onCompose={onCompose}
         quickReply={quickReply}
         folderRole={folderRole}
+        onEdit={onEdit}
       />
     </QueryClientProvider>,
   );
@@ -81,6 +83,40 @@ describe('ReadingPane', () => {
     renderPane('SU5CT1g.1.7', 'user@example.com', undefined, undefined, slot);
 
     expect(await screen.findByText('quick-SU5CT1g.1.7-Anna Smirnova')).toBeInTheDocument();
+  });
+
+  it('offers to edit a draft instead of replying to it or forwarding it, and opens it for editing', async () => {
+    mockApi(() => message());
+    const edited = vi.fn();
+    renderPane(
+      'SU5CT1g.1.7',
+      'user@example.com',
+      undefined,
+      undefined,
+      undefined,
+      'drafts',
+      edited,
+    );
+    await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+    const bar = screen.getByRole('toolbar', { name: 'Действия с письмом' });
+
+    expect(within(bar).queryByRole('button', { name: 'Ответить' })).not.toBeInTheDocument();
+    expect(within(bar).queryByRole('button', { name: 'Переслать' })).not.toBeInTheDocument();
+    await userEvent.click(within(bar).getByRole('button', { name: 'Ещё' }));
+    expect(screen.queryByRole('button', { name: 'Ответить всем' })).not.toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(within(bar).getByRole('button', { name: 'Редактировать' }));
+
+    expect(edited).toHaveBeenCalledOnce();
+  });
+
+  it('has no edit button outside the drafts folder', async () => {
+    mockApi(() => message());
+    renderPane('SU5CT1g.1.7', 'user@example.com', undefined, vi.fn(), undefined, 'inbox', vi.fn());
+    await screen.findByRole('heading', { name: 'Layouts, second iteration' });
+
+    expect(screen.queryByRole('button', { name: 'Редактировать' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ответить' })).toBeInTheDocument();
   });
 
   it('offers no quick reply for a draft', async () => {

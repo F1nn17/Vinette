@@ -198,4 +198,127 @@ describe('answering and forwarding', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('уже нет');
     expect(screen.getByRole('link', { name: 'Входящие' })).toHaveAttribute('href', '/mail/inbox');
   });
+
+  describe('going on with a draft', () => {
+    const DRAFT = {
+      id: 'RHJhZnRz.3.12',
+      messageId: 'made@vinette.test',
+      from: { name: '', address: 'me@vinette.test' },
+      to: [{ name: 'Анна', address: 'anna@example.org' }],
+      cc: [],
+      bcc: [{ name: '', address: 'hidden@example.org' }],
+      subject: 'Смета',
+      text: 'Привет',
+      html: '<p>Привет, <strong>мир</strong></p>',
+      attachments: [{ id: 'f1', fileName: 'report.pdf', contentType: 'application/pdf', size: 5 }],
+      inReplyTo: 'm3@example.org',
+      references: ['m1@example.org', 'm3@example.org'],
+      date: '2026-11-17T09:00:00Z',
+      requestReceipt: true,
+    };
+
+    beforeEach(() => {
+      const original = globalThis.fetch;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((input: string, init?: RequestInit) => {
+          if (String(input).startsWith('/api/v1/drafts/') && (init?.method ?? 'GET') === 'GET') {
+            calls.push({ url: String(input), method: 'GET' });
+            return Promise.resolve(json(DRAFT));
+          }
+          if (input === '/api/v1/attachments' && (init?.method ?? 'GET') === 'GET') {
+            calls.push({ url: String(input), method: 'GET' });
+            return Promise.resolve(
+              json({
+                items: DRAFT.attachments,
+                limits: { maxFileBytes: 1e6, maxTotalBytes: 1e6, maxFiles: 5 },
+              }),
+            );
+          }
+          return original(input, init);
+        }),
+      );
+    });
+
+    it('brings back the people, the subject, the text with its formatting, the box for a receipt and the files', async () => {
+      open('?draft=RHJhZnRz.3.12');
+
+      expect(await screen.findByLabelText('Тема')).toHaveValue('Смета');
+      expect(to()).toHaveTextContent('Анна');
+      expect(screen.getByRole('list', { name: 'Получатели: Скрытая' })).toHaveTextContent(
+        'hidden@example.org',
+      );
+      const editor = await screen.findByRole('textbox', { name: 'Текст письма' });
+      expect(editor).toHaveTextContent('Привет, мир');
+      expect(editor.querySelector('strong')).toHaveTextContent('мир');
+      expect(
+        screen.getByRole('checkbox', { name: 'Запросить уведомление о прочтении' }),
+      ).toBeChecked();
+      expect(
+        within(await screen.findByRole('list', { name: 'Прикреплённые файлы' })).getByText(
+          'report.pdf',
+        ),
+      ).toBeInTheDocument();
+      expect(calls.find((c) => c.url.startsWith('/api/v1/drafts/'))!.url).toBe(
+        '/api/v1/drafts/RHJhZnRz.3.12',
+      );
+    });
+
+    it('saves nothing until something changes, and then replaces this draft instead of making another', async () => {
+      open('?draft=RHJhZnRz.3.12');
+      await screen.findByLabelText('Тема');
+      await new Promise((resolve) => setTimeout(resolve, 1800));
+      expect(calls.some((c) => c.url === '/api/v1/drafts' && c.method === 'POST')).toBe(false);
+
+      await userEvent.type(screen.getByLabelText('Тема'), '!');
+
+      await waitFor(
+        () =>
+          expect(calls.some((c) => c.url === '/api/v1/drafts' && c.method === 'POST')).toBe(true),
+        { timeout: 4000 },
+      );
+      const saved = calls.find((c) => c.url === '/api/v1/drafts' && c.method === 'POST')!.body!;
+      expect(saved).toMatchObject({
+        previousId: 'RHJhZnRz.3.12',
+        messageId: 'made@vinette.test',
+        subject: 'Смета!',
+        requestReceipt: true,
+        inReplyTo: 'm3@example.org',
+        attachmentIds: ['f1'],
+      });
+    });
+
+    it('sends from it and tells the server which draft to delete', async () => {
+      const router = open('?draft=RHJhZnRz.3.12');
+      await screen.findByLabelText('Тема');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Отправить' }));
+
+      await waitFor(() => expect(router.state.location.pathname).toBe('/mail/inbox'));
+      expect(calls.find((c) => c.url === '/api/v1/messages')!.body).toMatchObject({
+        draftId: 'RHJhZnRz.3.12',
+        subject: 'Смета',
+        requestReceipt: true,
+        to: [{ address: 'anna@example.org' }],
+        bcc: [{ address: 'hidden@example.org' }],
+      });
+    });
+
+    it('says in words when the draft cannot be opened, and leaves a way back', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((input: string) =>
+          Promise.resolve(
+            String(input).startsWith('/api/v1/drafts/')
+              ? json({ code: 'not_found', title: 'x' }, { status: 404 })
+              : json({ token: 't' }),
+          ),
+        ),
+      );
+      open('?draft=nope');
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('уже нет');
+      expect(screen.getByRole('link', { name: 'Входящие' })).toHaveAttribute('href', '/mail/inbox');
+    });
+  });
 });

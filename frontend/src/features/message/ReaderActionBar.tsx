@@ -5,6 +5,7 @@ import {
   Flag,
   Eraser,
   Forward,
+  Pencil,
   MailPlus,
   Reply,
   ReplyAll,
@@ -35,6 +36,8 @@ export interface ReaderActionBarProps {
   onAction?: (action: ReaderAction) => void;
   /** Starts an answer or a forward of the open message in the editor (VIN-102); without it those buttons cannot be used. */
   onCompose?: (mode: ComposeFrom) => void;
+  /** Opens a draft in the editor (VIN-139): in the drafts folder it takes the place of "Reply" and "Forward". */
+  onEdit?: () => void;
   /** The "Labels" button and the panel it opens (VIN-078); without it the button is not shown. */
   labels?: { open: boolean; onToggle: () => void; menu: ReactNode };
 }
@@ -51,6 +54,7 @@ export function ReaderActionBar({
   folderRole,
   onAction,
   onCompose,
+  onEdit,
   labels,
 }: ReaderActionBarProps) {
   const { t } = useTranslation();
@@ -66,26 +70,41 @@ export function ReaderActionBar({
           <ArrowLeft {...icon} />
         </IconButton>
       )}
-      <Button
-        variant="secondary"
-        size="sm"
-        className="max-md:h-11"
-        icon={<Reply {...icon} size={16} />}
-        disabled={!onCompose}
-        onClick={() => onCompose?.('reply')}
-      >
-        {t('reader.reply')}
-      </Button>
-      <Button
-        variant="secondary"
-        size="sm"
-        className="max-md:h-11"
-        icon={<Forward {...icon} size={16} />}
-        disabled={!onCompose}
-        onClick={() => onCompose?.('forward')}
-      >
-        {t('reader.forward')}
-      </Button>
+      {folderRole === 'drafts' ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="max-md:h-11"
+          icon={<Pencil {...icon} size={16} />}
+          disabled={!onEdit}
+          onClick={() => onEdit?.()}
+        >
+          {t('reader.edit')}
+        </Button>
+      ) : (
+        <>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="max-md:h-11"
+            icon={<Reply {...icon} size={16} />}
+            disabled={!onCompose}
+            onClick={() => onCompose?.('reply')}
+          >
+            {t('reader.reply')}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="max-md:h-11"
+            icon={<Forward {...icon} size={16} />}
+            disabled={!onCompose}
+            onClick={() => onCompose?.('forward')}
+          >
+            {t('reader.forward')}
+          </Button>
+        </>
+      )}
       <span aria-hidden="true" className="mx-1 h-5 w-px bg-line max-md:hidden" />
       <div className="flex items-center max-md:hidden">
         {folderRole !== 'archive' && (
@@ -146,13 +165,17 @@ export function ReaderActionBar({
       <div className="ml-auto">
         <MoreMenu
           items={[
-            {
-              key: 'replyAll',
-              label: t('reader.replyAll'),
-              icon: <ReplyAll {...icon} />,
-              onSelect: () => onCompose?.('replyAll'),
-              disabled: !onCompose,
-            },
+            ...(folderRole === 'drafts'
+              ? []
+              : [
+                  {
+                    key: 'replyAll',
+                    label: t('reader.replyAll'),
+                    icon: <ReplyAll {...icon} />,
+                    onSelect: () => onCompose?.('replyAll'),
+                    disabled: !onCompose,
+                  },
+                ]),
             ...(folderRole !== 'archive'
               ? [
                   {

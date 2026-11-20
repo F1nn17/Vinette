@@ -47,10 +47,12 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
   const [values, setValues] = useState<ComposeValues>(start?.values ?? EMPTY_COMPOSE);
   const [body, setBody] = useState<ComposeBody>(start?.body ?? EMPTY_BODY);
   const attachments = useAttachments();
-  const attachmentIds = attachments.items.flatMap((a) =>
-    a.status === 'done' && a.id ? [a.id] : [],
-  );
-  const [receipt, setReceipt] = useState(false); // off unless the user asks (DESIGN.md §6)
+  // Until the list of uploads is read, an opened draft has the files it was opened with: reading the list is not a change of the draft.
+  const attachmentIds =
+    attachments.loading && start?.attachmentIds
+      ? start.attachmentIds
+      : attachments.items.flatMap((a) => (a.status === 'done' && a.id ? [a.id] : []));
+  const [receipt, setReceipt] = useState(start?.receipt ?? false); // off unless the user asks (DESIGN.md §6)
   const content = buildDraftContent(
     values,
     body,
@@ -58,7 +60,7 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
     { inReplyTo: start?.inReplyTo ?? null, references: start?.references ?? null },
     receipt,
   );
-  const draft = useDraftAutosave(content);
+  const draft = useDraftAutosave(content, undefined, start?.draft);
   const [busy, setBusy] = useState<'sending' | 'deleting' | null>(null);
   const busyRef = useRef(false);
   const [problem, setProblem] = useState<string | null>(null);
