@@ -88,4 +88,10 @@ public interface IMessageComposer
     /// "displayed", sent by hand. Throws <see cref="ArgumentException"/> if an address is not an address.
     /// </summary>
     ComposedMessage ComposeReceipt(ReceiptRequest request);
+
+    /// <summary>
+    /// The mail with its hidden recipients written into it as a <c>Bcc</c> header, so that it can be kept as a draft (the sent form has no
+    /// such header; ADR-0008). Everything else is as it was.
+    /// </summary>
+    ReadOnlyMemory<byte> AddHiddenRecipients(ReadOnlyMemory<byte> raw, IReadOnlyList<MailAddressInfo> hidden);
 }

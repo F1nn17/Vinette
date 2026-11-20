@@ -138,6 +138,22 @@ public sealed partial class MimeMessageComposer(TimeProvider? timeProvider = nul
         return new ComposedMessage(stream.ToArray(), new OutgoingEnvelope(from.Address, [to.Address]), id);
     }
 
+    public ReadOnlyMemory<byte> AddHiddenRecipients(ReadOnlyMemory<byte> raw, IReadOnlyList<MailAddressInfo> hidden)
+    {
+        ArgumentNullException.ThrowIfNull(hidden);
+        if (hidden.Count == 0)
+        {
+            return raw;
+        }
+
+        using var input = new MemoryStream(raw.ToArray(), writable: false);
+        var mime = MimeMessage.Load(input);
+        mime.Bcc.AddRange(hidden.Select(Address));
+        using var output = new MemoryStream();
+        mime.WriteTo(Wire, output);
+        return output.ToArray();
+    }
+
     private static MailboxAddress Address(MailAddressInfo person)
     {
         ArgumentNullException.ThrowIfNull(person);

@@ -19,6 +19,7 @@ Environment=VINETTE_CONFIG=/etc/vinette/appsettings.json
 Environment=VINETTE_DataProtection__KeysPath=/var/lib/vinette/keys
 Environment=VINETTE_Settings__Path=/var/lib/vinette/settings
 Environment=VINETTE_Attachments__Path=/var/lib/vinette/attachments
+Environment=VINETTE_Scheduling__Path=/var/lib/vinette/scheduled
 
 # Hardening
 NoNewPrivileges=true

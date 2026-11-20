@@ -33,6 +33,7 @@ public static class ConfigurationExtensions
         services.AddSingleton<IValidateOptions<RedisOptions>, RedisOptionsValidator>();
         AddValidated<SettingsOptions>(services, configuration, SettingsOptions.SectionName);
         AddValidated<AttachmentsOptions>(services, configuration, AttachmentsOptions.SectionName);
+        AddValidated<SchedulingOptions>(services, configuration, SchedulingOptions.SectionName);
         AddValidated<SenderCheckOptions>(services, configuration, SenderCheckOptions.SectionName);
         AddValidated<ExternalImagesOptions>(services, configuration, ExternalImagesOptions.SectionName);
         AddValidated<KeyStorageOptions>(services, configuration, KeyStorageOptions.SectionName);

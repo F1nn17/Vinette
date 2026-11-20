@@ -34,6 +34,9 @@ public sealed class SendApiTests : IDisposable
 
         public SentCopyOutcome Copy { get; set; } = SentCopyOutcome.Saved;
 
+        public Task<SendOutcome> SendComposedAsync(MailCredentials credentials, ComposedMessage message, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public Task<SendOutcome> SendAsync(MailCredentials credentials, OutgoingMessage message, CancellationToken cancellationToken)
         {
             if (Fail is not null)

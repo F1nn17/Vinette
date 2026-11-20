@@ -108,6 +108,20 @@
       "unknown": "Not in the address book"
     },
     "receipt": "Request a read receipt",
+    "later": "Send later",
+    "schedule": {
+      "title": "Send later",
+      "ready": "Ready times",
+      "inHour": "In an hour",
+      "tomorrow": "Tomorrow at 8:00",
+      "monday": "Monday at 8:00",
+      "custom": "Another time",
+      "willSend": "The message will go: {{when}}",
+      "tooSoon": "Pick a time at least a couple of minutes ahead.",
+      "confirm": "Schedule",
+      "queued": "The message will go: {{when}}",
+      "cancelled": "The message is back in Drafts"
+    },
     "options": "Message options",
     "signature": {
       "title": "Signature",
@@ -192,6 +206,9 @@
     "recipient_rejected_named": "The mail service did not accept {{address}}. Check it and send the message again.",
     "send_refused": "The mail service refused to send this message. Check the text and the recipients, or try later.",
     "send_too_large": "The message is too large to send. Remove some of the attachments.",
+    "schedule_too_soon": "That time is too close. Pick a later one.",
+    "schedule_too_late": "A message cannot be put off that far. Pick a nearer time.",
+    "too_many_scheduled": "Too many messages are put off. Cancel one or wait until it goes.",
     "send_uncertain": "The connection broke while the message was being handed over: it may have gone already. Look in Sent before sending again."
   },
   "folders": {

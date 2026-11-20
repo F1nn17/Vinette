@@ -63,7 +63,7 @@ public static partial class SendEndpoints
         return api;
     }
 
-    private static MailAddressInfo ToInfo(AddressDto a) => new(a.Name ?? string.Empty, a.Address ?? string.Empty);
+    internal static MailAddressInfo ToInfo(AddressDto a) => new(a.Name ?? string.Empty, a.Address ?? string.Empty);
 
     private static string CopyName(SentCopyOutcome outcome) => outcome switch
     {
@@ -107,18 +107,7 @@ public static partial class SendEndpoints
             return Problem(StatusCodes.Status400BadRequest, "An attached file is not there (any more).", ErrorCodes.BadRequest);
         }
 
-        var message = new OutgoingMessage(
-            new MailAddressInfo(request.FromName ?? string.Empty, credentials.Address),
-            [.. (request.To ?? []).Select(ToInfo)],
-            [.. (request.Cc ?? []).Select(ToInfo)],
-            [.. (request.Bcc ?? []).Select(ToInfo)],
-            request.Subject ?? string.Empty,
-            request.Text,
-            request.Html,
-            files,
-            request.InReplyTo,
-            request.References,
-            RequestReceipt: request.RequestReceipt);
+        var message = ToMessage(request, credentials, files);
 
         SendOutcome outcome;
         try
@@ -138,11 +127,43 @@ public static partial class SendEndpoints
             return Problem(StatusCodes.Status503ServiceUnavailable, "The connection broke while the message was being handed over; it may have been sent. Look in the sent messages before sending it again.", ErrorCodes.SendUncertain);
         }
 
-        // The message is out: what follows must not fail the answer, and a client that has gone away must not stop it.
+        // The message is out: what follows must not fail the answer.
+        suggestions.Remember(credentials.Address, [.. message.To, .. message.Cc, .. message.Bcc]);
+        var draftRemoved = await TidyAsync(request.AttachmentIds, draft, credentials, store, drafts, loggers);
+
+        return Results.Ok(new SentDto(outcome.Message.MessageId, CopyName(outcome.Copy), outcome.CopyId?.ToString(), draftRemoved));
+    }
+
+    /// <summary>The message as the user wrote it, from the mailbox that is signed in.</summary>
+    internal static OutgoingMessage ToMessage(SendRequest request, MailCredentials credentials, List<OutgoingAttachment> files) =>
+        new(
+            new MailAddressInfo(request.FromName ?? string.Empty, credentials.Address),
+            [.. (request.To ?? []).Select(ToInfo)],
+            [.. (request.Cc ?? []).Select(ToInfo)],
+            [.. (request.Bcc ?? []).Select(ToInfo)],
+            request.Subject ?? string.Empty,
+            request.Text,
+            request.Html,
+            files,
+            request.InReplyTo,
+            request.References,
+            RequestReceipt: request.RequestReceipt);
+
+    /// <summary>
+    /// What follows once a message is out or is safe in the queue: the uploaded files it used are removed and the draft it was written from is
+    /// deleted. Nothing here may fail the answer, and a client that has gone away must not stop it. False if the draft could not be deleted.
+    /// </summary>
+    internal static async Task<bool> TidyAsync(
+        IReadOnlyList<string>? attachmentIds,
+        MessageId? draft,
+        MailCredentials credentials,
+        IAttachmentStore store,
+        IDrafts drafts,
+        ILoggerFactory loggers)
+    {
         var logger = loggers.CreateLogger("Vinette.Api.Mail.Send");
         using var timeout = new CancellationTokenSource(TidyTimeout);
-        suggestions.Remember(credentials.Address, [.. message.To, .. message.Cc, .. message.Bcc]);
-        foreach (var id in (request.AttachmentIds ?? []).Distinct(StringComparer.Ordinal))
+        foreach (var id in (attachmentIds ?? []).Distinct(StringComparer.Ordinal))
         {
             try
             {
@@ -154,21 +175,21 @@ public static partial class SendEndpoints
             }
         }
 
-        var draftRemoved = true;
-        if (draft is not null)
+        if (draft is null)
         {
-            try
-            {
-                _ = await drafts.DeleteAsync(credentials, draft.Value, timeout.Token);
-            }
-            catch (Exception exception) when (exception is MailUnavailableException or MailBusyException or MailAccessRevokedException or OperationCanceledException)
-            {
-                draftRemoved = false;
-                DraftNotDeleted(logger, exception.GetType().Name);
-            }
+            return true;
         }
 
-        return Results.Ok(new SentDto(outcome.Message.MessageId, CopyName(outcome.Copy), outcome.CopyId?.ToString(), draftRemoved));
+        try
+        {
+            _ = await drafts.DeleteAsync(credentials, draft.Value, timeout.Token);
+            return true;
+        }
+        catch (Exception exception) when (exception is MailUnavailableException or MailBusyException or MailAccessRevokedException or OperationCanceledException)
+        {
+            DraftNotDeleted(logger, exception.GetType().Name);
+            return false;
+        }
     }
 
     private static IResult Rejected(MailRejectedException rejected) => rejected.Reason switch

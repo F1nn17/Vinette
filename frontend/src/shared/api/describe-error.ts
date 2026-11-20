@@ -24,6 +24,9 @@ export function describeApiError(error: unknown, t: Translate): string {
       case 'send_refused':
       case 'send_too_large':
       case 'send_uncertain':
+      case 'schedule_too_soon':
+      case 'schedule_too_late':
+      case 'too_many_scheduled':
         return t(`errors.${error.code}`);
       case 'recipient_rejected':
         return error.address
