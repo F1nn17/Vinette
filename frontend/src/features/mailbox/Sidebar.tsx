@@ -2,6 +2,7 @@ import {
   AlertCircle,
   Archive,
   ChevronDown,
+  Clock,
   FileText,
   Flag,
   Folder as FolderIcon,
@@ -18,6 +19,7 @@ import { describeApiError } from '@/shared/api/describe-error';
 import { cn, formatBytes } from '@/shared/lib';
 import { Button, Logo, ProgressBar } from '@/shared/ui';
 import { SidebarLabels } from '@/features/labels';
+import { summaryOf, useScheduled } from '@/features/scheduled/api';
 import { useFolders, useQuota, type Folder } from './api';
 import { folderLabel, folderSlug } from './folder-label';
 import { useShell } from './shell-context';
@@ -42,11 +44,13 @@ interface RowProps {
   icon: LucideIcon;
   label: string;
   count?: number;
+  /** Something needs attention here: a dot of the warning color beside the counter. */
+  warn?: string;
   rail: boolean;
   onNavigate: () => void;
 }
 
-function NavRow({ to, active, icon: Icon, label, count, rail, onNavigate }: RowProps) {
+function NavRow({ to, active, icon: Icon, label, count, warn, rail, onNavigate }: RowProps) {
   return (
     <Link
       to={to}
@@ -71,6 +75,13 @@ function NavRow({ to, active, icon: Icon, label, count, rail, onNavigate }: RowP
           {count}
         </span>
       )}
+      {warn && (
+        <span
+          role="img"
+          aria-label={warn}
+          className="bg-warning-text size-2 shrink-0 rounded-full"
+        />
+      )}
     </Link>
   );
 }
@@ -82,19 +93,27 @@ export interface SidebarProps {
   folderSlug: string;
   /** The label whose list is open (`/mail/@label/<name>`), if any: then no folder is the current one. */
   labelName?: string;
+  /** The list of the messages put off is open (`/mail/@scheduled`): then no folder is the current one. */
+  scheduledActive?: boolean;
 }
 
 /**
  * The folder panel (DESIGN.md §5): logo, account, "Compose", folders with counters, labels, storage. On a tablet it is a
  * rail of icons; on mobile the same content sits in a drawer.
  */
-export function Sidebar({ address, folderSlug: current, labelName }: SidebarProps) {
+export function Sidebar({
+  address,
+  folderSlug: current,
+  labelName,
+  scheduledActive = false,
+}: SidebarProps) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { search } = useLocation();
   const { layout, closeNav } = useShell();
   const folders = useFolders();
   const quota = useQuota();
+  const { waiting, failed } = summaryOf(useScheduled().data);
   const rail = layout === 'tablet';
   const flaggedView = new URLSearchParams(search).get('filter') === 'flagged';
 
@@ -104,7 +123,7 @@ export function Sidebar({ address, folderSlug: current, labelName }: SidebarProp
     node: (
       <NavRow
         to={`/mail/${encodeURIComponent(folderSlug(f))}`}
-        active={folderSlug(f) === current && !flaggedView}
+        active={folderSlug(f) === current && !flaggedView && !scheduledActive}
         icon={ICONS[f.role] ?? FolderIcon}
         label={folderLabel(f, t)}
         count={counterOf(f)}
@@ -129,6 +148,24 @@ export function Sidebar({ address, folderSlug: current, labelName }: SidebarProp
   };
   const inboxAt = shown.findIndex((f) => f.role === 'inbox');
   rows.splice(inboxAt + 1, 0, flagged);
+  // "Scheduled" is not a folder of the mailbox but the queue of the application; it sits right after the drafts (DESIGN.md §5).
+  const scheduled = {
+    key: '\u0000scheduled',
+    node: (
+      <NavRow
+        to="/mail/@scheduled"
+        active={scheduledActive}
+        icon={Clock}
+        label={t('folders.scheduled')}
+        count={waiting}
+        warn={failed > 0 ? t('scheduled.hasFailed') : undefined}
+        rail={rail}
+        onNavigate={closeNav}
+      />
+    ),
+  };
+  const draftsRow = rows.findIndex((r) => r.key === shown.find((f) => f.role === 'drafts')?.path);
+  rows.splice(draftsRow < 0 ? rows.length : draftsRow + 1, 0, scheduled);
 
   const storage = quota.data?.storage;
 
