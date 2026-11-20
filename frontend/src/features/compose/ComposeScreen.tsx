@@ -1,4 +1,4 @@
-import { Check, ChevronLeft, Send, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, Send, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
@@ -20,10 +20,13 @@ import { MessageEditor } from './MessageEditor';
 import type { ReplyStart } from './reply';
 import { sendBlocker } from './send';
 import { RecipientsCard } from './RecipientsCard';
+import { ScheduleDialog } from './ScheduleDialog';
+import { formatWhen } from './schedule';
 import { SignatureCard } from './SignatureCard';
 import { withSignature } from './signature';
 
 type Sent = components['schemas']['SentDto'];
+type Scheduled = components['schemas']['ScheduleResponse'];
 
 export interface ComposeScreenProps {
   /** The mailbox the message goes from. */
@@ -38,7 +41,7 @@ export interface ComposeScreenProps {
  * message is out; if the send fails the autosave goes on and the message stays on the screen with the reason in words.
  */
 export function ComposeScreen({ address, start }: ComposeScreenProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
   const [values, setValues] = useState<ComposeValues>(start?.values ?? EMPTY_COMPOSE);
@@ -66,8 +69,10 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
   const signatureId = picked ?? signatures.defaultSignature?.id ?? '';
   const signature = signatures.list.find((s) => s.id === signatureId) ?? null;
   const [managing, setManaging] = useState(false);
+  const [later, setLater] = useState(false); // the "Send later" window
+  const [askedAt, setAskedAt] = useState<Date | null>(null); // the time chosen, while the question about a missing subject is open
 
-  const send = async (subjectChecked = false) => {
+  const send = async (subjectChecked = false, sendAt?: Date) => {
     if (busyRef.current) return;
     const blocker = sendBlocker(values, attachments.items);
     if (blocker) {
@@ -75,6 +80,7 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
       return;
     }
     if (!subjectChecked && values.subject.trim() === '') {
+      setAskedAt(sendAt ?? null);
       setQuestion('subject');
       return;
     }
@@ -83,13 +89,24 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
     setProblem(null);
     try {
       const draftId = await draft.settle();
-      const sent = await apiPost<Sent>('/api/v1/messages', {
-        ...withSignature(content as NonNullable<typeof content>, signature),
-        draftId,
-      });
-      toast.show({
-        message: t(sent.copy === 'saved' ? 'compose.sent' : 'compose.sentNoCopy'),
-      });
+      const message = withSignature(content as NonNullable<typeof content>, signature);
+      if (sendAt) {
+        const queued = await apiPost<Scheduled>('/api/v1/scheduled', {
+          ...message,
+          sendAt: sendAt.toISOString(),
+          draftId,
+        });
+        toast.show({
+          message: t('compose.schedule.queued', { when: formatWhen(sendAt, i18n.language) }),
+          action: { label: t('toast.undo'), onSelect: () => void cancelQueued(queued.item.id) },
+          duration: 15_000,
+        });
+      } else {
+        const sent = await apiPost<Sent>('/api/v1/messages', { ...message, draftId });
+        toast.show({
+          message: t(sent.copy === 'saved' ? 'compose.sent' : 'compose.sentNoCopy'),
+        });
+      }
       void navigate('/mail/inbox');
       return; // the message is out and the screen is leaving: the button stays busy, so that it cannot send twice
     } catch (error) {
@@ -98,6 +115,16 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
     }
     busyRef.current = false;
     setBusy(null);
+  };
+
+  // "Undo" in the notice after a message was put off: it goes back among the drafts, and the notice says so (or that it did not work).
+  const cancelQueued = async (id: string) => {
+    try {
+      await apiRequest<void>('DELETE', `/api/v1/scheduled/${encodeURIComponent(id)}`);
+      toast.show({ message: t('compose.schedule.cancelled') });
+    } catch (error) {
+      toast.show({ message: describeApiError(error, t), tone: 'error' });
+    }
   };
 
   const discard = async () => {
@@ -172,14 +199,28 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
             </p>
           )}
           <div className="flex min-h-[68px] flex-wrap items-center gap-2 rounded-b-xl border-t border-subtle bg-surface-2 px-5 py-3">
-            <Button
-              onClick={() => void send()}
-              disabled={busy !== null}
-              size="lg"
-              icon={<Send size={18} strokeWidth={1.8} aria-hidden />}
-            >
-              {t(busy === 'sending' ? 'compose.sending' : 'compose.send')}
-            </Button>
+            <div className="inline-flex">
+              <Button
+                onClick={() => void send()}
+                disabled={busy !== null}
+                size="lg"
+                className="rounded-r-none"
+                icon={<Send size={18} strokeWidth={1.8} aria-hidden />}
+              >
+                {t(busy === 'sending' ? 'compose.sending' : 'compose.send')}
+              </Button>
+              <Button
+                aria-label={t('compose.later')}
+                title={t('compose.later')}
+                aria-haspopup="dialog"
+                disabled={busy !== null}
+                size="lg"
+                className="rounded-l-none border-l border-on-accent/40 px-3"
+                onClick={() => setLater(true)}
+              >
+                <ChevronDown size={18} strokeWidth={1.8} aria-hidden />
+              </Button>
+            </div>
             <AttachButton onFiles={attachments.add} />
             <span className="ml-1 text-meta text-muted max-md:hidden">{t('compose.sendHint')}</span>
             <button
@@ -222,6 +263,16 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
       >
         <SignaturesEditor onSaved={() => setManaging(false)} onCancel={() => setManaging(false)} />
       </Dialog>
+      {later && (
+        <ScheduleDialog
+          open
+          onClose={() => setLater(false)}
+          onSchedule={(at) => {
+            setLater(false);
+            void send(false, at);
+          }}
+        />
+      )}
       {question === 'subject' && (
         <Confirm
           title={t('compose.noSubjectTitle')}
@@ -230,7 +281,7 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
           onClose={() => setQuestion(null)}
           onConfirm={() => {
             setQuestion(null);
-            void send(true);
+            void send(true, askedAt ?? undefined);
           }}
         />
       )}

@@ -24,8 +24,14 @@ public sealed partial class OutgoingMailService(
         ArgumentNullException.ThrowIfNull(credentials);
         ArgumentNullException.ThrowIfNull(message);
 
-        var composed = composer.Compose(message);
-        await sender.SendAsync(credentials, composed.Envelope, composed.Raw, cancellationToken).ConfigureAwait(false);
+        return await SendComposedAsync(credentials, composer.Compose(message), cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<SendOutcome> SendComposedAsync(MailCredentials credentials, ComposedMessage message, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(credentials);
+        ArgumentNullException.ThrowIfNull(message);
+        await sender.SendAsync(credentials, message.Envelope, message.Raw, cancellationToken).ConfigureAwait(false);
 
         // The message is out. From here on nothing may fail the call, nor may a client that has gone away cancel the copy.
         using var timeout = new CancellationTokenSource(CopyTimeout);
@@ -40,7 +46,7 @@ public sealed partial class OutgoingMailService(
                     var sent = folders.FirstOrDefault(f => f.Role == FolderRole.Sent && f.CanContainMessages);
                     return sent is null
                         ? (SentCopyOutcome.NoSentFolder, (MessageId?)null)
-                        : (SentCopyOutcome.Saved, await session.AppendMessageAsync(sent.Path, composed.Raw, seen: true, draft: false, sentAt, token).ConfigureAwait(false));
+                        : (SentCopyOutcome.Saved, await session.AppendMessageAsync(sent.Path, message.Raw, seen: true, draft: false, sentAt, token).ConfigureAwait(false));
                 },
                 timeout.Token,
                 safeToRepeat: false).ConfigureAwait(false);
@@ -49,13 +55,13 @@ public sealed partial class OutgoingMailService(
                 NoSentFolder(logger);
             }
 
-            return new SendOutcome(composed, outcome, id);
+            return new SendOutcome(message, outcome, id);
         }
         catch (Exception exception) when (exception is MailUnavailableException or MailBusyException or MailAccessRevokedException
             or MailFolderNotFoundException or OperationCanceledException)
         {
             CopyFailed(logger, exception.GetType().Name); // the type only: what the server said may name addresses
-            return new SendOutcome(composed, SentCopyOutcome.Failed, null);
+            return new SendOutcome(message, SentCopyOutcome.Failed, null);
         }
     }
 

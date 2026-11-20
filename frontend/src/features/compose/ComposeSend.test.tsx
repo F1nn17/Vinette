@@ -53,6 +53,25 @@ beforeEach(() => {
           }),
         );
       if (input === '/api/v1/messages') return Promise.resolve(sendAnswer());
+      if (input === '/api/v1/scheduled' && init?.method === 'POST')
+        return Promise.resolve(
+          json(
+            {
+              item: {
+                id: 'q1',
+                sendAt: '2026-11-21T08:00:00Z',
+                subject: 'Hello',
+                to: [],
+                cc: [],
+                state: 'pending',
+                problem: null,
+                inDrafts: false,
+              },
+              draftRemoved: true,
+            },
+            { status: 201 },
+          ),
+        );
       if (String(input).startsWith('/api/v1/recipients/lookup'))
         return Promise.resolve(json({ items: lookup }));
       if (input === '/api/v1/settings')
@@ -429,5 +448,139 @@ describe('the read receipt box', () => {
     await new Promise((resolve) => setTimeout(resolve, 1800));
 
     expect(calls.some((c) => c.url === '/api/v1/drafts')).toBe(false);
+  });
+});
+
+describe('sending later', () => {
+  const scheduledCalls = () => calls.filter((c) => c.url === '/api/v1/scheduled');
+
+  async function openLater() {
+    await userEvent.click(screen.getByRole('button', { name: 'Отправить позже' }));
+    return screen.findByRole('dialog', { name: 'Отправить позже' });
+  }
+
+  it('has a chevron beside "Send" that opens the window with ready times and a field for another', async () => {
+    open();
+    await fill();
+
+    const dialog = await openLater();
+
+    expect(within(dialog).getByRole('list', { name: 'Готовые варианты' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Через час' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Завтра в 8:00' })).toBeInTheDocument();
+    expect((within(dialog).getByLabelText('Другое время') as HTMLInputElement).value).toMatch(
+      /T08:00$/,
+    ); // tomorrow at 8 is chosen
+    expect(within(dialog).getByRole('status')).toHaveTextContent('Письмо уйдёт:');
+    expect(scheduledCalls()).toHaveLength(0);
+  });
+
+  it('puts the message in the queue at the chosen time, with the draft, and says when it will go, with an undo', async () => {
+    const router = open();
+    await fill();
+    await screen.findByText(/Черновик сохранён в \d/, {}, { timeout: 4000 });
+    const dialog = await openLater();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Через час' }));
+
+    const before = Date.now();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Запланировать' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/mail/inbox'));
+    const [queued] = scheduledCalls();
+    expect(queued!.body).toMatchObject({
+      subject: 'Hello',
+      draftId: 'd1',
+      to: [{ address: 'anna@example.org' }],
+    });
+    const when = new Date(String(queued!.body!.sendAt)).getTime();
+    expect(when).toBeGreaterThan(before + 59 * 60_000);
+    expect(when).toBeLessThan(before + 62 * 60_000);
+    expect(sends()).toHaveLength(0); // nothing goes now
+    expect(await screen.findByText(/Письмо уйдёт:/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Отменить' })).toBeInTheDocument();
+  });
+
+  it('undo cancels the queued message and says it is back in the drafts', async () => {
+    open();
+    await fill();
+    const dialog = await openLater();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Запланировать' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Отменить' }));
+
+    await waitFor(() =>
+      expect(calls).toContainEqual(
+        expect.objectContaining({ url: '/api/v1/scheduled/q1', method: 'DELETE' }),
+      ),
+    );
+    expect(await screen.findByText('Письмо возвращено в «Черновики»')).toBeInTheDocument();
+  });
+
+  it('asks nothing of the server and says what is missing when there is no recipient', async () => {
+    open();
+    await userEvent.type(screen.getByLabelText('Тема'), 'Hi');
+    const dialog = await openLater();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Запланировать' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Добавьте хотя бы одного получателя.',
+    );
+    expect(scheduledCalls()).toHaveLength(0);
+  });
+
+  it('asks about a missing subject first, and keeps the time chosen', async () => {
+    const router = open();
+    await userEvent.type(screen.getByRole('combobox', { name: 'Кому' }), 'a@example.org{Enter}');
+    const dialog = await openLater();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Через час' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Запланировать' }));
+
+    const question = await screen.findByRole('dialog', { name: 'Отправить без темы?' });
+    expect(scheduledCalls()).toHaveLength(0);
+    await userEvent.click(within(question).getByRole('button', { name: 'Отправить' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/mail/inbox'));
+    expect(scheduledCalls()).toHaveLength(1);
+    expect(sends()).toHaveLength(0);
+  });
+
+  it('stays on the message and says in words why when the server refuses the time', async () => {
+    const router = open();
+    await fill();
+    const original = globalThis.fetch;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: string, init?: RequestInit) =>
+        input === '/api/v1/scheduled'
+          ? Promise.resolve(json({ code: 'too_many_scheduled', title: 'x' }, { status: 409 }))
+          : original(input, init),
+      ),
+    );
+    const dialog = await openLater();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Запланировать' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Отложено слишком много писем');
+    expect(router.state.location.pathname).toBe('/compose');
+    expect(screen.getByLabelText('Тема')).toHaveValue('Hello'); // nothing was lost
+  });
+
+  it('refuses a time that is too close inside the window, before any request', async () => {
+    open();
+    await fill();
+    const dialog = await openLater();
+
+    const field = within(dialog).getByLabelText('Другое время');
+    const soon = new Date(Date.now() + 30_000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    await userEvent.clear(field);
+    await userEvent.type(
+      field,
+      `${soon.getFullYear()}-${pad(soon.getMonth() + 1)}-${pad(soon.getDate())}T${pad(soon.getHours())}:${pad(soon.getMinutes())}`,
+    );
+
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('хотя бы на пару минут позже');
+    expect(within(dialog).getByRole('button', { name: 'Запланировать' })).toBeDisabled();
+    expect(scheduledCalls()).toHaveLength(0);
   });
 });

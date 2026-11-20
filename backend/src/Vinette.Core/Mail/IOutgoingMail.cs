@@ -32,4 +32,11 @@ public interface IOutgoingMail
     /// a copy that could not be kept is reported in the outcome.
     /// </summary>
     Task<SendOutcome> SendAsync(MailCredentials credentials, OutgoingMessage message, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sends a mail that was built earlier (a scheduled message, ADR-0008) and keeps a copy: the same as <see cref="SendAsync"/> after the
+    /// building. Throws what <see cref="IMailSender.SendAsync"/> throws, in which case nothing was sent (except
+    /// <see cref="MailUnavailableException"/> with <see cref="MailUnavailableException.MessageMayHaveBeenSent"/>).
+    /// </summary>
+    Task<SendOutcome> SendComposedAsync(MailCredentials credentials, ComposedMessage message, CancellationToken cancellationToken);
 }
