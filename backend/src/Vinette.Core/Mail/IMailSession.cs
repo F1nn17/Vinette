@@ -154,4 +154,11 @@ public interface IMailSession : IAsyncDisposable
     /// sets no storage limit for this mailbox: then there is nothing to show.
     /// </summary>
     Task<MailQuota?> GetQuotaAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Puts the standard keyword <c>$MDNSent</c> (RFC 3503) on a message: a read receipt was sent for it, or the reader chose not to send one, so
+    /// that it is not asked about again (also by other mail programs).
+    /// </summary>
+    /// <exception cref="MailMessageNotFoundException">There is no such message.</exception>
+    Task MarkReceiptSentAsync(MessageId id, CancellationToken cancellationToken);
 }

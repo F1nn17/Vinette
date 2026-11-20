@@ -32,6 +32,8 @@ export function buildDraftContent(
     inReplyTo: null,
     references: null,
   },
+  /** Ask the recipients for a read receipt. Off by default; on its own it is not a message worth keeping. */
+  requestReceipt = false,
 ): DraftContent | null {
   const empty =
     values.to.length === 0 &&
@@ -53,6 +55,7 @@ export function buildDraftContent(
     attachmentIds,
     inReplyTo: thread.inReplyTo,
     references: thread.references,
+    requestReceipt,
   };
 }
 

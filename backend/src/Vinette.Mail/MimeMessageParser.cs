@@ -129,7 +129,15 @@ public sealed class MimeMessageParser : IMessageParser
             [.. message.Bcc.Mailboxes.Select(ToAddress)],
             string.IsNullOrWhiteSpace(message.InReplyTo) ? null : message.InReplyTo,
             [.. message.References],
-            [.. message.ReplyTo.Mailboxes.Select(ToAddress)]);
+            [.. message.ReplyTo.Mailboxes.Select(ToAddress)],
+            ReceiptRequestOf(message));
+    }
+
+    /// <summary>The first address of Disposition-Notification-To (RFC 8098), or null if there is none or it cannot be read.</summary>
+    private static MailAddressInfo? ReceiptRequestOf(MimeMessage message)
+    {
+        var header = message.Headers[HeaderId.DispositionNotificationTo];
+        return header is not null && InternetAddressList.TryParse(header, out var list) && list.Mailboxes.FirstOrDefault() is { } mailbox ? ToAddress(mailbox) : null;
     }
 
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);

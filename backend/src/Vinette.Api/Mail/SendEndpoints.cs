@@ -17,6 +17,7 @@ namespace Vinette.Api.Mail;
 /// <param name="InReplyTo">The Message-ID of the message this is a reply to.</param>
 /// <param name="References">The Message-IDs of the conversation so far.</param>
 /// <param name="DraftId">The draft this message was written from (its last <c>id</c> from <c>POST /drafts</c>): deleted once the message is out.</param>
+/// <param name="RequestReceipt">Ask the recipients for a read receipt (a Disposition-Notification-To header naming the sender). Off by default.</param>
 public sealed record SendRequest(
     string? FromName,
     IReadOnlyList<AddressDto>? To,
@@ -28,7 +29,8 @@ public sealed record SendRequest(
     IReadOnlyList<string>? AttachmentIds,
     string? InReplyTo,
     IReadOnlyList<string>? References,
-    string? DraftId);
+    string? DraftId,
+    bool RequestReceipt = false);
 
 /// <summary>A message that went out.</summary>
 /// <param name="MessageId">The Message-ID of the message that was sent.</param>
@@ -115,7 +117,8 @@ public static partial class SendEndpoints
             request.Html,
             files,
             request.InReplyTo,
-            request.References);
+            request.References,
+            RequestReceipt: request.RequestReceipt);
 
         SendOutcome outcome;
         try

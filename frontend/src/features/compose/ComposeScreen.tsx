@@ -47,10 +47,14 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
   const attachmentIds = attachments.items.flatMap((a) =>
     a.status === 'done' && a.id ? [a.id] : [],
   );
-  const content = buildDraftContent(values, body, attachmentIds, {
-    inReplyTo: start?.inReplyTo ?? null,
-    references: start?.references ?? null,
-  });
+  const [receipt, setReceipt] = useState(false); // off unless the user asks (DESIGN.md §6)
+  const content = buildDraftContent(
+    values,
+    body,
+    attachmentIds,
+    { inReplyTo: start?.inReplyTo ?? null, references: start?.references ?? null },
+    receipt,
+  );
   const draft = useDraftAutosave(content);
   const [busy, setBusy] = useState<'sending' | 'deleting' | null>(null);
   const busyRef = useRef(false);
@@ -192,6 +196,15 @@ export function ComposeScreen({ address, start }: ComposeScreenProps) {
         </ComposeForm>
         <aside aria-label={t('compose.options')} className="flex flex-col gap-5">
           <RecipientsCard recipients={[...values.to, ...values.cc, ...values.bcc]} />
+          <label className="flex min-h-[52px] cursor-pointer items-center gap-3 rounded-xl border border-line bg-surface px-5 py-3 text-base text-text-2">
+            <input
+              type="checkbox"
+              checked={receipt}
+              onChange={(e) => setReceipt(e.target.checked)}
+              className="size-[18px] shrink-0 cursor-pointer accent-accent"
+            />
+            {t('compose.receipt')}
+          </label>
           <SignatureCard
             signatures={signatures.list}
             selectedId={signatureId}

@@ -19,6 +19,8 @@ public sealed class MailMetricsTests
 
         public Task<MailQuota?> GetQuotaAsync(CancellationToken cancellationToken) => Task.FromResult<MailQuota?>(null);
 
+        public Task MarkReceiptSentAsync(MessageId id, CancellationToken cancellationToken) => throw new NotSupportedException();
+
         public Task<MessageSource> GetMessageAsync(MessageId id, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<MessageFlagState> UpdateFlagsAsync(MessageId id, MessageFlagChange change, CancellationToken cancellationToken) => throw new NotSupportedException();

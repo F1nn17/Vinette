@@ -75,6 +75,8 @@ public sealed class MailboxWatcherTests
         public Task<int> RenameLabelAsync(string oldName, string? newName, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<MailQuota?> GetQuotaAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task MarkReceiptSentAsync(MessageId id, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     private sealed class FakeFactory : IMailSessionFactory

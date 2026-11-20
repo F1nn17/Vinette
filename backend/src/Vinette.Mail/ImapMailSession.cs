@@ -450,6 +450,22 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
         return LabelsOf(summary.Keywords);
     }
 
+    /// <summary>The standard keyword (RFC 3503) that says a read receipt was dealt with.</summary>
+    private const string ReceiptSentKeyword = "$MDNSent";
+
+    public async Task MarkReceiptSentAsync(MessageId id, CancellationToken cancellationToken)
+    {
+        var (folder, uidValidity) = await OpenAsync(id.Folder, cancellationToken, FolderAccess.ReadWrite).ConfigureAwait(false);
+        if (id.UidValidity != uidValidity)
+        {
+            throw new UidValidityChangedException(id.Folder, id.UidValidity, uidValidity);
+        }
+
+        var uid = new UniqueId(id.Uid);
+        _ = await FlagsOfAsync(folder, uid, cancellationToken).ConfigureAwait(false) ?? throw new MailMessageNotFoundException("The message is not in the folder.");
+        await folder.AddFlagsAsync(uid, MessageFlags.None, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ReceiptSentKeyword }, silent: true, cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>Which of the server's delta-sync extensions the watch of the inbox uses. Tests only: the others are pretended away.</summary>
     internal DeltaSync DeltaSyncMode { get; init; } = DeltaSync.Full;
 
@@ -909,7 +925,8 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
             flags.HasFlag(MessageFlags.Flagged),
             flags.HasFlag(MessageFlags.Answered),
             flags.HasFlag(MessageFlags.Draft),
-            Labels(summary));
+            Labels(summary),
+            summary.Keywords.Contains(ReceiptSentKeyword, StringComparer.OrdinalIgnoreCase));
     }
 
     private static string[] Labels(IMessageSummary message) => LabelsOf(message.Keywords);

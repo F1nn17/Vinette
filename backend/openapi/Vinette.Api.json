@@ -2073,6 +2073,95 @@
         }
       }
     },
+    "/api/v1/messages/{id}/receipt": {
+      "post": {
+        "tags": [
+          "Mail"
+        ],
+        "operationId": "AnswerReceiptRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ReceiptDecision"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/messages/{id}/quote": {
       "get": {
         "tags": [
@@ -2759,6 +2848,10 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "requestReceipt": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -2865,6 +2958,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "requestReceipt": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -3189,7 +3286,8 @@
           "hasExternalImages",
           "imagesTrusted",
           "sender",
-          "attachments"
+          "attachments",
+          "receiptRequested"
         ],
         "type": "object",
         "properties": {
@@ -3291,6 +3389,9 @@
             "items": {
               "$ref": "#/components/schemas/AttachmentDto"
             }
+          },
+          "receiptRequested": {
+            "type": "boolean"
           }
         }
       },
@@ -3661,6 +3762,17 @@
           }
         }
       },
+      "ReceiptDecision": {
+        "required": [
+          "send"
+        ],
+        "type": "object",
+        "properties": {
+          "send": {
+            "type": "boolean"
+          }
+        }
+      },
       "RecipientLookupItem": {
         "required": [
           "address",
@@ -3849,6 +3961,10 @@
               "null",
               "string"
             ]
+          },
+          "requestReceipt": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
