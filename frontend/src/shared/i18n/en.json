@@ -154,6 +154,43 @@
     "nameNeeded": "Every signature needs a name.",
     "save": "Save"
   },
+  "scheduled": {
+    "title": "Scheduled",
+    "waitingCount_one": "{{count}} waiting",
+    "waitingCount_other": "{{count}} waiting",
+    "groupFailed": "Not sent",
+    "groupWaiting": "Waiting to be sent",
+    "to": "To: {{name}}",
+    "today": "today",
+    "tomorrow": "tomorrow",
+    "sendsAt": "Will go",
+    "shouldHaveGone": "Should have gone",
+    "willSend": "Goes: {{when}}",
+    "failedShort": "not sent",
+    "failedTitle": "The message was not sent",
+    "failedNotice_one": "A scheduled message was not sent",
+    "failedNotice_other": "{{count}} scheduled messages were not sent",
+    "look": "Look",
+    "hasFailed": "There are messages that were not sent",
+    "empty": "No scheduled messages. A message can be put off with the arrow beside \"Send\".",
+    "noneOpen": "Choose a message to see when it goes",
+    "gone": "This message is no longer in the queue: it may have gone or been cancelled.",
+    "cancel": "Cancel sending",
+    "removeNote": "Remove the note",
+    "openDrafts": "Open Drafts",
+    "noteRemoved": "Note removed",
+    "inDrafts": "The message is in Drafts.",
+    "willBeInDrafts": "The message will be moved to Drafts.",
+    "problem": {
+      "recipient_rejected": "The mail service did not accept one of the recipients.",
+      "send_refused": "The mail service refused to send this message.",
+      "send_too_large": "The message is too large to send.",
+      "send_uncertain": "The connection broke while the message was being handed over: it may have gone after all. Look in Sent.",
+      "mail_unavailable": "The mail service did not answer for over an hour.",
+      "session_revoked": "Could not sign in to the mail: the password changed or access was closed.",
+      "other": "The message could not be sent."
+    }
+  },
   "shortcuts": {
     "title": "Keyboard shortcuts",
     "note": "Actions apply to the selected messages, or to the open one if nothing is selected.",
@@ -218,6 +255,7 @@
     "archive": "Archive",
     "junk": "Spam",
     "trash": "Trash",
+    "scheduled": "Scheduled",
     "flagged": "Flagged"
   },
   "sidebar": {
