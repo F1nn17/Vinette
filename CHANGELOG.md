@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The sign-in screen shows "Powered by Vinette" under the card (a link to the project). Set `Branding:PoweredBy` to `false` to hide it; `Branding:Tagline` and `Branding:Name` are the subtitle and the "© Name" line of the brand panel.
 - `Branding:Accent` is checked at start: the accent carries white text (buttons) and is the color of links, so it must have a contrast of at least 4.5 : 1 with white (WCAG AA). A lighter accent is darkened (same hue, only as much as needed) and a warning in the log names both colors; the darkened color is what the page, the browser's address bar and the web app manifest use. A dark enough accent is used as it is.
 - The web app manifest (`/manifest.webmanifest`) is made from the branding: "Install" and the home-screen shortcut carry your `Branding:Name` (with a short name of up to 12 characters), `Branding:Accent` as the theme color and, if `Branding:LogoPath` is set, your logo as the icon (otherwise the built-in icons). A change reaches an installed app within an hour.
 - The interface language follows the choice in the settings (Russian or English) everywhere, also after a reload and on the sign-in screen of the same browser; with no choice it follows the browser's language (Russian if the browser's is neither). The page's `lang` is set to match, for spelling and screen readers.
