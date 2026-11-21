@@ -27,6 +27,7 @@ public static class ConfigurationExtensions
         AddValidated<ImapOptions>(services, configuration, ImapOptions.SectionName);
         AddValidated<SmtpOptions>(services, configuration, SmtpOptions.SectionName);
         AddValidated<BrandingOptions>(services, configuration, BrandingOptions.SectionName);
+        services.AddSingleton<IPostConfigureOptions<BrandingOptions>, AccentContrastPostConfigure>();
         AddValidated<SessionLifetimeOptions>(services, configuration, SessionLifetimeOptions.SectionName);
         AddValidated<MetricsOptions>(services, configuration, MetricsOptions.SectionName);
         AddValidated<RedisOptions>(services, configuration, RedisOptions.SectionName);
