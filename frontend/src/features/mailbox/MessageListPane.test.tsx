@@ -274,6 +274,77 @@ describe('MessageListPane', () => {
     );
   });
 
+  it('searches after a pause in typing: the words go to the address and to the server, and the count is shown', async () => {
+    const server = mockServer((url) =>
+      url.searchParams.get('q')
+        ? { items: [message(7)], next: null, total: 1 }
+        : { items: [message(1), message(2)], next: null, total: 2 },
+    );
+    const user = userEvent.setup();
+    const router = renderPane();
+    await screen.findByText('Subject 1');
+
+    await user.type(screen.getByRole('searchbox', { name: 'Поиск в почте' }), 'отчёт  квартал');
+
+    expect(await screen.findByText('Subject 7')).toBeInTheDocument();
+    expect(screen.queryByText('Subject 1')).toBeNull();
+    expect(new URLSearchParams(router.state.location.search).get('q')).toBe('отчёт квартал');
+    expect(server.urls.at(-1)).toContain(new URLSearchParams({ q: 'отчёт квартал' }).toString());
+    // one question for the words, not one for every letter
+    expect(server.urls.filter((u) => u.includes('q=')).length).toBe(1);
+    expect(screen.getByRole('heading', { name: /Входящие/u })).toHaveTextContent('найдено 1');
+  });
+
+  it('searches at once with Enter, and keeps the search when a message is opened', async () => {
+    const server = mockServer((url) =>
+      url.searchParams.get('q')
+        ? { items: [message(7)], next: null, total: 1 }
+        : { items: [message(1)], next: null, total: 1 },
+    );
+    const user = userEvent.setup();
+    renderPane();
+    await screen.findByText('Subject 1');
+
+    await user.type(screen.getByRole('searchbox', { name: 'Поиск в почте' }), 'abc{Enter}');
+
+    const row = await screen.findByRole('link', { name: /Subject 7/ });
+    expect(row).toHaveAttribute('href', '/mail/inbox/m7?q=abc');
+    expect(server.urls.at(-1)).toContain('q=abc');
+  });
+
+  it('takes the search from the address, and says plainly when nothing is found, with a way back', async () => {
+    const server = mockServer((url) =>
+      url.searchParams.get('q')
+        ? { items: [], next: null, total: 0 }
+        : { items: [message(1)], next: null, total: 1 },
+    );
+    const user = userEvent.setup();
+    const router = renderPane('/mail/inbox?q=zzz');
+
+    expect(await screen.findByText(/Ничего не найдено по запросу «zzz»/)).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Поиск в почте' })).toHaveValue('zzz');
+
+    await user.click(screen.getByRole('button', { name: 'Сбросить поиск' }));
+
+    expect(await screen.findByText('Subject 1')).toBeInTheDocument();
+    expect(router.state.location.search).toBe('');
+    expect(screen.getByRole('searchbox', { name: 'Поиск в почте' })).toHaveValue('');
+    expect(server.urls.some((u) => u.includes('q=zzz'))).toBe(true);
+  });
+
+  it('empties the search with Escape and works together with a filter', async () => {
+    const server = mockServer(() => ({ items: [message(1)], next: null, total: 1 }));
+    const user = userEvent.setup();
+    const router = renderPane('/mail/inbox?filter=unread&q=abc');
+    await screen.findByText('Subject 1');
+    expect(server.urls.at(-1)).toMatch(/filter=unread/);
+    expect(server.urls.at(-1)).toMatch(/q=abc/);
+
+    await user.type(screen.getByRole('searchbox', { name: 'Поиск в почте' }), '{Escape}');
+
+    await waitFor(() => expect(router.state.location.search).toBe('?filter=unread'));
+  });
+
   it('takes the flagged view from the address', async () => {
     const server = mockServer(() => ({ items: [], next: null, total: 0 }));
     renderPane('/mail/inbox?filter=flagged');

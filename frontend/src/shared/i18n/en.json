@@ -291,6 +291,10 @@
     "unreadCount_one": "{{count}} unread",
     "unreadCount_other": "{{count}} unread",
     "refresh": "Refresh",
+    "found_one": "{{count}} found",
+    "found_other": "{{count}} found",
+    "noResults": "Nothing found for \"{{query}}\". Check the spelling or try other words.",
+    "clearSearch": "Clear search",
     "search": "Search mail",
     "filters": "List filters",
     "filter": {

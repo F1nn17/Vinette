@@ -25,6 +25,19 @@ export function ListEmpty({ label = false }: { label?: boolean }) {
   return <p className="p-5 text-muted">{t(label ? 'labels.empty' : 'list.empty')}</p>;
 }
 
+/** A search found nothing: what was searched for, a hint and a way back to the whole folder. */
+export function ListNoResults({ query, onClear }: { query: string; onClear: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div role="status" className="flex flex-col items-start gap-2 p-5 text-muted">
+      <p>{t('list.noResults', { query })}</p>
+      <Button variant="secondary" size="sm" onClick={onClear}>
+        {t('list.clearSearch')}
+      </Button>
+    </div>
+  );
+}
+
 /** The folder in the address does not exist. */
 export function ListNoFolder() {
   const { t } = useTranslation();

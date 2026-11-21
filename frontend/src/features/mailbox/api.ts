@@ -31,8 +31,16 @@ export type ListFilter = 'all' | 'unread' | 'flagged';
 
 export const PAGE_SIZE = 50;
 
-export const messagesKey = (folderPath: string, filter: ListFilter, preview: boolean) =>
-  ['messages', folderPath, filter, preview] as const;
+/** The key of a list; a search adds its words as the fifth part (a list without one has four parts). */
+export const messagesKey = (
+  folderPath: string,
+  filter: ListFilter,
+  preview: boolean,
+  search = '',
+) =>
+  (search
+    ? (['messages', folderPath, filter, preview, search] as const)
+    : (['messages', folderPath, filter, preview] as const)) satisfies readonly unknown[];
 
 /** The messages of a folder, page after page (cursor paging): the newest first, narrowed by the filter. */
 export function useMessages(
@@ -42,15 +50,18 @@ export function useMessages(
   preview: boolean,
   /** False holds the request back (the settings that decide how to ask are not known yet). */
   ready = true,
+  /** The words of a search (`q`, see `useSearchBox`); empty for the whole folder. */
+  search = '',
 ) {
   return useInfiniteQuery({
-    queryKey: messagesKey(folderPath ?? '', filter, preview),
+    queryKey: messagesKey(folderPath ?? '', filter, preview, search),
     enabled: folderPath !== undefined && ready,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam, signal }) => {
       const query = new URLSearchParams({ limit: String(PAGE_SIZE) });
       if (filter !== 'all') query.set('filter', filter);
       if (!preview) query.set('preview', 'false');
+      if (search) query.set('q', search);
       if (pageParam) query.set('after', pageParam);
       return apiGet<MessageListResponse>(
         `/api/v1/folders/${encodeURIComponent(folderPath ?? '')}/messages?${query.toString()}`,
