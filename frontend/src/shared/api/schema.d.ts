@@ -1162,6 +1162,8 @@ export interface operations {
                 order?: string;
                 preview?: boolean;
                 filter?: string;
+                q?: string;
+                in?: string;
             };
             header?: never;
             path: {

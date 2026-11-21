@@ -92,6 +92,50 @@ public enum MessageFilter
     Flagged,
 }
 
+/// <summary>Where a search looks for the words.</summary>
+public enum MessageSearchScope
+{
+    /// <summary>In the sender, the subject and the text.</summary>
+    All,
+
+    /// <summary>In the sender (name and address).</summary>
+    From,
+
+    /// <summary>In the subject.</summary>
+    Subject,
+
+    /// <summary>In the text of the message.</summary>
+    Body,
+}
+
+/// <summary>
+/// The words of a search: split at spaces, each one must be found (in the place <see cref="MessageSearchScope"/> names), in any order.
+/// </summary>
+public static class MessageSearch
+{
+    /// <summary>Longest query in characters.</summary>
+    public const int MaxLength = 200;
+
+    /// <summary>Most words in a query.</summary>
+    public const int MaxTerms = 8;
+
+    /// <summary>
+    /// The words of the text, or null if the text is empty or has no word (only spaces). Control characters count as spaces; the words are
+    /// not changed otherwise (the mail server compares without regard to case as it is set up to).
+    /// </summary>
+    public static IReadOnlyList<string>? Terms(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var cleaned = new string([.. text.Select(c => char.IsControl(c) ? ' ' : c)]);
+        var terms = cleaned.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return terms.Length == 0 ? null : terms;
+    }
+}
+
 /// <summary>Which page of a folder to list.</summary>
 /// <param name="Folder">The folder's path.</param>
 /// <param name="After">Where the previous page ended; null for the first page.</param>
@@ -99,11 +143,24 @@ public enum MessageFilter
 /// <param name="NewestFirst">Newest arrived first (the default of a mailbox) or oldest first.</param>
 /// <param name="IncludePreview">Fetch the text preview; costs the server a look into every message, so the compact list leaves it out.</param>
 /// <param name="Filter">Which messages to show; the cursor and the order apply to the filtered list.</param>
-public sealed record MessageListQuery(string Folder, MessageCursor? After, int Limit, bool NewestFirst = true, bool IncludePreview = true, MessageFilter Filter = MessageFilter.All)
+/// <param name="Terms">The words of a search (see <see cref="MessageSearch.Terms"/>); null for no search. Together with <paramref name="Filter"/> both must hold.</param>
+/// <param name="Scope">Where the words are looked for.</param>
+public sealed record MessageListQuery(
+    string Folder,
+    MessageCursor? After,
+    int Limit,
+    bool NewestFirst = true,
+    bool IncludePreview = true,
+    MessageFilter Filter = MessageFilter.All,
+    IReadOnlyList<string>? Terms = null,
+    MessageSearchScope Scope = MessageSearchScope.All)
 {
     public const int DefaultLimit = 50;
 
     public const int MaxLimit = 100;
+
+    /// <summary>Whether the list is the result of a search.</summary>
+    public bool IsSearch => Terms is { Count: > 0 };
 }
 
 /// <summary>The messages that carry a label, from all the folders that matter, newest first.</summary>

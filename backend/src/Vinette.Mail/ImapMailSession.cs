@@ -67,7 +67,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
             throw new UidValidityChangedException(query.Folder, after.UidValidity, uidValidity);
         }
 
-        if (query.Filter != MessageFilter.All)
+        if (query.Filter != MessageFilter.All || query.IsSearch)
         {
             return await ListFilteredAsync(folder, query, uidValidity, cancellationToken).ConfigureAwait(false);
         }
@@ -121,7 +121,7 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
     /// </summary>
     private async Task<MessagePage> ListFilteredAsync(IMailFolder folder, MessageListQuery query, uint uidValidity, CancellationToken cancellationToken)
     {
-        var search = query.Filter == MessageFilter.Unread ? SearchQuery.NotSeen : SearchQuery.Flagged;
+        var search = SearchFor(query);
         var matching = (await folder.SearchAsync(search, cancellationToken).ConfigureAwait(false)).Select(u => u.Id).Order().ToList();
 
         IEnumerable<uint> candidates = matching;
@@ -149,6 +149,40 @@ internal sealed class ImapMailSession(ImapClient client, bool previewExtension =
 
         MessageCursor? next = left.Count > pageUids.Count && items.Count > 0 ? new MessageCursor(uidValidity, items[^1].Id.Uid) : null;
         return new MessagePage(uidValidity, items, next, matching.Count);
+    }
+
+    /// <summary>
+    /// The search command of a list: the filter (unread, flagged) and the words, all of which must hold. Every word is one criterion
+    /// (or across the sender, subject and text). MailKit sends a word that is not plain ASCII as UTF-8, and the server decodes a message
+    /// (its encoded subject, its charset) before it compares, so Cyrillic words are found whatever encoding the message came in.
+    /// </summary>
+    internal static SearchQuery SearchFor(MessageListQuery query)
+    {
+        var criteria = new List<SearchQuery>();
+        switch (query.Filter)
+        {
+            case MessageFilter.Unread:
+                criteria.Add(SearchQuery.NotSeen);
+                break;
+            case MessageFilter.Flagged:
+                criteria.Add(SearchQuery.Flagged);
+                break;
+            default:
+                break;
+        }
+
+        foreach (var term in query.Terms ?? [])
+        {
+            criteria.Add(query.Scope switch
+            {
+                MessageSearchScope.From => SearchQuery.FromContains(term),
+                MessageSearchScope.Subject => SearchQuery.SubjectContains(term),
+                MessageSearchScope.Body => SearchQuery.BodyContains(term),
+                _ => SearchQuery.FromContains(term).Or(SearchQuery.SubjectContains(term)).Or(SearchQuery.BodyContains(term)),
+            });
+        }
+
+        return criteria.Count == 0 ? SearchQuery.All : criteria.Aggregate((a, b) => a.And(b));
     }
 
     /// <summary>Opens a folder read-only (nothing is marked as read by looking); a folder that is missing or is a container is "not found".</summary>

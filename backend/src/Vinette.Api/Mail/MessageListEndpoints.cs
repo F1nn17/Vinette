@@ -65,6 +65,8 @@ public static class MessageListEndpoints
     /// <param name="preview">Include the text preview (default true); false is cheaper for the server.</param>
     /// <param name="filter"><c>all</c> (default), <c>unread</c> or <c>flagged</c>; cursor and order apply to the filtered list.</param>
     /// <param name="order"><c>newest</c> (default) or <c>oldest</c>: by arrival.</param>
+    /// <param name="q">Search: words separated by spaces (up to 8, 200 characters), all of which must be found; empty or absent for no search. Looks in this folder only; works with <c>filter</c>, <c>order</c> and paging, and <c>total</c> counts the matches.</param>
+    /// <param name="searchIn">Query name <c>in</c>: where <c>q</c> is looked for: <c>all</c> (default: sender, subject and text), <c>from</c>, <c>subject</c> or <c>body</c>.</param>
     private static async Task<IResult> ListAsync(
         string folder,
         HttpContext http,
@@ -75,7 +77,9 @@ public static class MessageListEndpoints
         [FromQuery] string? after = null,
         [FromQuery] string? order = null,
         [FromQuery] bool? preview = null,
-        [FromQuery] string? filter = null)
+        [FromQuery] string? filter = null,
+        [FromQuery] string? q = null,
+        [FromQuery(Name = "in")] string? searchIn = null)
     {
         var pageSize = limit ?? MessageListQuery.DefaultLimit;
         if (pageSize is < 1 or > MessageListQuery.MaxLimit)
@@ -111,7 +115,31 @@ public static class MessageListEndpoints
             return Bad("filter must be all, unread or flagged.");
         }
 
-        var query = new MessageListQuery(folder, cursor, pageSize, order != "oldest", preview ?? true, messageFilter.Value);
+        var scope = searchIn switch
+        {
+            null or "all" => MessageSearchScope.All,
+            "from" => MessageSearchScope.From,
+            "subject" => MessageSearchScope.Subject,
+            "body" => MessageSearchScope.Body,
+            _ => (MessageSearchScope?)null,
+        };
+        if (scope is null)
+        {
+            return Bad("in must be all, from, subject or body.");
+        }
+
+        if (q is { Length: > MessageSearch.MaxLength })
+        {
+            return Bad($"q must be at most {MessageSearch.MaxLength} characters.");
+        }
+
+        var terms = MessageSearch.Terms(q);
+        if (terms is { Count: > MessageSearch.MaxTerms })
+        {
+            return Bad($"q must have at most {MessageSearch.MaxTerms} words.");
+        }
+
+        var query = new MessageListQuery(folder, cursor, pageSize, order != "oldest", preview ?? true, messageFilter.Value, terms, scope.Value);
         var page = await gateway.ExecuteAsync(
             http.GetMailCredentials(sessions),
             (session, token) => session.ListMessagesAsync(query, token),
