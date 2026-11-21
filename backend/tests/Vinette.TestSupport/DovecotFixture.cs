@@ -92,13 +92,13 @@ public sealed class DovecotFixture : IAsyncLifetime
             .WithPortBinding(SmtpContainerPort, true)
             .WithResourceMapping(
                 File.ReadAllBytes(Path.Combine(devMail, "postfix-accounts.cf")),
-                "/tmp/docker-mailserver/postfix-accounts.cf")
+                FilePath.Of("/tmp/docker-mailserver/postfix-accounts.cf"))
             .WithResourceMapping(
                 File.ReadAllBytes(Path.Combine(devMail, "dovecot.cf")),
-                "/tmp/docker-mailserver/dovecot.cf")
-            .WithResourceMapping(Encoding.ASCII.GetBytes(certificatePem), "/etc/dev-mail-ssl/cert.pem")
-            .WithResourceMapping(Encoding.ASCII.GetBytes(keyPem), "/etc/dev-mail-ssl/key.pem")
-            .WithResourceMapping(new DirectoryInfo(fixtures), FixturesInContainer)
+                FilePath.Of("/tmp/docker-mailserver/dovecot.cf"))
+            .WithResourceMapping(Encoding.ASCII.GetBytes(certificatePem), FilePath.Of("/etc/dev-mail-ssl/cert.pem"))
+            .WithResourceMapping(Encoding.ASCII.GetBytes(keyPem), FilePath.Of("/etc/dev-mail-ssl/key.pem"))
+            .WithResourceMapping(DirectoryPath.Of(fixtures), DirectoryPath.Of(FixturesInContainer))
             .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted(
                 "sh", "-c", "ss -lnt | grep -q ':143 ' && ss -lnt | grep -q ':587 '"))
             .Build();
