@@ -20,6 +20,8 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : [['list']],
   use: {
     baseURL: external ?? frontendUrl,
+    // The application follows the browser's language until the user chooses one; the scenarios read Russian texts.
+    locale: 'ru-RU',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },

@@ -5,19 +5,6 @@ import type { components } from '@/shared/api/schema';
 export type Settings = components['schemas']['SettingsDto'];
 export type ListDensity = 'comfortable' | 'compact';
 
-/** The languages the application has; no choice (an empty one) follows the browser. */
-export const LANGUAGES = ['ru', 'en'] as const;
-
-/** The language to show for a choice: the chosen one, or, for none, the browser's if the application has it, else Russian. */
-export function languageFor(
-  choice: string | null | undefined,
-  browser: string = navigator.language,
-): string {
-  const own = LANGUAGES.find((l) => l === choice);
-  if (own) return own;
-  return LANGUAGES.find((l) => browser.toLowerCase().startsWith(l)) ?? 'ru';
-}
-
 export const SETTINGS_KEY = ['settings'] as const;
 
 /** What the user has chosen in the interface (list density, language, label colors). */

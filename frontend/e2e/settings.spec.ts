@@ -68,6 +68,11 @@ test.describe('settings', () => {
       return ((await response.json()) as { language: string | null }).language;
     });
     expect(saved).toBe('en');
+
+    // the next start already speaks it, and so does the sign-in screen of this browser
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   });
 
   test('the signatures and the trusted senders have their sections', async ({ page }) => {
