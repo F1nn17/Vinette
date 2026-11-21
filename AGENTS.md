@@ -84,7 +84,7 @@ make dev
 | `alice@vinette.test` | `alice` | `alice-pass` |
 | `bob@vinette.test` | `bob` | `bob-pass` |
 
-GreenMail принимает логин **без** `@домен`; Dovecot в продакшене — полный адрес. Порты: IMAP 3143 (IMAPS 3993), SMTP 3025 (SMTPS 3465), API GreenMail 8081. Dev-конфигурация бэкенда — `appsettings.Development.json` (без шифрования, только локально). Фронтенд проксирует `/api`, `/hubs`, `/branding` на бэкенд.
+GreenMail принимает логин **без** `@домен`; Dovecot в продакшене — полный адрес. Порты: IMAP 3143 (IMAPS 3993), SMTP 3025 (SMTPS 3465), API GreenMail 8081. Dev-конфигурация бэкенда — `appsettings.Development.json` (без шифрования, только локально). Фронтенд проксирует `/api`, `/hubs`, `/branding`, `/manifest.webmanifest` на бэкенд.
 
 GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRESYNC и др.). Для них есть dev-почта на настоящем Dovecot 2.4 + Postfix (`make dev-mail`, файл [compose.dovecot.yaml](deploy/docker/compose.dovecot.yaml)):
 
