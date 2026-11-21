@@ -105,6 +105,17 @@ describe('applyMailEvent: arrived', () => {
     expect(ids(client, WORK)).toEqual(['SU5CT1g.1.9']);
   });
 
+  it('does not put mail into the list of a search: it is read again, the server knows whether the mail matches', () => {
+    const client = setup();
+    const SEARCH = ['messages', 'INBOX', 'all', true, 'report'] as const;
+    client.setQueryData(SEARCH, list(item(2)));
+
+    applyMailEvent(client, arrived(item(3)));
+
+    expect(ids(client, SEARCH)).toEqual(['SU5CT1g.1.2']);
+    expect(isStale(client, SEARCH)).toBe(true);
+  });
+
   it('does not put a message in twice (the screen may have it already)', () => {
     const client = setup();
 

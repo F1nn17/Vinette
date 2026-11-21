@@ -305,6 +305,12 @@
     "unreadCount_many": "{{count}} непрочитанных",
     "unreadCount_other": "{{count}} непрочитанных",
     "refresh": "Обновить",
+    "found_one": "найдено {{count}}",
+    "found_few": "найдено {{count}}",
+    "found_many": "найдено {{count}}",
+    "found_other": "найдено {{count}}",
+    "noResults": "Ничего не найдено по запросу «{{query}}». Проверьте написание или попробуйте другие слова.",
+    "clearSearch": "Сбросить поиск",
     "search": "Поиск в почте",
     "filters": "Фильтры списка",
     "filter": {

@@ -9,7 +9,7 @@ type Detail = components['schemas']['MessageDetailDto'];
 
 const num = (value: unknown) => Number(value) || 0;
 
-/** The keys of the lists of one folder are `['messages', folder, filter, preview]`. */
+/** The keys of the lists of one folder are `['messages', folder, filter, preview]`, with the words of the search added for a search. */
 const listsOf = (folder: string) => ({ queryKey: ['messages', folder] });
 
 /** Keys of the mutations that act on messages: while one runs, its optimistic state is the truth the screen should keep. */
@@ -72,6 +72,11 @@ export function applyMailEvent(queryClient: QueryClient, event: MailEvent): void
         listsOf(event.folder),
       )) {
         const filter = key[2];
+        // A search shows what matches its words; the server decides whether the new mail does, so the list is read again instead.
+        if (key[4]) {
+          void queryClient.invalidateQueries({ queryKey: key });
+          continue;
+        }
         if (!data || data.pages.length === 0) continue;
         if (data.pages.some((page) => page.items.some((item) => item.id === message.id))) continue;
         if ((filter === 'unread' && message.seen) || (filter === 'flagged' && !message.flagged))

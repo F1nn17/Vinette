@@ -10,11 +10,19 @@ import { useListDensity, useSettings, useUpdateSettings } from '@/features/setti
 import { useFolders, useMessages, type ListFilter, type MessageItem } from './api';
 import { folderOfId, useMessageBatch, type BatchAction } from './batch';
 import { folderLabel, folderSlug } from './folder-label';
-import { ListEmpty, ListError, ListNoFolder, ListSkeleton, OfflineBanner } from './list-states';
+import {
+  ListEmpty,
+  ListError,
+  ListNoFolder,
+  ListNoResults,
+  ListSkeleton,
+  OfflineBanner,
+} from './list-states';
 import { ListOptionsMenu } from './ListOptionsMenu';
 import { useEmptyFolder, usePurge } from './purge';
 import { MessageRow } from './MessageRow';
 import { NavMenuButton } from './NavMenuButton';
+import { useSearchBox } from './search';
 import { ShortcutsDialog } from './ShortcutsDialog';
 import { useShortcuts } from './shortcuts';
 import { SelectionBar } from './SelectionBar';
@@ -78,14 +86,19 @@ export function MessageListPane({
   const connectionLost = useConnectionLost();
   const { layout } = useShell();
   const mobile = layout === 'mobile';
-  const [searchOpen, setSearchOpen] = useState(false);
+  const searchBox = useSearchBox();
+  const searching = !labelMode && searchBox.query !== '';
+  // On a phone the field is behind the magnifier; a search that is already in the address keeps it open.
+  const [searchOpen, setSearchOpen] = useState(searchBox.query !== '');
   const [scroller, setScroller] = useState<HTMLElement | null>(null);
   const navigate = useNavigate();
   const batch = useMessageBatch();
   const purge = usePurge();
   const emptying = useEmptyFolder();
   // The selection belongs to one folder and filter: another list starts with nothing selected.
-  const listKey = labelMode ? `@label|${labelName}` : `${slug}|${params.get('filter') ?? ''}`;
+  const listKey = labelMode
+    ? `@label|${labelName}`
+    : `${slug}|${params.get('filter') ?? ''}|${searchBox.query}`;
   const [selectionState, setSelectionState] = useState<{
     key: string;
     selection: Selection;
@@ -104,12 +117,14 @@ export function MessageListPane({
     filter,
     !compact,
     !settings.isPending,
+    searchBox.query,
   );
   const labelMessages = useLabelMessages(labelName, !compact, !settings.isPending);
   const messages = labelMode ? labelMessages : folderMessages;
 
   const items = messages.data?.pages.flatMap((p) => p.items) ?? [];
   const unread = folder && !labelMode ? Number(folder.unread) : 0;
+  const found = searching ? Number(messages.data?.pages[0]?.total ?? 0) : 0;
   const search = params.toString() ? `?${params.toString()}` : '';
   const now = new Date();
   const groupWords = {
@@ -290,10 +305,17 @@ export function MessageListPane({
               >
                 {title}
               </span>
-              {unread > 0 && !mobile && (
+              {searching && messages.isSuccess ? (
                 <span className="shrink-0 text-secondary text-muted">
-                  {t('list.unreadCount', { count: unread })}
+                  {t('list.found', { count: found })}
                 </span>
+              ) : (
+                unread > 0 &&
+                !mobile && (
+                  <span className="shrink-0 text-secondary text-muted">
+                    {t('list.unreadCount', { count: unread })}
+                  </span>
+                )
               )}
             </h1>
             {mobile ? (
@@ -335,11 +357,23 @@ export function MessageListPane({
               </Button>
             </div>
           )}
-        {(!mobile || searchOpen) && (
+        {/* The list of a label is one page of what has the label, from all folders: there is nothing to search in. */}
+        {!labelMode && (!mobile || searchOpen) && (
           <SearchField
             inputRef={searchRef}
             aria-label={t('list.search')}
             placeholder={t('list.search')}
+            value={searchBox.typed}
+            maxLength={200}
+            onChange={(event) => searchBox.onType(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') searchBox.commit();
+              // Escape empties the box; with it already empty the focus goes back to the list.
+              if (event.key === 'Escape') {
+                if (searchBox.typed !== '') searchBox.clear();
+                else event.currentTarget.blur();
+              }
+            }}
           />
         )}
         {!labelMode && (
@@ -366,9 +400,15 @@ export function MessageListPane({
 
         {missing && !error && <ListNoFolder />}
 
-        {!loading && !error && (folder || labelMode) && items.length === 0 && (
-          <ListEmpty label={labelMode} />
-        )}
+        {!loading &&
+          !error &&
+          (folder || labelMode) &&
+          items.length === 0 &&
+          (searching ? (
+            <ListNoResults query={searchBox.query} onClear={searchBox.clear} />
+          ) : (
+            <ListEmpty label={labelMode} />
+          ))}
 
         {items.length > 0 && (
           <VirtualMessageRows
