@@ -1,7 +1,6 @@
 import {
   AlertCircle,
   Archive,
-  ChevronDown,
   Clock,
   FileText,
   Flag,
@@ -13,6 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { AccountMenu } from './AccountMenu';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { describeApiError } from '@/shared/api/describe-error';
@@ -95,6 +95,8 @@ export interface SidebarProps {
   labelName?: string;
   /** The list of the messages put off is open (`/mail/@scheduled`): then no folder is the current one. */
   scheduledActive?: boolean;
+  /** Ends the session ("Sign out" in the account menu); without it the menu has none. */
+  onSignOut?: () => void;
 }
 
 /**
@@ -106,6 +108,7 @@ export function Sidebar({
   folderSlug: current,
   labelName,
   scheduledActive = false,
+  onSignOut,
 }: SidebarProps) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -177,18 +180,12 @@ export function Sidebar({
         <Logo size={32} showName={!rail} />
       </div>
 
-      {!rail && (
-        <Link
-          to="/settings"
-          onClick={closeNav}
-          aria-label={t('sidebar.settings', { address })}
-          title={t('sidebar.settings', { address })}
-          className="flex h-9 items-center justify-between rounded-md border border-control bg-surface px-3 text-secondary text-ink transition-colors hover:bg-bg"
-        >
-          <span className="truncate">{address}</span>
-          <ChevronDown size={16} strokeWidth={1.8} aria-hidden className="shrink-0 text-muted" />
-        </Link>
-      )}
+      <AccountMenu
+        address={address}
+        onSignOut={onSignOut}
+        variant={rail ? 'rail' : 'wide'}
+        onNavigate={closeNav}
+      />
 
       {rail ? (
         <Button

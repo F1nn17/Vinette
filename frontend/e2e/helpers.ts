@@ -44,7 +44,7 @@ export async function signIn(
 
 /**
  * Ends the session the way the application does (POST /api/v1/auth/logout with the anti-forgery token).
- * The interface has no sign-out button yet (account menu: VIN-120); then this becomes a click.
+ * For scenarios that only need the session gone; the account menu's "Sign out" has a scenario of its own (auth.spec.ts).
  */
 export async function signOutViaApi(page: Page): Promise<void> {
   await page.evaluate(async () => {

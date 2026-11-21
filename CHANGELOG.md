@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The account menu: the button with your address in the sidebar (and a round button with your initials on a tablet) opens a menu with the current account, "Settings" and "Sign out". Signing out now works from the menu; it is reachable with the keyboard (arrow keys, Escape).
 - White-label guide, [docs/white-label.md](docs/white-label.md): how to set the name, logo, favicon, accent, tagline and the "Powered by" credit, the requirements for the files and the accent, a Docker Compose example and how to check the result.
 - The sign-in screen shows "Powered by Vinette" under the card (a link to the project). Set `Branding:PoweredBy` to `false` to hide it; `Branding:Tagline` and `Branding:Name` are the subtitle and the "© Name" line of the brand panel.
 - `Branding:Accent` is checked at start: the accent carries white text (buttons) and is the color of links, so it must have a contrast of at least 4.5 : 1 with white (WCAG AA). A lighter accent is darkened (same hue, only as much as needed) and a warning in the log names both colors; the darkened color is what the page, the browser's address bar and the web app manifest use. A dark enough accent is used as it is.

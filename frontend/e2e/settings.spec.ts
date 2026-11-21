@@ -25,10 +25,8 @@ test.describe('settings', () => {
   test('the address block opens the settings; the density is saved on the server and survives a reload', async ({
     page,
   }) => {
-    await page
-      .getByRole('link', { name: /Настройки/ })
-      .first()
-      .click();
+    await page.getByRole('button', { name: /Меню аккаунта/ }).click();
+    await page.getByRole('menuitem', { name: 'Настройки' }).click();
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Настройки' })).toBeVisible();
 

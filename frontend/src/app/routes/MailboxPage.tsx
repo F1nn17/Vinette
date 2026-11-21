@@ -27,7 +27,7 @@ export function MailboxPage() {
   const { messageId } = params;
   const navigate = useNavigate();
   const { search } = useLocation();
-  const { address } = useSession();
+  const { address, signOut } = useSession();
   const layout = useLayout();
   const folders = useFolders();
   // A label's list holds messages of several folders: the open message says which folder it is in.
@@ -45,7 +45,14 @@ export function MailboxPage() {
       {purge.dialog}
       <AppShell
         messageOpen={messageId !== undefined}
-        nav={<Sidebar address={address ?? ''} folderSlug={folder} labelName={labelName} />}
+        nav={
+          <Sidebar
+            address={address ?? ''}
+            folderSlug={folder}
+            labelName={labelName}
+            onSignOut={() => void signOut()}
+          />
+        }
         list={
           <MessageListPane
             folderSlug={folder}
