@@ -89,6 +89,46 @@ public sealed class MessageListApiTests(DovecotFixture dovecot) : IDisposable
     }
 
     [Fact]
+    public async Task A_Cyrillic_Query_Finds_The_Message_And_Counts_The_Matches()
+    {
+        var (client, cookie) = await SignInAsync(DovecotFixture.Bob);
+        var query = Uri.EscapeDataString("отчёт квартал");
+
+        var (status, found) = await GetAsync(client, cookie, $"/api/v1/folders/INBOX/messages?q={query}&in=subject");
+        var (_, none) = await GetAsync(client, cookie, $"/api/v1/folders/INBOX/messages?q={Uri.EscapeDataString("нет-такого")}");
+        var (_, empty) = await GetAsync(client, cookie, "/api/v1/folders/INBOX/messages?q=%20%20&limit=3");
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Equal(["Отчёт за квартал"], found.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("subject").GetString()).ToArray());
+        Assert.Equal(1, found.GetProperty("total").GetInt32());
+        Assert.Equal(0, none.GetProperty("items").GetArrayLength());
+        Assert.Equal(3, empty.GetProperty("items").GetArrayLength()); // a query of spaces is no query
+    }
+
+    [Theory]
+    [InlineData("q=a&in=everywhere")]
+    [InlineData("q=a+b+c+d+e+f+g+h+i")]
+    public async Task A_Bad_Search_Is_A_400_With_A_Code(string parameters)
+    {
+        var (client, cookie) = await SignInAsync(DovecotFixture.Bob);
+
+        var (status, body) = await GetAsync(client, cookie, $"/api/v1/folders/INBOX/messages?{parameters}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, status);
+        Assert.Equal("bad_request", body.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task A_Query_That_Is_Too_Long_Is_A_400()
+    {
+        var (client, cookie) = await SignInAsync(DovecotFixture.Bob);
+
+        var (status, _) = await GetAsync(client, cookie, $"/api/v1/folders/INBOX/messages?q={new string('a', 201)}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, status);
+    }
+
+    [Fact]
     public async Task The_Oldest_Order_Starts_With_The_First_Message()
     {
         var (client, cookie) = await SignInAsync(DovecotFixture.Bob);
