@@ -44,7 +44,8 @@ COPY --from=backend --chown=1654:1654 /data /data
 ENV ASPNETCORE_HTTP_PORTS=8080 \
     VINETTE_DataProtection__KeysPath=/data/keys \
     VINETTE_Settings__Path=/data/settings \
-    VINETTE_Attachments__Path=/data/attachments \n    VINETTE_Scheduling__Path=/data/scheduled
+    VINETTE_Attachments__Path=/data/attachments \
+    VINETTE_Scheduling__Path=/data/scheduled
 USER 1654:1654
 EXPOSE 8080
 VOLUME /data
