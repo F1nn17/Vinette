@@ -6,12 +6,12 @@ import { SettingsScreen } from '@/features/settings';
 /** `/settings`: the settings in the wide area beside the folders (DESIGN.md §5, "Настройки"). */
 export function SettingsPage() {
   const { t } = useTranslation();
-  const { address } = useSession();
+  const { address, signOut } = useSession();
   const mobile = useLayout() === 'mobile';
   return (
     <AppShell
       messageOpen
-      nav={<Sidebar address={address ?? ''} folderSlug="" />}
+      nav={<Sidebar address={address ?? ''} folderSlug="" onSignOut={() => void signOut()} />}
       reader={
         <div className="h-full overflow-y-auto">
           <div className="mx-auto flex max-w-[720px] flex-col gap-5 px-10 py-7 max-md:px-4 max-md:py-4">

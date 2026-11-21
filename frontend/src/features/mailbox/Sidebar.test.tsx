@@ -125,14 +125,15 @@ describe('Sidebar', () => {
     expect(names.slice(0, 3)).toEqual(['Входящие4', 'С флажком', 'Черновики2']);
   });
 
-  it('leads from the address block to the settings', async () => {
+  it('has the account menu button with the address; the menu itself is closed', async () => {
     mockApi();
     renderSidebar();
 
-    const link = await within(nav()).findByRole('link', { name: /Настройки/u });
+    const button = await within(nav()).findByRole('button', { name: /Меню аккаунта/u });
 
-    expect(link).toHaveAttribute('href', '/settings');
-    expect(link).toHaveTextContent('alice@vinette.test');
+    expect(button).toHaveTextContent('alice@vinette.test');
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('menu')).toBeNull();
   });
 
   it('marks only the open folder as the current page', async () => {

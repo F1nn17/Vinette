@@ -73,13 +73,17 @@ test.describe('sign-in', () => {
     expect(days).toBeLessThan(31);
   });
 
-  test('after signing out the mailbox is closed again', async ({ page }) => {
+  test('"Sign out" in the account menu ends the session and the mailbox is closed again', async ({
+    page,
+  }) => {
     await signIn(page, accounts.bob);
 
-    await signOutViaApi(page);
+    await page.getByRole('button', { name: /Меню аккаунта/ }).click();
+    await page.getByRole('menuitem', { name: 'Выйти' }).click();
+    await expect(page).toHaveURL(/\/login$/);
+
     await page.goto('/mail/inbox');
     await waitForAppReady(page);
-
     await expect(page).toHaveURL(/\/login$/);
   });
 
