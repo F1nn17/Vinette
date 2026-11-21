@@ -117,6 +117,7 @@ api.MapQuote();
 api.MapRecipientSuggestions();
 app.MapHub<MailHub>("/hubs/mail");
 app.MapBranding();
+app.MapManifest();
 
 app.MapSpa();
 

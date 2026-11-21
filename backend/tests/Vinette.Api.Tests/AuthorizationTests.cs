@@ -32,6 +32,7 @@ public sealed class AuthorizationTests : IDisposable
         "GET /api/v1/health",
         "GET /branding/favicon",
         "GET /branding/logo",
+        "GET /manifest.webmanifest", // generated from the branding
         "GET /openapi/{documentName}.json", // Development only
         "POST /api/v1/auth/login",
         "POST /api/v1/auth/logout",

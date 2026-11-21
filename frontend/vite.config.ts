@@ -17,6 +17,7 @@ export default defineConfig({
       '/api': { target: backend, changeOrigin: true },
       '/hubs': { target: backend, changeOrigin: true, ws: true },
       '/branding': { target: backend, changeOrigin: true },
+      '/manifest.webmanifest': { target: backend, changeOrigin: true },
     },
   },
   build: {
