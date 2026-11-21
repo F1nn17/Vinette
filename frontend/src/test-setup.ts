@@ -1,5 +1,9 @@
 import '@testing-library/jest-dom/vitest';
-import '@/shared/i18n';
+import i18n from '@/shared/i18n';
+
+// The tests read Russian texts, whatever language the machine's browser has (the application follows the browser).
+await i18n.changeLanguage('ru');
+Object.defineProperty(navigator, 'language', { get: () => 'ru-RU', configurable: true });
 
 // ProseMirror (the message editor) measures the page while it moves the cursor into view; jsdom has no layout, so it measures nothing.
 const rect = {

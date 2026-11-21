@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from '@/shared/i18n';
-import { languageFor } from './api';
+import { LanguageSync } from './LanguageSync';
 import { SettingsScreen } from './SettingsScreen';
 
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -63,41 +63,33 @@ function show() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
+      <LanguageSync />
       <SettingsScreen />
     </QueryClientProvider>,
   );
 }
 
 afterEach(async () => {
+  localStorage.clear();
   vi.unstubAllGlobals();
   await i18n.changeLanguage('ru');
 });
 
-describe('languageFor', () => {
-  it('takes the chosen language, else the browser language if the application has it, else Russian', () => {
-    expect(languageFor('en', 'ru-RU')).toBe('en');
-    expect(languageFor(null, 'en-GB')).toBe('en');
-    expect(languageFor('', 'EN-us')).toBe('en');
-    expect(languageFor(null, 'de-DE')).toBe('ru');
-    expect(languageFor('fr', 'ru')).toBe('ru');
-  });
-});
-
 describe('SettingsScreen', () => {
-  it('shows what is chosen now', async () => {
+  it('shows what is chosen now (and speaks the chosen language)', async () => {
     mockApi({ density: 'compact', language: 'en' });
     show();
 
-    expect(await screen.findByRole('button', { name: 'Компактная' })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: 'Compact' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    expect(screen.getByRole('button', { name: 'Обычная' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Comfortable' })).toHaveAttribute(
       'aria-pressed',
       'false',
     );
-    expect(screen.getByRole('combobox', { name: 'Язык' })).toHaveValue('en');
-    expect(screen.getByRole('heading', { level: 2, name: 'Подписи' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
+    expect(screen.getByRole('heading', { level: 2, name: 'Signatures' })).toBeInTheDocument();
   });
 
   it('saves the density at once and shows it at once', async () => {

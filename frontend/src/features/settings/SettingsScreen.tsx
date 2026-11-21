@@ -3,14 +3,8 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { describeApiError } from '@/shared/api/describe-error';
 import { Chip, IconButton, Select } from '@/shared/ui';
-import {
-  LANGUAGES,
-  languageFor,
-  useSettings,
-  useUntrustImageSender,
-  useUpdateSettings,
-  type ListDensity,
-} from './api';
+import { LANGUAGES } from '@/shared/i18n/language';
+import { useSettings, useUntrustImageSender, useUpdateSettings, type ListDensity } from './api';
 import { SignaturesEditor } from './SignaturesEditor';
 
 const DENSITIES: ListDensity[] = ['comfortable', 'compact'];
@@ -48,7 +42,7 @@ function Section({
  * (only the signatures are a form of their own, as a whole list is edited there).
  */
 export function SettingsScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const settings = useSettings();
   const update = useUpdateSettings();
   const untrust = useUntrustImageSender();
@@ -95,10 +89,7 @@ export function SettingsScreen() {
         <Select
           label={t('settings.language.title')}
           value={language}
-          onChange={(event) => {
-            update.mutate({ language: event.target.value });
-            void i18n.changeLanguage(languageFor(event.target.value));
-          }}
+          onChange={(event) => update.mutate({ language: event.target.value })}
           className="max-w-xs"
         >
           <option value="">{t('settings.language.browser')}</option>

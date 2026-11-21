@@ -1,6 +1,4 @@
 export {
-  LANGUAGES,
-  languageFor,
   SETTINGS_KEY,
   useListDensity,
   useSettings,
@@ -9,6 +7,7 @@ export {
   type ListDensity,
   type Settings,
 } from './api';
+export { LanguageSync } from './LanguageSync';
 export { SettingsScreen } from './SettingsScreen';
 export { SignaturesEditor, type SignaturesEditorProps } from './SignaturesEditor';
 export {
