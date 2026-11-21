@@ -4,6 +4,7 @@
     "subtitle": "Use the address and password of your mailbox.",
     "headline": "Mail\nthat belongs to you",
     "tagline": "Your messages stay with you, not in someone else's cloud. No ads, no prying eyes.",
+    "poweredBy": "Powered by Vinette",
     "address": "Email address",
     "addressPlaceholder": "user@example.com",
     "password": "Password",

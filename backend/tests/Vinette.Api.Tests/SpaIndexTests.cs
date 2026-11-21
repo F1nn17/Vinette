@@ -27,4 +27,22 @@ public class SpaIndexTests
         Assert.Contains("/branding/logo", result);
         Assert.Contains("href=\"/branding/favicon\"", result);
     }
+
+    [Fact]
+    public void Render_Tells_The_Application_Whether_To_Show_The_Credit_And_Passes_The_Tagline()
+    {
+        var shown = Config(SpaIndex.Render(Html, new BrandingOptions { Tagline = "Acme <b>mail</b>" }));
+        var hidden = Config(SpaIndex.Render(Html, new BrandingOptions { PoweredBy = false }));
+
+        Assert.True(shown.GetProperty("branding").GetProperty("poweredBy").GetBoolean());
+        Assert.False(hidden.GetProperty("branding").GetProperty("poweredBy").GetBoolean());
+        Assert.Equal("Acme <b>mail</b>", shown.GetProperty("branding").GetProperty("tagline").GetString());
+    }
+
+    private static System.Text.Json.JsonElement Config(string html)
+    {
+        var start = html.IndexOf("type=\"application/json\">", StringComparison.Ordinal) + "type=\"application/json\">".Length;
+        var end = html.IndexOf("</script>", start, StringComparison.Ordinal);
+        return System.Text.Json.JsonElement.Parse(html[start..end]);
+    }
 }

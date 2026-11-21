@@ -130,6 +130,9 @@ function LoginForm() {
   );
 }
 
+/** Where "Powered by Vinette" leads: the project's page. */
+const POWERED_BY_URL = 'https://github.com/F1nn17/Vinette';
+
 /**
  * The sign-in screen (docs/design/DESIGN.md section 7): a dark brand panel and the form card. The panel is left out on
  * narrow screens, where the logo moves above the card. The "sign in with a work account" option is not shown: no
@@ -137,7 +140,7 @@ function LoginForm() {
  */
 export function LoginScreen() {
   const { t } = useTranslation();
-  const { name, tagline } = getBranding();
+  const { name, tagline, poweredBy } = getBranding();
 
   return (
     <div className="grid min-h-screen bg-bg md:grid-cols-[560px_1fr]">
@@ -161,6 +164,18 @@ export function LoginScreen() {
           <p className="mt-1.5 mb-6 text-secondary text-muted">{t('login.subtitle')}</p>
           <LoginForm />
         </div>
+        {poweredBy && (
+          <p className="text-secondary text-muted">
+            <a
+              href={POWERED_BY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-xs underline-offset-2 hover:underline"
+            >
+              {t('login.poweredBy')}
+            </a>
+          </p>
+        )}
       </main>
     </div>
   );

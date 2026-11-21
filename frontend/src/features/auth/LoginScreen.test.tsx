@@ -150,6 +150,46 @@ describe('login screen', () => {
     expect(screen.getByText('© Acme Mail')).toBeInTheDocument();
   });
 
+  function configure(branding: Record<string, unknown>) {
+    const config = document.createElement('script');
+    config.id = 'vinette-config';
+    config.type = 'application/json';
+    config.textContent = JSON.stringify({ branding });
+    document.head.appendChild(config);
+  }
+
+  it('credits Vinette under the card, with a link to the project that opens in a new tab', async () => {
+    mockServer();
+
+    renderLogin();
+
+    const link = await screen.findByRole('link', { name: 'Работает на Vinette' });
+    expect(link).toHaveAttribute('href', 'https://github.com/F1nn17/Vinette');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+  });
+
+  it('leaves the credit out when Branding:PoweredBy is off, and keeps the tagline and the name', async () => {
+    configure({ name: 'Acme Mail', tagline: 'Почта Acme для всех', poweredBy: false });
+    mockServer();
+
+    renderLogin();
+
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.queryByText('Работает на Vinette')).not.toBeInTheDocument();
+    expect(screen.getByText('Почта Acme для всех')).toBeInTheDocument();
+    expect(screen.getByText('© Acme Mail')).toBeInTheDocument();
+  });
+
+  it('falls back to the built-in tagline when the configured one is blank', async () => {
+    configure({ name: 'Acme Mail', tagline: '   ' });
+    mockServer();
+
+    renderLogin();
+
+    expect(await screen.findByText(/Письма хранятся у вас/)).toBeInTheDocument();
+  });
+
   it('shows and hides the password with a button that names its action', async () => {
     mockServer();
     renderLogin();
