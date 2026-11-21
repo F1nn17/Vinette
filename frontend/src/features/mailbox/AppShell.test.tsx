@@ -73,6 +73,23 @@ describe('AppShell', () => {
     expect(layoutOf()).toBe(expected);
   });
 
+  it('without a list (the settings) has the folders and one wide area, also on a phone', () => {
+    fakeWindow(DESKTOP_MIN_WIDTH);
+    const { rerender } = render(
+      <AppShell messageOpen={false} nav={<p>folders-content</p>} reader={<p>wide-content</p>} />,
+    );
+
+    expect(screen.queryByRole('region', { name: 'Список писем' })).toBeNull();
+    expect(screen.getByRole('main')).toHaveTextContent('wide-content');
+    expect(screen.getByRole('navigation', { name: 'Папки' })).toBeInTheDocument();
+
+    fakeWindow(500);
+    rerender(
+      <AppShell messageOpen={false} nav={<p>folders-content</p>} reader={<p>wide-content</p>} />,
+    );
+    expect(screen.getByRole('main')).toHaveTextContent('wide-content');
+  });
+
   it('follows the window when it is resized across the borders', () => {
     const win = fakeWindow(1400);
     renderShell();

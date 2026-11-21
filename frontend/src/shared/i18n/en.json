@@ -191,6 +191,31 @@
       "other": "The message could not be sent."
     }
   },
+  "settings": {
+    "title": "Settings",
+    "look": { "title": "Appearance" },
+    "density": {
+      "title": "List density",
+      "comfortable": "Comfortable",
+      "compact": "Compact",
+      "hint": "The compact list has lower rows and no start of the text. On a phone it is always comfortable."
+    },
+    "language": {
+      "title": "Language",
+      "browser": "Same as the browser",
+      "ru": "Русский",
+      "en": "English"
+    },
+    "signatures": {
+      "hint": "A signature is put at the end of a new message. It can be changed right in the message."
+    },
+    "images": {
+      "title": "Pictures in messages",
+      "hint": "Pictures from these senders are shown without asking. For all others they stay hidden until you allow them.",
+      "none": "No such senders yet. You can allow pictures in the message itself.",
+      "remove": "Stop showing pictures from {{address}}"
+    }
+  },
   "shortcuts": {
     "title": "Keyboard shortcuts",
     "note": "Actions apply to the selected messages, or to the open one if nothing is selected.",
@@ -261,6 +286,7 @@
   "sidebar": {
     "compose": "Compose",
     "account": "Account",
+    "settings": "Settings: {{address}}",
     "labels": "Labels",
     "noLabels": "No labels yet.",
     "storage": "{{used}} of {{limit}} used",

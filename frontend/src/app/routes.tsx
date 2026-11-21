@@ -4,6 +4,7 @@ import { LoginPage } from './routes/LoginPage';
 import { MailboxPage } from './routes/MailboxPage';
 import { RealtimeLayout } from './routes/RealtimeLayout';
 import { ScheduledPage } from './routes/ScheduledPage';
+import { SettingsPage } from './routes/SettingsPage';
 
 export const appRoutes: RouteObject[] = [
   { path: '/', element: <Navigate to="/mail/inbox" replace /> },
@@ -24,6 +25,7 @@ export const appRoutes: RouteObject[] = [
           { path: '/mail/@label/:name/:messageId?', element: <MailboxPage /> },
           // The messages put off with "Send later": the queue of the application, not a folder of the mailbox.
           { path: '/mail/@scheduled/:id?', element: <ScheduledPage /> },
+          { path: '/settings', element: <SettingsPage /> },
           // The editor is heavy and only the compose screen needs it: it is loaded when the screen is first opened.
           {
             path: '/compose',
