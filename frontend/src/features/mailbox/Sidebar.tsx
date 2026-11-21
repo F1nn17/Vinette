@@ -178,13 +178,16 @@ export function Sidebar({
       </div>
 
       {!rail && (
-        <div
-          className="flex h-9 items-center justify-between rounded-md border border-control bg-surface px-3 text-secondary text-ink"
-          title={t('sidebar.account')}
+        <Link
+          to="/settings"
+          onClick={closeNav}
+          aria-label={t('sidebar.settings', { address })}
+          title={t('sidebar.settings', { address })}
+          className="flex h-9 items-center justify-between rounded-md border border-control bg-surface px-3 text-secondary text-ink transition-colors hover:bg-bg"
         >
           <span className="truncate">{address}</span>
           <ChevronDown size={16} strokeWidth={1.8} aria-hidden className="shrink-0 text-muted" />
-        </div>
+        </Link>
       )}
 
       {rail ? (

@@ -120,8 +120,19 @@ describe('Sidebar', () => {
     await within(nav()).findByRole('link', { name: /Входящие/u });
     const names = within(nav())
       .getAllByRole('link')
+      .filter((a) => a.getAttribute('href')?.startsWith('/mail'))
       .map((a) => a.textContent);
     expect(names.slice(0, 3)).toEqual(['Входящие4', 'С флажком', 'Черновики2']);
+  });
+
+  it('leads from the address block to the settings', async () => {
+    mockApi();
+    renderSidebar();
+
+    const link = await within(nav()).findByRole('link', { name: /Настройки/u });
+
+    expect(link).toHaveAttribute('href', '/settings');
+    expect(link).toHaveTextContent('alice@vinette.test');
   });
 
   it('marks only the open folder as the current page', async () => {

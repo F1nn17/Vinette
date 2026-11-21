@@ -7,8 +7,8 @@ import { useLayout } from './use-layout';
 export interface AppShellProps {
   /** The folder panel (sidebar). On a tablet it is a 64 px rail, on mobile a drawer. */
   nav: ReactNode;
-  /** The message list. */
-  list: ReactNode;
+  /** The message list; without it (the settings) the reading area takes the place of both columns. */
+  list?: ReactNode;
   /** The reading area. */
   reader: ReactNode;
   /** Whether a message is open: on mobile it then takes the whole screen. */
@@ -36,8 +36,9 @@ export function AppShell({ nav, list, reader, messageOpen }: AppShellProps) {
     return () => document.removeEventListener('keydown', onKey);
   }, [drawerOpen]);
 
-  const showList = !drawer || !messageOpen;
-  const showReader = !drawer || messageOpen;
+  const hasList = list !== undefined;
+  const showList = hasList && (!drawer || !messageOpen);
+  const showReader = !drawer || messageOpen || !hasList;
 
   const state = useMemo<ShellState>(
     () => ({
@@ -78,8 +79,12 @@ export function AppShell({ nav, list, reader, messageOpen }: AppShellProps) {
         data-layout={layout}
         className={cn(
           'grid h-dvh overflow-hidden bg-bg',
-          layout === 'desktop' && 'grid-cols-[248px_408px_minmax(0,1fr)]',
-          layout === 'tablet' && 'grid-cols-[64px_minmax(280px,408px)_minmax(0,1fr)]',
+          layout === 'desktop' &&
+            (hasList ? 'grid-cols-[248px_408px_minmax(0,1fr)]' : 'grid-cols-[248px_minmax(0,1fr)]'),
+          layout === 'tablet' &&
+            (hasList
+              ? 'grid-cols-[64px_minmax(280px,408px)_minmax(0,1fr)]'
+              : 'grid-cols-[64px_minmax(0,1fr)]'),
           layout === 'mobile' && 'grid-cols-1',
         )}
       >
@@ -101,18 +106,20 @@ export function AppShell({ nav, list, reader, messageOpen }: AppShellProps) {
           {nav}
         </nav>
         {/* On a phone the message covers the list (same grid cell) and the list is only made invisible: what was loaded and where it was scrolled to is still there when the reader goes back. */}
-        <section
-          ref={listRef}
-          aria-label={t('mailbox.list')}
-          // Out of sight but still laid out, not removed from the page: a box that is removed forgets how far it was scrolled.
-          style={showList ? undefined : { visibility: 'hidden' }}
-          className={cn(
-            'flex min-h-0 min-w-0 flex-col overflow-hidden border-x border-line bg-surface',
-            drawer && 'col-start-1 row-start-1',
-          )}
-        >
-          {list}
-        </section>
+        {hasList && (
+          <section
+            ref={listRef}
+            aria-label={t('mailbox.list')}
+            // Out of sight but still laid out, not removed from the page: a box that is removed forgets how far it was scrolled.
+            style={showList ? undefined : { visibility: 'hidden' }}
+            className={cn(
+              'flex min-h-0 min-w-0 flex-col overflow-hidden border-x border-line bg-surface',
+              drawer && 'col-start-1 row-start-1',
+            )}
+          >
+            {list}
+          </section>
+        )}
         {showReader && (
           <main
             ref={readerRef}
