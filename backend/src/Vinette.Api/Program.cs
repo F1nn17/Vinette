@@ -67,19 +67,19 @@ builder.Services.AddOpenApi(options => options.AddDocumentTransformer(async (doc
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<MailHubConnections>();
 
-var dataProtection = builder.Services.AddDataProtection().SetApplicationName("Vinette");
-var keysPath = builder.Configuration[$"{KeyStorageOptions.SectionName}:{nameof(KeyStorageOptions.KeysPath)}"];
-var keysPersisted = !string.IsNullOrWhiteSpace(keysPath);
-if (keysPersisted)
-{
-    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath!));
-}
+var keyStorage = builder.Configuration.GetSection(KeyStorageOptions.SectionName).Get<KeyStorageOptions>() ?? new KeyStorageOptions();
+var keysPersisted = !string.IsNullOrWhiteSpace(keyStorage.KeysPath);
+builder.Services.AddDataProtection().SetApplicationName("Vinette").UseVinetteKeys(keyStorage);
 
 var app = builder.Build();
 
 if (!keysPersisted)
 {
     SessionServices.LogKeysNotPersisted(app.Logger);
+}
+else
+{
+    KeyProtectionSetup.LogStatus(app.Logger, keyStorage);
 }
 
 app.UseVinetteForwardedHeaders();
