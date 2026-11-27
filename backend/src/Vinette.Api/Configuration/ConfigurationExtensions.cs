@@ -40,6 +40,9 @@ public static class ConfigurationExtensions
         AddValidated<ExternalImagesOptions>(services, configuration, ExternalImagesOptions.SectionName);
         AddValidated<KeyStorageOptions>(services, configuration, KeyStorageOptions.SectionName);
         AddValidated<RequestSecurityOptions>(services, configuration, RequestSecurityOptions.SectionName);
+        services.AddHostedService<TransportSecurityWarnings>();
+        // The server's name and version are of no use to anyone but an attacker.
+        services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(kestrel => kestrel.AddServerHeader = false);
         AddValidated<SecurityHeadersOptions>(services, configuration, SecurityHeadersOptions.SectionName);
         AddValidated<LoginRateLimitOptions>(services, configuration, LoginRateLimitOptions.SectionName);
         return services;

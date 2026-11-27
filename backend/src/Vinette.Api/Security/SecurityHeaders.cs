@@ -113,6 +113,12 @@ public static class SecurityHeaders
                 headers.TryAdd("X-Frame-Options", "DENY");
                 headers.TryAdd("Referrer-Policy", "no-referrer");
                 headers.TryAdd("Permissions-Policy", PermissionsPolicy);
+                // What the API and the live channel answer is the user's mail: no cache, in the browser or on the way, keeps it.
+                if (context.Request.Path.StartsWithSegments("/api") || context.Request.Path.StartsWithSegments("/hubs"))
+                {
+                    headers.TryAdd("Cache-Control", "no-store");
+                }
+
                 if (context.Request.IsHttps && Hsts(options) is { } hsts)
                 {
                     headers.TryAdd("Strict-Transport-Security", hsts);
