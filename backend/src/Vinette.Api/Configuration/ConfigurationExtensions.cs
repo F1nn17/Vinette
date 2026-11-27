@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Vinette.Api.Security;
 
 namespace Vinette.Api.Configuration;
 
@@ -39,6 +40,7 @@ public static class ConfigurationExtensions
         AddValidated<ExternalImagesOptions>(services, configuration, ExternalImagesOptions.SectionName);
         AddValidated<KeyStorageOptions>(services, configuration, KeyStorageOptions.SectionName);
         AddValidated<RequestSecurityOptions>(services, configuration, RequestSecurityOptions.SectionName);
+        AddValidated<SecurityHeadersOptions>(services, configuration, SecurityHeadersOptions.SectionName);
         AddValidated<LoginRateLimitOptions>(services, configuration, LoginRateLimitOptions.SectionName);
         return services;
     }

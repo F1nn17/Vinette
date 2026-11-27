@@ -83,6 +83,7 @@ if (!keysPersisted)
 }
 
 app.UseVinetteForwardedHeaders();
+app.UseVinetteSecurityHeaders();
 app.UseVinetteProblemDetails();
 app.UseRateLimiter();
 app.UseVinetteMetrics();
