@@ -8,7 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-
 - The account menu: the button with your address in the sidebar (and a round button with your initials on a tablet) opens a menu with the current account, "Settings" and "Sign out". Signing out now works from the menu; it is reachable with the keyboard (arrow keys, Escape).
 - White-label guide, [docs/white-label.md](docs/white-label.md): how to set the name, logo, favicon, accent, tagline and the "Powered by" credit, the requirements for the files and the accent, a Docker Compose example and how to check the result.
 - The sign-in screen shows "Powered by Vinette" under the card (a link to the project). Set `Branding:PoweredBy` to `false` to hide it; `Branding:Tagline` and `Branding:Name` are the subtitle and the "© Name" line of the brand panel.
@@ -119,3 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A link to a message (`/mail/<folder>/<message>`) opens the application after a page reload and from a bookmark; it answered with an error before.
 - Subjects, senders and previews written in KOI8-R, Windows-1251 and other legacy charsets are shown correctly in the message list (the application did not load these charsets before).
 - A request parameter the server cannot read (e.g. `limit=abc`) now answers `400` with a problem body instead of `500`.
+
+### Security
+
+- Every answer of the application now carries security headers: a Content-Security-Policy (scripts only from the application itself, no inline scripts and no `eval`; pictures, fonts and connections only from itself, the live channel included; nothing may embed the page: `frame-ancestors 'none'`, `object-src 'none'`), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, a Permissions-Policy that refuses camera, microphone, location and the like, and, on HTTPS only, `Strict-Transport-Security: max-age=31536000` (no subdomains, no preload). New settings under `Security:Headers`: `HstsMaxAge` (zero turns HSTS off), `CspReportOnly` (the policy is only reported in the browser's console, nothing is blocked: for finding what an unusual set-up needs) and `ConnectSources` (more origins the page may connect to, such as `wss://live.example.com` when a proxy serves the live channel from another host). Behind a reverse proxy, list it in `Security:TrustedProxies` so that HSTS follows the real scheme.
