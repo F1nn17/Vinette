@@ -58,7 +58,7 @@
 
 ### Границы
 
-`--border #E2E4E9` · `--border-subtle #EEF0F3` (разделители строк) · `--border-control #D5D8DE` · `--border-input #C9CDD4`.
+`--border #E2E4E9` · `--border-subtle #EEF0F3` (разделители строк) · `--border-control #80868F` · `--border-input #80868F` (границы кнопок и полей: контраст не менее 3 : 1 с фоном и белым, WCAG 1.4.11; изменено в VIN-130 с #D5D8DE и #C9CDD4, которые давали 1.4–1.6 : 1).
 
 ### Метки (фон / текст / точка)
 

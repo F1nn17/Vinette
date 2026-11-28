@@ -8,6 +8,7 @@ import { useLayout } from '@/features/mailbox';
 import { scheduledPath, useCancelScheduled, useScheduled, type ScheduledItem } from './api';
 import { problemText } from './problem';
 import { fullWhen } from './when';
+import { useDocumentTitle } from '@/shared/lib/document-title';
 
 const people = (list: ScheduledItem['to']) =>
   list.map((a) => (a.name ? `${a.name} <${a.address}>` : a.address)).join(', ');
@@ -30,6 +31,8 @@ export function ScheduledDetail({ id }: ScheduledDetailProps) {
   const query = useScheduled();
   const cancel = useCancelScheduled();
   const item = id === undefined ? undefined : query.data?.find((i) => i.id === id);
+  // the card names the tab with its subject (the list under it names it "Scheduled")
+  useDocumentTitle(item ? item.subject || t('list.noSubject') : null, 1);
 
   if (id === undefined) {
     return (

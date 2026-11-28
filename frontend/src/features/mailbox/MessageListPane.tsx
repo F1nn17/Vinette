@@ -41,6 +41,7 @@ import { useShell } from './shell-context';
 import { ComposeFab } from './ComposeFab';
 import { useConnectionLost, useOnline } from './use-online';
 import { VirtualMessageRows, type ListEntry } from './VirtualMessageRows';
+import { useDocumentTitle } from '@/shared/lib/document-title';
 
 const FILTERS: ListFilter[] = ['all', 'unread', 'flagged'];
 
@@ -235,6 +236,7 @@ export function MessageListPane({
       : slug === 'inbox'
         ? t('folders.inbox')
         : '';
+  useDocumentTitle(title);
   const error =
     folders.isError && !labelMode ? folders.error : messages.isError ? messages.error : null;
   const missing = folders.isSuccess && !folder && !labelMode;

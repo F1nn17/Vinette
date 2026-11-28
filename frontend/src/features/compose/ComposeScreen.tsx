@@ -26,6 +26,7 @@ import { ScheduleDialog } from './ScheduleDialog';
 import { formatWhen } from './schedule';
 import { SignatureCard } from './SignatureCard';
 import { withSignature } from './signature';
+import { useDocumentTitle } from '@/shared/lib/document-title';
 
 type Sent = components['schemas']['SentDto'];
 type Scheduled = components['schemas']['ScheduleResponse'];
@@ -44,6 +45,7 @@ export interface ComposeScreenProps {
  */
 export function ComposeScreen({ address, start }: ComposeScreenProps) {
   const { t, i18n } = useTranslation();
+  useDocumentTitle(t('compose.title'));
   const navigate = useNavigate();
   const toast = useToast();
   const queryClient = useQueryClient();

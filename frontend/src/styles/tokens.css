@@ -25,8 +25,8 @@
   /* Borders */
   --border: #e2e4e9;
   --border-subtle: #eef0f3;
-  --border-control: #d5d8de;
-  --border-input: #c9cdd4;
+  --border-control: #80868f; /* 3.3 : 1 or more on --bg and --surface: the edge of a control (WCAG 1.4.11) */
+  --border-input: #80868f;
 
   /* Labels: background / text / dot */
   --label-work-bg: #e6ecfb;

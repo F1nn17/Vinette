@@ -29,5 +29,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
+    // Vitest replaces CSS with nothing; the contrast test reads the design tokens from their file (tokens-contrast.test.ts).
+    css: { include: [/styles\/tokens\.css/] },
   },
 });

@@ -7,6 +7,7 @@ import { ListError, ListSkeleton } from '@/features/mailbox/list-states';
 import { scheduledPath, summaryOf, useScheduled, type ScheduledItem } from './api';
 import { problemText } from './problem';
 import { fullWhen, shortWhen } from './when';
+import { useDocumentTitle } from '@/shared/lib/document-title';
 
 export interface ScheduledListProps {
   /** The message that is open (`/mail/@scheduled/<id>`), if any. */
@@ -114,6 +115,7 @@ function Group({
  */
 export function ScheduledList({ openId }: ScheduledListProps) {
   const { t } = useTranslation();
+  useDocumentTitle(t('scheduled.title'));
   const mobile = useLayout() === 'mobile';
   const query = useScheduled();
   const items = query.data ?? [];

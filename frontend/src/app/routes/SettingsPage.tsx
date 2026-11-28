@@ -2,10 +2,12 @@ import { useTranslation } from 'react-i18next';
 import { useSession } from '@/features/auth';
 import { AppShell, NavMenuButton, Sidebar, useLayout } from '@/features/mailbox';
 import { SettingsScreen } from '@/features/settings';
+import { useDocumentTitle } from '@/shared/lib/document-title';
 
 /** `/settings`: the settings in the wide area beside the folders (DESIGN.md §5, "Настройки"). */
 export function SettingsPage() {
   const { t } = useTranslation();
+  useDocumentTitle(t('settings.title'));
   const { address, signOut } = useSession();
   const mobile = useLayout() === 'mobile';
   return (

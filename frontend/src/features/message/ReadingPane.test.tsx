@@ -716,7 +716,7 @@ describe('ReadingPane', () => {
     expect(
       await screen.findByRole('heading', { level: 2, name: 'Вложения · 1' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Скачать report\.pdf/u })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /report\.pdf/u })).toHaveAttribute(
       'href',
       '/api/v1/messages/SU5CT1g.1.7/attachments/1.2',
     );

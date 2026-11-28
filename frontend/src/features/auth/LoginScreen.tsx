@@ -6,6 +6,7 @@ import type { Translate } from '@/shared/api/describe-error';
 import { getBranding } from '@/shared/lib/branding';
 import { Button, Checkbox, IconButton, Logo, TextField } from '@/shared/ui';
 import { useSession } from './session-context';
+import { useDocumentTitle } from '@/shared/lib/document-title';
 
 /** Maps an error of the sign-in call to a text for the user (no technical wording, see docs/design/DESIGN.md). */
 function errorMessage(error: unknown, t: Translate) {
@@ -140,6 +141,7 @@ const POWERED_BY_URL = 'https://github.com/F1nn17/Vinette';
  */
 export function LoginScreen() {
   const { t } = useTranslation();
+  useDocumentTitle(t('login.title'));
   const { name, tagline, poweredBy } = getBranding();
 
   return (
