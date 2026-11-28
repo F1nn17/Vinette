@@ -20,6 +20,9 @@ async function watchViolations(page: Page): Promise<string[]> {
 }
 
 test.describe('content security policy', () => {
+  // The headers come from the backend, not from the Vite dev server that `make e2e` starts: CI runs these against the built image (VINETTE_E2E_URL).
+  test.skip(!process.env.VINETTE_E2E_URL, 'needs the page from the backend: set VINETTE_E2E_URL');
+
   test('the pages carry the policy and the other security headers', async ({ page }) => {
     const response = await page.goto('/login');
     const headers = response!.headers();
