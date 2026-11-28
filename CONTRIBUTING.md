@@ -18,7 +18,7 @@ PR не принимается, пока `make check` не проходит.
 
 ## Pull request
 
-- Одна задача — один PR; укажите задачу из [ROADMAP.md](ROADMAP.md) (`VIN-xxx`).
+- Один PR — от одной до трёх задач одной темы; укажите все задачи из [ROADMAP.md](ROADMAP.md) (`VIN-xxx`).
 - Добавьте или обновите тесты.
 - Отразите изменение в [CHANGELOG.md](CHANGELOG.md), секция `[Unreleased]`.
 - Заполните чек-лист из шаблона PR.
