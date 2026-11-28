@@ -1,0 +1,17 @@
+# Vinette behind Traefik v3: the router and the service. Replace vinette.example.com.
+# Traefik passes Host and sets X-Forwarded-For, -Proto and -Host itself; WebSocket needs nothing extra, and it limits
+# the size of a request only if you add a middleware (do not add "buffering": it holds the answers back).
+http:
+  routers:
+    vinette:
+      rule: Host(`vinette.example.com`)
+      entryPoints: [websecure]
+      service: vinette
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    vinette:
+      loadBalancer:
+        servers:
+          - url: http://vinette:8080

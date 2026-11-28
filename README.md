@@ -60,6 +60,10 @@ docker compose -f deploy/docker/compose.yaml up -d
 
 ## Документация
 
+- [docs/admin-guide.md](docs/admin-guide.md) — руководство администратора: все настройки, данные, журнал, обновление
+- [docs/reverse-proxy.md](docs/reverse-proxy.md) — HTTPS и reverse proxy (nginx, Caddy, Traefik)
+- [docs/white-label.md](docs/white-label.md) — свой бренд
+- [docs/data-protection-keys.md](docs/data-protection-keys.md) — шифрование ключей
 - [docs/architecture.md](docs/architecture.md) — архитектура
 - [docs/adr/](docs/adr/) — архитектурные решения (стек, лицензия)
 - [docs/design/](docs/design/README.md) — дизайн-спецификация (появится позже)
