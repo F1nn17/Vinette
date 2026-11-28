@@ -131,6 +131,26 @@ jobs:
 
       - run: make e2e
 
+      # The headers (CSP, HSTS, ...) are sent by the backend, not by the Vite dev server that `make e2e` used: the image is built and the scenarios
+      # that need them run against it. The dev mail server that `make e2e` started is still up on this machine, so the container shares its network.
+      - name: Build the image
+        run: make docker
+
+      - name: Content-Security-Policy against the built image
+        working-directory: frontend
+        run: |
+          docker run -d --name vinette-e2e --network host \
+            -e VINETTE_Imap__Host=localhost -e VINETTE_Imap__Port=3993 -e VINETTE_Imap__Security=Tls -e VINETTE_Imap__AllowInvalidCertificate=true \
+            -e VINETTE_Smtp__Host=localhost -e VINETTE_Smtp__Port=3587 -e VINETTE_Smtp__Security=StartTls -e VINETTE_Smtp__AllowInvalidCertificate=true \
+            -e VINETTE_Security__LoginRateLimit__MaxFailuresPerIp=1000 -e VINETTE_Security__LoginRateLimit__MaxAttemptsPerMinutePerIp=1000 \
+            vinette:dev
+          for i in $(seq 1 30); do curl -fs http://localhost:8080/api/v1/health && break; sleep 2; done
+          VINETTE_E2E_URL=http://localhost:8080 corepack pnpm exec playwright test csp
+
+      - name: Show the log of the image when something failed
+        if: failure()
+        run: docker logs vinette-e2e || true
+
       - name: Keep the report when a scenario fails
         if: failure()
         uses: actions/upload-artifact@v7
