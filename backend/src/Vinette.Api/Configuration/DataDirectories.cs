@@ -32,6 +32,14 @@ public static partial class DataDirectories
         return all.Where(d => !string.IsNullOrWhiteSpace(d.Path)).Select(d => (d.Setting, d.Path!));
     }
 
+    /// <summary>
+    /// The directory for temporary files, when the environment names one (<c>TMPDIR</c>; the Docker image sets it to <c>/data/tmp</c> so that the root file
+    /// system can be read-only). On a volume that starts empty (a Kubernetes claim, a bind mount) that directory is not there yet, and the key store
+    /// fails on its first write without it, so it is looked at with the others.
+    /// </summary>
+    public static IEnumerable<(string Setting, string Path)> Temporary(string? tmpdir) =>
+        string.IsNullOrWhiteSpace(tmpdir) ? [] : [("TMPDIR", tmpdir)];
+
     /// <summary>Makes sure every configured directory exists and can be written to; throws <see cref="DataDirectoryException"/> for the first that cannot.</summary>
     public static void EnsureWritable(IEnumerable<(string Setting, string Path)> directories)
     {

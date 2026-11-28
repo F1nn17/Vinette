@@ -66,6 +66,18 @@ public sealed class DataDirectoriesTests : IDisposable
     }
 
     [Fact]
+    public void The_Temporary_Directory_Is_Looked_At_Only_When_The_Environment_Names_One_And_Is_Made_When_Missing()
+    {
+        Assert.Empty(DataDirectories.Temporary(null));
+        Assert.Empty(DataDirectories.Temporary("  "));
+
+        var tmp = Path.Combine(root, "data", "tmp");
+        DataDirectories.EnsureWritable(DataDirectories.Temporary(tmp));
+
+        Assert.True(Directory.Exists(tmp));
+    }
+
+    [Fact]
     public void The_First_Bad_Directory_Stops_The_Check_And_The_Good_Ones_Before_It_Are_Made()
     {
         var good = Path.Combine(root, "good");
