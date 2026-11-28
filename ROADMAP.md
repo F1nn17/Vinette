@@ -363,7 +363,7 @@
   Готово, когда: все ключи `appsettings.example.json` описаны. Зависит от: VIN-004.
 - [ ] **VIN-127 · Требования к почтовому серверу** — какие возможности Dovecot и Postfix нужны (IMAP-расширения, submission, TLS), примеры настройки.
   Готово, когда: перечень сверен с CAPABILITY dev-среды. Зависит от: VIN-010.
-- [ ] **VIN-128 · Руководство по reverse proxy** — nginx, Caddy, Traefik: TLS, WebSocket для SignalR, `X-Forwarded-*`, доверенные прокси.
+- [~] **VIN-128 · Руководство по reverse proxy** — nginx, Caddy, Traefik: TLS, WebSocket для SignalR, `X-Forwarded-*`, доверенные прокси.
   Готово, когда: примеры проверены. Зависит от: VIN-024.
 - [ ] **VIN-129 · e2e в CI** — Playwright против dev-среды в compose; сценарии «вход», «чтение», «отправка».
   Готово, когда: сценарии зелёные в GitHub Actions, артефакты (трейсы) сохраняются при падении. Зависит от: VIN-014.
