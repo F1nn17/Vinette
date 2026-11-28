@@ -33,6 +33,7 @@ public static class ErrorCodes
     public const string ScheduleTooLate = "schedule_too_late";
     public const string TooManyScheduled = "too_many_scheduled";
     public const string TooManyRequests = "too_many_requests";
+    public const string SendLimitReached = "send_limit_reached";
     public const string InternalError = "internal_error";
     public const string ServiceUnavailable = "service_unavailable";
 

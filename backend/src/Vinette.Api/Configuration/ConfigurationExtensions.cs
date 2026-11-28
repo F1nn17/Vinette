@@ -45,6 +45,9 @@ public static class ConfigurationExtensions
         services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(kestrel => kestrel.AddServerHeader = false);
         AddValidated<SecurityHeadersOptions>(services, configuration, SecurityHeadersOptions.SectionName);
         AddValidated<LoginRateLimitOptions>(services, configuration, LoginRateLimitOptions.SectionName);
+        AddValidated<SendRateLimitOptions>(services, configuration, SendRateLimitOptions.SectionName);
+        services.AddSingleton<SendRateLimiter>();
+        services.AddHostedService<SendRateLimitCleanupService>();
         return services;
     }
 
