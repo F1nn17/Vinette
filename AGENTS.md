@@ -58,7 +58,7 @@ GNU Make, .NET SDK (версия в [backend/global.json](backend/global.json)),
 | `make test` | модульные тесты бэкенда, фронтенда и скриптов `scripts/` (Docker не нужен) |
 | `make test-integration` | интеграционные тесты бэкенда против настоящего Dovecot в контейнере (Testcontainers; нужен Docker, ~1 мин) |
 | `make lint` | `dotnet format --verify-no-changes`, ESLint, Prettier, `check-version`, `check-licenses` |
-| `make check-version` | версия бэкенда (`Directory.Build.props`) совпадает с `frontend/package.json` |
+| `make check-version` | версия бэкенда (`Directory.Build.props`) совпадает с `frontend/package.json` и с `version`/`appVersion` Helm-чарта |
 | `make check-bundle` | собранный фронтенд укладывается в бюджет размера (после `make build`; бюджеты и измерения — [docs/performance.md](docs/performance.md)); входит в `make check` |
 | `make check-licenses` | лицензии всех зависимостей NuGet и npm совместимы с Apache-2.0 (политика — `scripts/license-policy.mjs`; нужен `make setup`) |
 | `make format` | автоформатирование |
@@ -106,6 +106,7 @@ GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRE
 ### Docker и голое железо
 
 - Образ: `make docker`; запуск — [deploy/docker/compose.yaml](deploy/docker/compose.yaml); порт 8080, non-root, ключи Data Protection в томе `/data`; запускается с `--read-only --cap-drop ALL` (писать нужно только в `/data`, временные файлы — `/data/tmp`).
+- Kubernetes: Helm-чарт [deploy/helm/vinette](deploy/helm/vinette), описание — [docs/helm.md](docs/helm.md); `helm lint --strict` и установка в kind идут в CI (задание «Helm chart»). Версия чарта (`version` и `appVersion` в `Chart.yaml`) совпадает с версией продукта.
 - Голое железо: [deploy/systemd/vinette.service](deploy/systemd/vinette.service); пользователь `vinette`, конфиг `/etc/vinette`, данные `/var/lib/vinette`.
 
 ### Навигация по коду (graphify)
@@ -173,7 +174,7 @@ graphify update .                               # построить или об
 
 ## 6. Версии и релизы
 
-- SemVer. Единый источник версии — `VersionPrefix` в [backend/Directory.Build.props](backend/Directory.Build.props); версия в `frontend/package.json` совпадает с ней (проверка в CI — VIN-015).
+- SemVer. Единый источник версии — `VersionPrefix` в [backend/Directory.Build.props](backend/Directory.Build.props); версия в `frontend/package.json` и `version`/`appVersion` в `deploy/helm/vinette/Chart.yaml` совпадают с ней (проверка в CI — VIN-015, `make check-version`).
 - Релиз: перенеси `[Unreleased]` в `[X.Y.Z] - ГГГГ-ММ-ДД`, подними версию, закоммить, поставь тег `vX.Y.Z`. `release.yml` проверит, что тег совпадает с версией, соберёт образ с тегами `X.Y.Z`, `X.Y`, `latest` и создаст GitHub Release из секции CHANGELOG.
 - Тег ставит и пушит только владелец или по его прямому указанию.
 

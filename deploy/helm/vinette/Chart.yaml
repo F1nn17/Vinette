@@ -1,0 +1,17 @@
+apiVersion: v2
+name: vinette
+description: Vinette, a self-hosted web mail client, for a mail server (IMAP and SMTP) that runs elsewhere
+type: application
+# The version of the chart; the version of the application is appVersion and is the default image tag.
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.27.0-0"
+home: https://github.com/F1nn17/Vinette
+sources:
+  - https://github.com/F1nn17/Vinette
+keywords:
+  - mail
+  - webmail
+  - imap
+annotations:
+  licenses: Apache-2.0

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- A Helm chart for Kubernetes, [deploy/helm/vinette](deploy/helm/vinette) ("UI only" mode: Vinette against a mail server that runs elsewhere): Deployment, Service, optional Ingress, ConfigMap, optional Secret and a persistent volume for the keys. It runs the image with a read-only root file system and no privileges, can encrypt the keys with a certificate from a Secret, validates its values (`values.schema.json`) and has `helm test`. CI lints it and installs it in kind. Guide: [docs/helm.md](docs/helm.md). The chart version must equal the product version (`make check-version`).
 - The account menu: the button with your address in the sidebar (and a round button with your initials on a tablet) opens a menu with the current account, "Settings" and "Sign out". Signing out now works from the menu; it is reachable with the keyboard (arrow keys, Escape).
 - White-label guide, [docs/white-label.md](docs/white-label.md): how to set the name, logo, favicon, accent, tagline and the "Powered by" credit, the requirements for the files and the accent, a Docker Compose example and how to check the result.
 - The sign-in screen shows "Powered by Vinette" under the card (a link to the project). Set `Branding:PoweredBy` to `false` to hide it; `Branding:Tagline` and `Branding:Name` are the subtitle and the "© Name" line of the brand panel.
@@ -121,7 +122,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A link to a message (`/mail/<folder>/<message>`) opens the application after a page reload and from a bookmark; it answered with an error before.
 - Subjects, senders and previews written in KOI8-R, Windows-1251 and other legacy charsets are shown correctly in the message list (the application did not load these charsets before).
 - A request parameter the server cannot read (e.g. `limit=abc`) now answers `400` with a problem body instead of `500`.
-- The container image could not run with a read-only root file system (`read_only: true`, as in our own compose file): the key store wanted to write to `/tmp` and failed. Temporary files now go to `/data/tmp` on the data volume, so the image runs with `--read-only` and no extra mount.
+- The container image could not run with a read-only root file system (`read_only: true`, as in our own compose file): the key store wanted to write to `/tmp` and failed. Temporary files now go to `/data/tmp` on the data volume, so the image runs with `--read-only` and no extra mount. The application creates that directory at start, so a volume that begins empty (a Kubernetes claim, a bind mount) works too.
 
 ### Security
 

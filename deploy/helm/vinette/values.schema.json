@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["mail"],
+  "properties": {
+    "replicaCount": { "type": "integer", "minimum": 0 },
+    "mail": {
+      "type": "object",
+      "required": ["imap"],
+      "properties": {
+        "imap": {
+          "type": "object",
+          "required": ["host"],
+          "properties": {
+            "host": { "type": "string", "minLength": 1 },
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "security": { "enum": ["Tls", "StartTls", "None"] },
+            "allowInvalidCertificate": { "type": "boolean" }
+          }
+        },
+        "smtp": {
+          "type": "object",
+          "properties": {
+            "host": { "type": "string" },
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "security": { "enum": ["Tls", "StartTls", "None"] },
+            "allowInvalidCertificate": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "branding": {
+      "type": "object",
+      "properties": {
+        "accent": { "type": "string", "pattern": "^(#[0-9A-Fa-f]{6})?$" }
+      }
+    },
+    "security": {
+      "type": "object",
+      "properties": {
+        "trustedProxies": { "type": "array", "items": { "type": "string" } },
+        "trustedOrigins": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "config": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean"] } },
+    "secret": {
+      "type": "object",
+      "properties": {
+        "existingSecret": { "type": "string" },
+        "values": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean"] } }
+      }
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["ClusterIP", "NodePort", "LoadBalancer"] },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "size": { "type": "string" }
+      }
+    }
+  }
+}

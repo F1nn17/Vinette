@@ -1,0 +1,132 @@
+# Vinette against a mail server that is not part of this chart ("UI only" mode).
+# Every key is described in docs/helm.md; the settings of the application itself are in docs/admin-guide.md.
+
+image:
+  repository: ghcr.io/f1nn17/vinette
+  # Empty: the appVersion of the chart. For the strictest installs set the digest: "sha256:..." in `digest`, which wins over the tag.
+  tag: ""
+  digest: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# The image of `helm test`, which asks the health address of the service.
+test:
+  image: docker.io/curlimages/curl:8.11.1
+
+nameOverride: ""
+fullnameOverride: ""
+
+# One instance. Sessions are kept in the memory of the instance and the data lives on a volume that one pod writes to, so a second
+# instance needs Redis for the sessions and a shared volume (docs/admin-guide.md, ADR-0007); do not raise this without both.
+replicaCount: 1
+
+# The mail server. The password of a user is never in the chart: users sign in with their mailbox password.
+mail:
+  imap:
+    host: mail.example.com   # required
+    port: 993
+    security: Tls            # Tls | StartTls | None
+    allowInvalidCertificate: false
+  smtp:
+    host: ""                 # empty: the same as the IMAP host
+    port: 587
+    security: StartTls       # Tls | StartTls | None
+    allowInvalidCertificate: false
+
+branding:
+  name: ""                   # empty: "Vinette"
+  accent: ""                 # for example "#1F6FEB"; must keep AA contrast with white text
+  tagline: ""
+  poweredBy: true
+
+security:
+  # Where the ingress controller (or the proxy in front of Vinette) comes from, as CIDR ranges: only from there are X-Forwarded-* headers believed.
+  # Without it the application sees the address of the controller instead of the client and rate limits count them all as one.
+  trustedProxies: []
+  # The addresses the site is opened at, when the proxy does not pass the Host header (a rare case).
+  trustedOrigins: []
+
+# Any other setting by its name in the configuration, with the sections separated by "__" (VINETTE_ is added). Text, numbers or true/false.
+#   config:
+#     Session__IdleTimeout: "04:00:00"
+#     Security__SendRateLimit__MessagesPerHour: "100"
+config: {}
+
+# Secret values (Redis connection string, token of the metrics, ...). Prefer a Secret that you made yourself (existingSecret): what is written
+# in `values` is kept in the history of the release. Every key of the Secret becomes an environment variable as it is named, for example
+# VINETTE_Redis__ConnectionString.
+secret:
+  existingSecret: ""
+  values: {}
+
+# The keys that encrypt the saved passwords of the sessions. They live on the volume below and must outlive the pod, or every user is signed
+# out on every restart. To encrypt them on the volume with a certificate (docs/data-protection-keys.md), put the .pfx and its password in a Secret:
+#   kubectl create secret generic vinette-keys --from-file=keys.pfx=./keys.pfx --from-file=password=./password.txt
+dataProtection:
+  certificate:
+    existingSecret: ""
+    pfxKey: keys.pfx
+    passwordKey: password
+
+persistence:
+  # false: an emptyDir, and everything is lost when the pod is moved or restarted (only for a trial).
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  accessModes: [ReadWriteOnce]
+  size: 1Gi
+  annotations: {}
+
+service:
+  type: ClusterIP
+  port: 80
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: mail.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # tls:
+  #   - secretName: vinette-tls
+  #     hosts: [mail.example.com]
+  tls: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+# What the image is built for: not root, a read-only root file system, no capabilities (docs/image-security.md).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1654
+  runAsGroup: 1654
+  fsGroup: 1654
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+priorityClassName: ""
+terminationGracePeriodSeconds: 30

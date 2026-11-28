@@ -5,6 +5,7 @@
 - [reverse-proxy.md](reverse-proxy.md) — HTTPS и прокси (nginx, Caddy, Traefik);
 - [white-label.md](white-label.md) — название, логотип, цвет;
 - [data-protection-keys.md](data-protection-keys.md) — шифрование ключей сертификатом;
+- [helm.md](helm.md) — установка в Kubernetes (Helm-чарт);
 - [image-security.md](image-security.md) — запуск образа с минимумом прав, скан уязвимостей, SBOM, проверка подписи;
 - [mail-server.md](mail-server.md) — требования к почтовому серверу (IMAP, отправка, проверка отправителей);
 - [backup-and-update.md](backup-and-update.md) — резервные копии, восстановление, обновление и откат;

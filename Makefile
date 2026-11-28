@@ -80,7 +80,7 @@ lint: check-version check-licenses ## Check code style, static analysis, version
 check-bundle: ## The built front end is within its size budget (run after build; budgets: docs/performance.md)
 	node scripts/check-bundle-size.mjs
 
-check-version: ## Backend and frontend versions must match (Directory.Build.props is the source)
+check-version: ## Backend, frontend and Helm chart versions must match (Directory.Build.props is the source)
 	node scripts/check-version.mjs
 
 check-licenses: ## NuGet and npm dependency licenses must be compatible with Apache-2.0 (run make setup first)
