@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Options;
 using Vinette.Api.Attachments;
 using Vinette.Api.Auth;
 using Vinette.Api.Configuration;
@@ -72,6 +73,21 @@ var keysPersisted = !string.IsNullOrWhiteSpace(keyStorage.KeysPath);
 builder.Services.AddDataProtection().SetApplicationName("Vinette").UseVinetteKeys(keyStorage);
 
 var app = builder.Build();
+
+// The data directories are checked before anything listens: one that cannot be used stops the start with a message that names the setting.
+try
+{
+    DataDirectories.EnsureWritable(DataDirectories.Configured(
+        keyStorage,
+        app.Services.GetRequiredService<IOptions<SettingsOptions>>().Value,
+        app.Services.GetRequiredService<IOptions<AttachmentsOptions>>().Value,
+        app.Services.GetRequiredService<IOptions<SchedulingOptions>>().Value));
+}
+catch (DataDirectories.DataDirectoryException exception)
+{
+    DataDirectories.LogProblem(app.Logger, exception.Message);
+    return 1;
+}
 
 if (!keysPersisted)
 {
