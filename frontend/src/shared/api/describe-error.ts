@@ -32,6 +32,13 @@ export function describeApiError(error: unknown, t: Translate): string {
         return error.address
           ? t('errors.recipient_rejected_named', { address: error.address })
           : t('errors.recipient_rejected');
+      case 'send_limit_reached': {
+        // The wait can be a day: minutes for a short one, hours for a long one.
+        const minutes = Math.max(1, Math.ceil((error.retryAfterSeconds ?? 3600) / 60));
+        return minutes < 120
+          ? t('errors.send_limit_reached_minutes', { minutes })
+          : t('errors.send_limit_reached_hours', { hours: Math.ceil(minutes / 60) });
+      }
       case 'too_many_requests': {
         const minutes = Math.max(1, Math.ceil((error.retryAfterSeconds ?? 60) / 60));
         return t('errors.too_many_requests', { minutes });

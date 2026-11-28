@@ -1,4 +1,5 @@
 using Vinette.Api.Errors;
+using Vinette.Api.Security;
 using Vinette.Api.Sessions;
 using Vinette.Core.Attachments;
 using Vinette.Core.Mail;
@@ -59,6 +60,7 @@ public static partial class SendEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         return api;
     }
@@ -87,6 +89,7 @@ public static partial class SendEndpoints
         IAttachmentStore store,
         IRecipientSuggestions suggestions,
         IMessageHtmlSanitizer sanitizer,
+        SendRateLimiter limiter,
         ILoggerFactory loggers,
         CancellationToken cancellationToken)
     {
@@ -114,6 +117,13 @@ public static partial class SendEndpoints
         }
 
         var message = ToMessage(request, credentials, files, html);
+
+        // What one mailbox may send is limited (a stolen session must not become a spammer); a send that is refused here is not counted.
+        if (limiter.TryAcquire(credentials.Address, SendRecipients(message)) is { } wait)
+        {
+            LogSendLimited(loggers.CreateLogger("Vinette.Api.Mail.Send"), credentials.Address, (int)Math.Ceiling(wait.TotalSeconds));
+            return SendRateLimiter.Refusal(wait, http);
+        }
 
         SendOutcome outcome;
         try
@@ -210,6 +220,13 @@ public static partial class SendEndpoints
 
     private static IResult Problem(int status, string title, string code) =>
         Results.Problem(statusCode: status, title: title, extensions: new Dictionary<string, object?> { ["code"] = code });
+
+    /// <summary>The number of different people the message goes to, for the limit on recipients.</summary>
+    internal static int SendRecipients(OutgoingMessage message) =>
+        message.To.Concat(message.Cc).Concat(message.Bcc).Select(a => a.Address.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "{Address} reached the limit of sent messages: answered 429, try again in {RetryAfterSeconds} s")]
+    private static partial void LogSendLimited(ILogger logger, string address, int retryAfterSeconds);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "A file of a sent message could not be removed ({Reason}); it is removed when it expires")]
     private static partial void FileNotRemoved(ILogger logger, string reason);

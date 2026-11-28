@@ -1,5 +1,6 @@
 using Vinette.Api.Errors;
 using Vinette.Api.Mail;
+using Vinette.Api.Security;
 using Vinette.Api.Sessions;
 using Vinette.Core.Attachments;
 using Vinette.Core.Mail;
@@ -70,7 +71,8 @@ public static class ScheduleEndpoints
             .Produces<ScheduleResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status409Conflict);
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
         api.MapGet("/scheduled", ListAsync)
             .WithName("ListScheduled")
             .WithTags("Scheduled")
@@ -110,6 +112,7 @@ public static class ScheduleEndpoints
         IDrafts drafts,
         IAttachmentStore store,
         IMessageHtmlSanitizer sanitizer,
+        SendRateLimiter limiter,
         ILoggerFactory loggers,
         CancellationToken cancellationToken)
     {
@@ -146,6 +149,13 @@ public static class ScheduleEndpoints
             credentials,
             files,
             html);
+
+        // A message put off counts when it is put off (the user is told at once), not when its time comes: the same limits as for sending now.
+        if (limiter.TryAcquire(credentials.Address, SendEndpoints.SendRecipients(message)) is { } wait)
+        {
+            return SendRateLimiter.Refusal(wait, http);
+        }
+
         ScheduledMail item;
         try
         {

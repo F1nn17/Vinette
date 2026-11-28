@@ -27,6 +27,16 @@ describe('describeApiError', () => {
     );
   });
 
+  it('tells how long to wait when too many messages were sent: minutes for a short wait, hours for a long one', () => {
+    const wait = (seconds?: number) =>
+      describeApiError(new ApiError(429, 'send_limit_reached', undefined, 'x', seconds), t);
+
+    expect(wait(1500)).toBe('errors.send_limit_reached_minutes:{"minutes":25}');
+    expect(wait(10)).toBe('errors.send_limit_reached_minutes:{"minutes":1}');
+    expect(wait(3 * 3600 + 5)).toBe('errors.send_limit_reached_hours:{"hours":4}');
+    expect(wait(undefined)).toBe('errors.send_limit_reached_minutes:{"minutes":60}');
+  });
+
   it('explains the limits on attached files', () => {
     for (const code of ['attachment_too_large', 'attachments_too_large', 'too_many_attachments']) {
       expect(describeApiError(new ApiError(413, code, undefined, 'x'), t)).toBe(`errors.${code}`);

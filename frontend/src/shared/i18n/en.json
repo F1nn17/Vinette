@@ -19,6 +19,8 @@
       "passwordRequired": "Enter your password.",
       "invalid_credentials": "Wrong address or password. Check them and try again.",
       "mail_unavailable": "Mail is temporarily unavailable. Try again in a few minutes.",
+      "send_limit_reached_minutes": "You have sent too many messages in a short time. You can send the next one in {{minutes}} min.",
+      "send_limit_reached_hours": "You have sent too many messages today. You can send the next one in {{hours}} h.",
       "too_many_requests": "Too many sign-in attempts. Try again in {{minutes}} min.",
       "validation_failed": "Check that the address and password are complete and have no stray characters.",
       "network": "No connection. Check your internet connection and try again.",
