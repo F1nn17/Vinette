@@ -21,7 +21,7 @@ DOTNET := cd $(BACKEND) && dotnet
 PNPM := cd $(FRONTEND) && corepack pnpm
 
 .DEFAULT_GOAL := help
-.PHONY: help setup dev dev-backend dev-frontend dev-mail dev-mail-check dev-mail-down seed seed-reset build test test-integration e2e lint check-version check-licenses format check api-types docker package clean
+.PHONY: help setup dev dev-backend dev-frontend dev-mail dev-mail-check dev-mail-down seed seed-reset build test test-integration e2e lint check-version check-bundle check-licenses format check api-types docker package clean
 
 help: ## Show available targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -77,6 +77,9 @@ lint: check-version check-licenses ## Check code style, static analysis, version
 	$(DOTNET) format $(SLN) --verify-no-changes --no-restore
 	$(PNPM) lint
 
+check-bundle: ## The built front end is within its size budget (run after build; budgets: docs/performance.md)
+	node scripts/check-bundle-size.mjs
+
 check-version: ## Backend and frontend versions must match (Directory.Build.props is the source)
 	node scripts/check-version.mjs
 
@@ -87,7 +90,7 @@ format: ## Auto-format backend and frontend
 	$(DOTNET) format $(SLN) --no-restore
 	$(PNPM) format
 
-check: lint test build ## Everything CI runs: lint, test, build
+check: lint test build check-bundle ## Everything CI runs: lint, test, build, bundle size
 
 api-types: ## Regenerate TypeScript API types from the backend OpenAPI document
 	$(DOTNET) build $(API) --no-restore --no-incremental -p:GenerateOpenApi=true
