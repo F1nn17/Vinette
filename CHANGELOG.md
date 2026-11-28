@@ -106,11 +106,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recipient suggestions: `GET /api/v1/recipients/suggestions?q=&limit=` returns the people to offer while a recipient is typed (1 to 20, 8 by default): the people the mailbox has written to and received from, those written to and the recent ones first, found by the beginning of an address, of a name or of a word of a name (Cyrillic works). Only the newest 1000 messages of the Sent folder and of the inbox are read, once per ten minutes, and kept in memory; an answer comes from memory however big the mailbox is.
 
 ### Changed
+- The title of the browser tab names the screen ("Inbox — Vinette", the subject of an open message, "Settings — Vinette"), so that tabs, history and screen readers tell screens apart (WCAG 2.4.2). It carries the product name set in `Branding:Name`.
+- The edges of fields and of secondary buttons are darker (contrast 3.3 : 1 or more with the background instead of 1.4–1.6 : 1), so that they can be seen by people with low vision (WCAG 1.4.11). `docs/design/DESIGN.md` is updated.
 
 - Several instances of the application can run behind one address (see the new decision record ADR-0007): no Redis backplane and no sticky routing are needed. The page now opens its live-updates channel as a plain WebSocket without a negotiation request, so any instance can take it; the load balancer only has to pass WebSocket upgrades (a proxy that does not leaves the page without live updates and shows the "No connection" notice). The sessions must be in Redis (`Session:Store=Redis`), and the Data Protection keys and the settings directory must be shared by the instances. Connection limits and the follow-the-inbox connections are counted per instance.
 - The application now runs on .NET 11 (it was .NET 10). The Docker image is built on `dotnet/sdk:11.0` and runs on `dotnet/aspnet:11.0-resolute-chiseled` (Ubuntu 26.04 base); a server without Docker needs the ASP.NET Core 11 runtime. See ADR-0005.
 
 ### Fixed
+- Accessibility audit ([docs/accessibility.md](docs/accessibility.md)): the buttons "Cc" and "Bcc" of the new message screen and the attachment cards are now named by what they show, so that voice control ("click Cc") and screen readers agree with the screen (WCAG 2.5.3).
 
 - The first load of the application was 40 % bigger than needed (341 KB instead of 204 KB gzip): the message editor, which only the "Write" screen needs, was loaded with the mailbox. It is loaded with the compose screen again.
 - The data directories (`DataProtection:KeysPath`, `Settings:Path`, `Attachments:Path`, `Scheduling:Path`) are created and tested for writing when the application starts. One that cannot be used (for example the sample config's `/var/lib/vinette` inside the Docker image) now stops the start with a message that names the setting, instead of starting "healthy" and failing at the first sign-in.

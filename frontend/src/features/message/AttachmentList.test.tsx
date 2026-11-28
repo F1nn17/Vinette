@@ -46,15 +46,17 @@ describe('AttachmentList', () => {
   it('makes each card one link that downloads the file under its own name', () => {
     render(<AttachmentList messageId="SU5CT1g.1.7" attachments={[file('1.2.1', 'report.pdf')]} />);
 
-    const link = screen.getByRole('link', { name: /Скачать report\.pdf/u });
+    const link = screen.getByRole('link', { name: /report\.pdf/u });
     expect(link).toHaveAttribute('href', '/api/v1/messages/SU5CT1g.1.7/attachments/1.2.1');
     expect(link).toHaveAttribute('download', 'report.pdf');
   });
 
-  it('names the link by file and size for assistive technology', () => {
+  it('names the link by its visible text (file and size) and adds what it does, for assistive technology', () => {
     render(<AttachmentList messageId="a.1.1" attachments={[file('1.2', 'report.pdf', 2048)]} />);
 
-    expect(screen.getByRole('link', { name: /^Скачать report\.pdf, 2\s/u })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /report\.pdf\s*2.*Скачать файл$/u }),
+    ).toBeInTheDocument();
   });
 
   it('is reached with the keyboard: one Tab stop per card, in order', async () => {

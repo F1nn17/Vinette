@@ -34,7 +34,6 @@ export function AttachmentList({ messageId, attachments }: AttachmentListProps) 
               <a
                 href={attachmentHref(messageId, attachment.partId)}
                 download={attachment.fileName}
-                aria-label={t('reader.download', { name: attachment.fileName, size })}
                 className="flex min-h-14 items-center gap-3 rounded-md border border-line bg-surface px-3 py-2.5 transition-colors hover:bg-bg"
               >
                 <span
@@ -48,6 +47,8 @@ export function AttachmentList({ messageId, attachments }: AttachmentListProps) 
                   <span className="block text-meta text-muted">{size}</span>
                 </span>
                 <Download size={18} strokeWidth={1.8} aria-hidden className="shrink-0 text-muted" />
+                {/* The name of the link is its visible text (WCAG 2.5.3); this says what the link does. */}
+                <span className="sr-only">{t('reader.download')}</span>
               </a>
             </li>
           );

@@ -67,6 +67,7 @@ docker compose -f deploy/docker/compose.yaml up -d
 - [docs/reverse-proxy.md](docs/reverse-proxy.md) — HTTPS и reverse proxy (nginx, Caddy, Traefik)
 - [docs/white-label.md](docs/white-label.md) — свой бренд
 - [docs/data-protection-keys.md](docs/data-protection-keys.md) — шифрование ключей
+- [docs/accessibility.md](docs/accessibility.md) — аудит доступности (WCAG 2.2 AA)
 - [docs/helm.md](docs/helm.md) — установка в Kubernetes (Helm-чарт)
 - [docs/image-security.md](docs/image-security.md) — образ: read-only, скан уязвимостей, SBOM, подпись
 - [docs/architecture.md](docs/architecture.md) — архитектура

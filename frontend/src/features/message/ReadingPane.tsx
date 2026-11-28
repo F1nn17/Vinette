@@ -14,6 +14,7 @@ import { ReceiptRequest } from './ReceiptRequest';
 import { MessageFrame } from './MessageFrame';
 import { ReaderActionBar, type ComposeFrom, type ReaderAction } from './ReaderActionBar';
 import { SenderCheckBadge } from './SenderCheckBadge';
+import { useDocumentTitle } from '@/shared/lib/document-title';
 
 export interface ReadingPaneProps {
   /** The open message; none shows a hint. */
@@ -110,6 +111,8 @@ function Header({ message, address, imagesAsked, imagesLoading, onShowImages }: 
     : null;
   const verdict = verdictOf(message);
   const blocked = Number(message.blockedExternalResources);
+  // the open message names the tab with its subject; the folder under it names it otherwise
+  useDocumentTitle(message.subject || t('list.noSubject'), 1);
   return (
     <header className="flex flex-col gap-4">
       <div>

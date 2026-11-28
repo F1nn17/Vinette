@@ -58,32 +58,30 @@ describe('ComposeForm', () => {
   it('opens the Cc and Bcc rows on demand and puts the cursor in them', async () => {
     render(<Harness />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Добавить получателей в копию' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Копия: добавить получателей' }));
 
     const cc = screen.getByLabelText('Копия');
     expect(cc).toHaveFocus();
     expect(
-      screen.queryByRole('button', { name: 'Добавить получателей в копию' }),
+      screen.queryByRole('button', { name: 'Копия: добавить получателей' }),
     ).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Скрытая')).not.toBeInTheDocument();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Добавить получателей в скрытую копию' }),
+      screen.getByRole('button', { name: 'Скрытая: добавить получателей в скрытую копию' }),
     );
     expect(screen.getByLabelText('Скрытая')).toHaveFocus();
   });
 
   it('can close an empty extra row, but not one that holds recipients', async () => {
     render(<Harness />);
-    await userEvent.click(screen.getByRole('button', { name: 'Добавить получателей в копию' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Копия: добавить получателей' }));
 
     await userEvent.click(screen.getByRole('button', { name: 'Убрать строку «Копия»' }));
     expect(screen.queryByLabelText('Копия')).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Добавить получателей в копию' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Копия: добавить получателей' })).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Добавить получателей в копию' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Копия: добавить получателей' }));
     await userEvent.type(screen.getByLabelText('Копия'), 'b@x.test{Enter}');
     expect(screen.queryByRole('button', { name: 'Убрать строку «Копия»' })).not.toBeInTheDocument();
   });
@@ -97,7 +95,7 @@ describe('ComposeForm', () => {
       'hidden@x.test',
     );
     expect(
-      screen.queryByRole('button', { name: 'Добавить получателей в скрытую копию' }),
+      screen.queryByRole('button', { name: 'Скрытая: добавить получателей в скрытую копию' }),
     ).not.toBeInTheDocument();
   });
 
