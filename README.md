@@ -60,6 +60,7 @@ docker compose -f deploy/docker/compose.yaml up -d
 
 ## Документация
 
+- [docs/install-bare-metal.md](docs/install-bare-metal.md) — установка на голое железо (systemd)
 - [docs/admin-guide.md](docs/admin-guide.md) — руководство администратора: все настройки, данные, журнал, обновление
 - [docs/mail-server.md](docs/mail-server.md) — требования к почтовому серверу
 - [docs/backup-and-update.md](docs/backup-and-update.md) — резервные копии, восстановление, обновление

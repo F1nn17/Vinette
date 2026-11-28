@@ -70,6 +70,7 @@ GNU Make, .NET SDK (версия в [backend/global.json](backend/global.json)),
 | `make seed-reset` | удалить загруженные ранее письма и загрузить заново |
 | `make e2e` | Playwright e2e: поднимает dev-почту и загружает в неё тестовые письма (`E2E_MAIL=0` — не трогать), запускает бэкенд и Vite, прогоняет `frontend/e2e` |
 | `make docker` | образ `vinette:dev` |
+| `make package` | архив для установки на голое железо: `artifacts/vinette-X.Y.Z.tar.gz` (приложение с фронтендом, unit-файл, образец конфигурации) и `.sha256` |
 | `make clean` | удалить артефакты сборки |
 
 ### Dev-среда
