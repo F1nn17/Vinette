@@ -81,7 +81,8 @@ try
         keyStorage,
         app.Services.GetRequiredService<IOptions<SettingsOptions>>().Value,
         app.Services.GetRequiredService<IOptions<AttachmentsOptions>>().Value,
-        app.Services.GetRequiredService<IOptions<SchedulingOptions>>().Value));
+        app.Services.GetRequiredService<IOptions<SchedulingOptions>>().Value)
+        .Concat(DataDirectories.Temporary(Environment.GetEnvironmentVariable("TMPDIR"))));
 }
 catch (DataDirectories.DataDirectoryException exception)
 {
