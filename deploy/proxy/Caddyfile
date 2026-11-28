@@ -1,0 +1,18 @@
+# Vinette behind Caddy. Caddy gets and renews the certificate by itself (the name must point to this server, ports 80 and 443 open).
+# Replace vinette.example.com; "vinette:8080" is where the application listens.
+
+vinette.example.com {
+	# Attachments: up to Attachments:MaxTotalBytes (25 MB by default) in one message.
+	request_body {
+		max_size 30MB
+	}
+
+	# Caddy passes Host and sets X-Forwarded-For, -Proto and -Host itself; WebSocket needs nothing extra.
+	reverse_proxy vinette:8080 {
+		flush_interval -1
+		transport http {
+			read_timeout 1h
+			write_timeout 1h
+		}
+	}
+}
