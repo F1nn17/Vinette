@@ -59,6 +59,7 @@ GNU Make, .NET SDK (версия в [backend/global.json](backend/global.json)),
 | `make test-integration` | интеграционные тесты бэкенда против настоящего Dovecot в контейнере (Testcontainers; нужен Docker, ~1 мин) |
 | `make lint` | `dotnet format --verify-no-changes`, ESLint, Prettier, `check-version`, `check-licenses` |
 | `make check-version` | версия бэкенда (`Directory.Build.props`) совпадает с `frontend/package.json` |
+| `make check-bundle` | собранный фронтенд укладывается в бюджет размера (после `make build`; бюджеты и измерения — [docs/performance.md](docs/performance.md)); входит в `make check` |
 | `make check-licenses` | лицензии всех зависимостей NuGet и npm совместимы с Apache-2.0 (политика — `scripts/license-policy.mjs`; нужен `make setup`) |
 | `make format` | автоформатирование |
 | `make check` | lint + test + build — ровно то, что гоняет CI |
@@ -205,6 +206,7 @@ graphify update .                               # построить или об
 - Строй интерфейс из `src/shared/ui`; недостающий примитив добавляй туда с тестом и записью в `/dev/ui`.
 - Доступность — по [DESIGN.md §11](docs/design/DESIGN.md): семантические области, фокус-кольцо, `aria-label` у иконочных кнопок, `label` у полей, цели нажатия ≥ 40/44 px, AA-контраст, `prefers-reduced-motion`.
 - Иконки — lucide-react, 18 px, `strokeWidth` 1.8.
+- Тяжёлое (редактор письма и подобное) грузится лениво. Код первой загрузки не импортирует его через `index.ts` («barrel») фичи, иначе оно попадёт в главный файл: импортируй нужное напрямую (`@/features/compose/QuickReply`). Бюджет размера проверяет `make check-bundle`.
 
 ## 10. Безопасность (жёсткие правила)
 

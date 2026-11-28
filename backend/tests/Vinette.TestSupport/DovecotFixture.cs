@@ -232,6 +232,26 @@ public sealed class DovecotFixture : IAsyncLifetime
     }
 
     /// <summary>Sets the storage limit of a mailbox, e.g. "10M" (docker-mailserver's <c>setup quota set</c>).</summary>
+    /// <summary>
+    /// Fills the INBOX of an account with <paramref name="count"/> small mails, written straight into its maildir inside the container (a mail per
+    /// file, in one awk run: fifty thousand take seconds, where fifty thousand deliveries would take hours). The mails are numbered 1..count and
+    /// built from the number: every tenth is unread, every 97th is flagged, every 1999th has "needle" in the subject, every 997th in the text,
+    /// every 500th has Russian words in the text; the sender is "sender{n % 200}@example.org". Dovecot is told to index the folder afterwards.
+    /// </summary>
+    public async Task FillInboxAsync(MailAccount account, int count, CancellationToken cancellationToken)
+    {
+        await Container.CopyAsync(await File.ReadAllBytesAsync(Path.Combine(AppContext.BaseDirectory, "fill-inbox.awk"), cancellationToken), "/tmp/fill.awk", ct: cancellationToken);
+        var script =
+            $"dir=$(doveadm mailbox path -u {account.Address} INBOX) && mkdir -p \"$dir/cur\" \"$dir/new\" \"$dir/tmp\" "
+            + $"&& awk -v n={count} -v user={account.Address} -v curdir=\"$dir/cur\" -v newdir=\"$dir/new\" -f /tmp/fill.awk "
+            + $"&& chown -R \"$(stat -c %u:%g \"$dir\")\" \"$dir\" && doveadm force-resync -u {account.Address} INBOX";
+        var result = await Container.ExecAsync(["sh", "-c", script], cancellationToken);
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"Filling the inbox of {account.Address} failed (exit {result.ExitCode}): {result.Stderr}");
+        }
+    }
+
     public async Task SetQuotaAsync(MailAccount account, string limit, CancellationToken cancellationToken)
     {
         var result = await Container.ExecAsync(["setup", "quota", "set", account.Address, limit], cancellationToken);

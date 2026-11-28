@@ -13,7 +13,8 @@ import {
   usePurge,
 } from '@/features/mailbox';
 import { labelPath } from '@/features/labels';
-import { QuickReply } from '@/features/compose';
+// Not from the barrel of the feature: that would pull the editor (ProseMirror, about 300 KB) into the first load; only the compose screen needs it.
+import { QuickReply } from '@/features/compose/QuickReply';
 import { ReadingPane } from '@/features/message';
 
 /**

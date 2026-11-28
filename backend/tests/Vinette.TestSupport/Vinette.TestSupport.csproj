@@ -12,5 +12,6 @@
     <None Include="..\fixtures\**\*" LinkBase="fixtures" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\..\deploy\docker\dev-mail\postfix-accounts.cf" LinkBase="dev-mail" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\..\deploy\docker\dev-mail\dovecot.cf" LinkBase="dev-mail" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="fill-inbox.awk" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
