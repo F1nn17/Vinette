@@ -93,6 +93,21 @@ jobs:
             exit 1
           fi
 
+      # The archive for a bare-metal install (docs/install-bare-metal.md): the application with the front end, the unit file, the sample config.
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: backend/global.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Build the archive for a bare-metal install
+        run: |
+          corepack enable
+          make setup
+          make package
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -100,4 +115,6 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --title "$GITHUB_REF_NAME" \
             --notes-file release-notes.md \
-            --verify-tag
+            --verify-tag \
+            "artifacts/vinette-${GITHUB_REF_NAME#v}.tar.gz" \
+            "artifacts/vinette-${GITHUB_REF_NAME#v}.tar.gz.sha256"

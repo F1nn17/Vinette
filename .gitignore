@@ -29,3 +29,6 @@ appsettings.Local.json
 .env.*
 !.env.example
 /data/
+
+# make package
+artifacts/

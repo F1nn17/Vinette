@@ -21,7 +21,7 @@ DOTNET := cd $(BACKEND) && dotnet
 PNPM := cd $(FRONTEND) && corepack pnpm
 
 .DEFAULT_GOAL := help
-.PHONY: help setup dev dev-backend dev-frontend dev-mail dev-mail-check dev-mail-down seed seed-reset build test test-integration e2e lint check-version check-licenses format check api-types docker clean
+.PHONY: help setup dev dev-backend dev-frontend dev-mail dev-mail-check dev-mail-down seed seed-reset build test test-integration e2e lint check-version check-licenses format check api-types docker package clean
 
 help: ## Show available targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -96,7 +96,20 @@ api-types: ## Regenerate TypeScript API types from the backend OpenAPI document
 docker: ## Build the container image (IMAGE=vinette:dev)
 	docker build -f deploy/docker/Dockerfile --build-arg VERSION=$(VERSION) -t $(IMAGE) .
 
+package: ## Archive for a bare-metal install: artifacts/vinette-VERSION.tar.gz (the application with the front end, the unit file, the sample config)
+	$(PNPM) build
+	rm -rf artifacts/vinette-$(VERSION) artifacts/vinette-$(VERSION).tar.gz
+	mkdir -p artifacts/vinette-$(VERSION)/app
+	$(DOTNET) publish $(API) -c Release --no-self-contained -p:UseAppHost=false -o ../artifacts/vinette-$(VERSION)/app
+	cp -r $(FRONTEND)/dist artifacts/vinette-$(VERSION)/app/wwwroot
+	rm -f artifacts/vinette-$(VERSION)/app/appsettings.Development.json artifacts/vinette-$(VERSION)/app/web.config
+	cp deploy/systemd/vinette.service deploy/config/appsettings.example.json LICENSE artifacts/vinette-$(VERSION)/
+	cp docs/install-bare-metal.md artifacts/vinette-$(VERSION)/INSTALL.md
+	tar -czf artifacts/vinette-$(VERSION).tar.gz -C artifacts vinette-$(VERSION)
+	cd artifacts && sha256sum vinette-$(VERSION).tar.gz > vinette-$(VERSION).tar.gz.sha256
+	@echo "artifacts/vinette-$(VERSION).tar.gz"
+
 clean: ## Remove build outputs
 	$(DOTNET) clean $(SLN) -v q || true
 	find $(BACKEND) -type d \( -name bin -o -name obj \) -prune -exec rm -rf {} +
-	rm -rf $(FRONTEND)/dist $(FRONTEND)/coverage $(FRONTEND)/test-results $(FRONTEND)/playwright-report
+	rm -rf artifacts $(FRONTEND)/dist $(FRONTEND)/coverage $(FRONTEND)/test-results $(FRONTEND)/playwright-report
