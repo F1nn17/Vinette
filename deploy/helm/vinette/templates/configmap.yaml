@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vinette.fullname" . }}
+  labels:
+    {{- include "vinette.labels" . | nindent 4 }}
+data:
+  VINETTE_Imap__Host: {{ required "mail.imap.host is required: the address of your mail server" .Values.mail.imap.host | quote }}
+  VINETTE_Imap__Port: {{ .Values.mail.imap.port | quote }}
+  VINETTE_Imap__Security: {{ .Values.mail.imap.security | quote }}
+  VINETTE_Imap__AllowInvalidCertificate: {{ .Values.mail.imap.allowInvalidCertificate | quote }}
+  VINETTE_Smtp__Host: {{ default .Values.mail.imap.host .Values.mail.smtp.host | quote }}
+  VINETTE_Smtp__Port: {{ .Values.mail.smtp.port | quote }}
+  VINETTE_Smtp__Security: {{ .Values.mail.smtp.security | quote }}
+  VINETTE_Smtp__AllowInvalidCertificate: {{ .Values.mail.smtp.allowInvalidCertificate | quote }}
+  {{- with .Values.branding.name }}
+  VINETTE_Branding__Name: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.branding.accent }}
+  VINETTE_Branding__Accent: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.branding.tagline }}
+  VINETTE_Branding__Tagline: {{ . | quote }}
+  {{- end }}
+  VINETTE_Branding__PoweredBy: {{ .Values.branding.poweredBy | quote }}
+  {{- range $i, $cidr := .Values.security.trustedProxies }}
+  VINETTE_Security__TrustedProxies__{{ $i }}: {{ $cidr | quote }}
+  {{- end }}
+  {{- range $i, $origin := .Values.security.trustedOrigins }}
+  VINETTE_Security__TrustedOrigins__{{ $i }}: {{ $origin | quote }}
+  {{- end }}
+  {{- if .Values.dataProtection.certificate.existingSecret }}
+  VINETTE_DataProtection__CertificatePath: {{ printf "%s/%s" (include "vinette.certDir" .) .Values.dataProtection.certificate.pfxKey | quote }}
+  VINETTE_DataProtection__CertificatePasswordFile: {{ printf "%s/%s" (include "vinette.certDir" .) .Values.dataProtection.certificate.passwordKey | quote }}
+  {{- end }}
+  {{- range $key, $value := .Values.config }}
+  VINETTE_{{ $key }}: {{ $value | quote }}
+  {{- end }}

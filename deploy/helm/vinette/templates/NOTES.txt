@@ -1,0 +1,31 @@
+Vinette {{ .Chart.AppVersion }} is installed as "{{ include "vinette.fullname" . }}" and talks to the mail server {{ .Values.mail.imap.host }}.
+
+{{- if .Values.ingress.enabled }}
+
+Open it at:
+{{- range .Values.ingress.hosts }}
+  {{ if $.Values.ingress.tls }}https{{ else }}http{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+
+No ingress is set. To look at it from this computer:
+  kubectl --namespace {{ .Release.Namespace }} port-forward service/{{ include "vinette.fullname" . }} 8080:{{ .Values.service.port }}
+and open http://localhost:8080 (the sign-in cookie is Secure: over plain HTTP it works only for localhost; put HTTPS in front for anything else).
+{{- end }}
+
+Check the health:  helm test {{ .Release.Name }} --namespace {{ .Release.Namespace }}
+{{- if not .Values.persistence.enabled }}
+
+WARNING: persistence.enabled is false. The keys of the sessions are on a temporary volume: everyone is signed out whenever the pod restarts, and
+scheduled messages are lost. Use it for a trial only.
+{{- end }}
+{{- if gt (int .Values.replicaCount) 1 }}
+
+WARNING: replicaCount is above 1. Sessions are in the memory of each pod and the data volume is written by one pod at a time: set Session__Store=Redis
+(config / secret), give all pods a shared volume (ReadWriteMany) and turn the scheduler off on all but one (docs/admin-guide.md, ADR-0007).
+{{- end }}
+{{- if not .Values.security.trustedProxies }}
+
+NOTE: security.trustedProxies is empty. Behind an ingress the application then sees the address of the controller instead of the clients, and the
+limits on signing in count all users as one. Set it to the pod range of your ingress controller (docs/helm.md).
+{{- end }}
