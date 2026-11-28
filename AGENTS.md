@@ -71,6 +71,7 @@ GNU Make, .NET SDK (версия в [backend/global.json](backend/global.json)),
 | `make seed-reset` | удалить загруженные ранее письма и загрузить заново |
 | `make e2e` | Playwright e2e: поднимает dev-почту и загружает в неё тестовые письма (`E2E_MAIL=0` — не трогать), запускает бэкенд и Vite, прогоняет `frontend/e2e` |
 | `make docker` | образ `vinette:dev` |
+| `make scan-image` | скан образа `vinette:dev` на уязвимости (Trivy в Docker; `SBOM=файл.json` — ещё и состав образа); критическая уязвимость с исправлением даёт ошибку; в CI и релизе то же ([docs/image-security.md](docs/image-security.md)) |
 | `make package` | архив для установки на голое железо: `artifacts/vinette-X.Y.Z.tar.gz` (приложение с фронтендом, unit-файл, образец конфигурации) и `.sha256` |
 | `make clean` | удалить артефакты сборки |
 
@@ -104,7 +105,7 @@ GreenMail не умеет часть расширений IMAP (SPECIAL-USE, QRE
 
 ### Docker и голое железо
 
-- Образ: `make docker`; запуск — [deploy/docker/compose.yaml](deploy/docker/compose.yaml); порт 8080, non-root, ключи Data Protection в томе `/data`.
+- Образ: `make docker`; запуск — [deploy/docker/compose.yaml](deploy/docker/compose.yaml); порт 8080, non-root, ключи Data Protection в томе `/data`; запускается с `--read-only --cap-drop ALL` (писать нужно только в `/data`, временные файлы — `/data/tmp`).
 - Голое железо: [deploy/systemd/vinette.service](deploy/systemd/vinette.service); пользователь `vinette`, конфиг `/etc/vinette`, данные `/var/lib/vinette`.
 
 ### Навигация по коду (graphify)

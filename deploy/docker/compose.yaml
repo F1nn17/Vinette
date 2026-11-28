@@ -19,6 +19,7 @@ services:
     volumes:
       # Data Protection keys: keep them, or users are signed out on every restart.
       - vinette-data:/data
+    # Read-only root file system: the application writes only to /data (temporary files too), see docs/image-security.md.
     read_only: true
     security_opt:
       - no-new-privileges:true
