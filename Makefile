@@ -21,7 +21,7 @@ DOTNET := cd $(BACKEND) && dotnet
 PNPM := cd $(FRONTEND) && corepack pnpm
 
 .DEFAULT_GOAL := help
-.PHONY: help setup dev dev-backend dev-frontend dev-mail dev-mail-check dev-mail-down seed seed-reset build test test-integration e2e lint check-version check-bundle check-licenses format check api-types docker package clean
+.PHONY: help setup dev dev-backend dev-frontend dev-mail dev-mail-check dev-mail-down seed seed-reset build test test-integration e2e lint check-version check-bundle check-licenses format check api-types docker scan-image package clean
 
 help: ## Show available targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -98,6 +98,9 @@ api-types: ## Regenerate TypeScript API types from the backend OpenAPI document
 
 docker: ## Build the container image (IMAGE=vinette:dev)
 	docker build -f deploy/docker/Dockerfile --build-arg VERSION=$(VERSION) -t $(IMAGE) .
+
+scan-image: ## Scan the container image for vulnerabilities (IMAGE=vinette:dev); SBOM=file.json also writes its SBOM
+	sh scripts/scan-image.sh $(IMAGE) $(SBOM)
 
 package: ## Archive for a bare-metal install: artifacts/vinette-VERSION.tar.gz (the application with the front end, the unit file, the sample config)
 	$(PNPM) build

@@ -1,0 +1,5 @@
+# Image findings that were looked at and accepted (scripts/scan-image.sh). One CVE per line, with the reason and the date to look again:
+#
+#   CVE-2026-12345  # not reachable: the vulnerable function is not called by Vinette; look again 2027-01-15
+#
+# Empty on purpose: the image has no known findings of HIGH or CRITICAL severity with a fix.

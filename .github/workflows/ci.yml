@@ -139,7 +139,8 @@ jobs:
       - name: Content-Security-Policy against the built image
         working-directory: frontend
         run: |
-          docker run -d --name vinette-e2e --network host \
+          # The same flags as the compose file and the Helm chart: read-only root file system, no capabilities, no privilege escalation (docs/image-security.md).
+          docker run -d --name vinette-e2e --network host --read-only --cap-drop ALL --security-opt no-new-privileges:true -v vinette-e2e-data:/data \
             -e VINETTE_Imap__Host=localhost -e VINETTE_Imap__Port=3993 -e VINETTE_Imap__Security=Tls -e VINETTE_Imap__AllowInvalidCertificate=true \
             -e VINETTE_Smtp__Host=localhost -e VINETTE_Smtp__Port=3587 -e VINETTE_Smtp__Security=StartTls -e VINETTE_Smtp__AllowInvalidCertificate=true \
             -e VINETTE_Security__LoginRateLimit__MaxFailuresPerIp=1000 -e VINETTE_Security__LoginRateLimit__MaxAttemptsPerMinutePerIp=1000 \
@@ -170,6 +171,19 @@ jobs:
       - uses: actions/checkout@v7
       - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v4
+      - name: Build for the scan (linux/amd64)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          load: true
+          tags: vinette:scan
+          cache-from: type=gha
+
+      # A CRITICAL finding that has a fix fails the build; HIGH ones are listed (docs/image-security.md).
+      - name: Scan the image for vulnerabilities
+        run: sh scripts/scan-image.sh vinette:scan
+
       - name: Build (no push)
         uses: docker/build-push-action@v7
         with:
